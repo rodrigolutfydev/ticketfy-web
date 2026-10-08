@@ -1,0 +1,259 @@
+/*
+  Estilo global do Ticketfy.
+
+  Como funciona o tema:
+  - Cada cor do projeto é uma variável CSS (--canvas, --ink, --accent...).
+  - O bloco @theme inline ensina o Tailwind a criar classes a partir delas:
+    --color-canvas vira bg-canvas, text-canvas, border-canvas e assim por diante.
+  - Trocar o tema (claro/escuro) é só trocar o atributo data-theme no <html>.
+    As variáveis mudam de valor e todas as classes acompanham, sem precisar
+    escrever "dark:" em cada componente.
+*/
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/bricolage-grotesque";
+
+@theme inline {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Inter Variable", ui-sans-serif, sans-serif;
+
+  --color-canvas: var(--canvas); /* fundo da página */
+  --color-surface: var(--surface); /* cartões e painéis */
+  --color-raised: var(--raised); /* campos e áreas destacadas dentro de cartões */
+  --color-line: var(--line); /* bordas e divisórias */
+  --color-line-strong: var(--line-strong); /* borda de campos e botões: precisa aparecer bem */
+  --color-ink: var(--ink); /* texto principal */
+  --color-muted: var(--muted); /* texto secundário */
+  --color-subtle: var(--subtle); /* texto de apoio, placeholders */
+  --color-accent: var(--accent); /* laranja da marca (preenchimentos) */
+  --color-accent-strong: var(--accent-strong); /* hover do laranja */
+  --color-accent-ink: var(--accent-ink); /* texto em cima do laranja */
+  --color-accent-text: var(--accent-text); /* laranja usado como cor de texto */
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+}
+
+/*
+  Tema escuro: é o padrão, igual ao layout de referência.
+  Contraste: cada "camada" (fundo -> cartão -> campo) é um degrau mais clara,
+  e as bordas são visíveis o bastante para separar as caixas sem sombra.
+  Texto secundário (--muted) passa de 7:1 sobre o cartão.
+*/
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #0e1116;
+  --surface: #161b22;
+  --raised: #1f2630;
+  --line: #2a323d;
+  --line-strong: #3a4452;
+  --ink: #f2f4f7;
+  --muted: #9aa4b2;
+  --subtle: #7d8796;
+  --accent: #ff5a4e;
+  --accent-strong: #ff7167;
+  --accent-ink: #1f0604;
+  --accent-text: #ff6f64;
+  --success: #2fbf71;
+  --danger: #ff6b70;
+  --warning: #f5a524;
+  --info: #7cb3ff;
+  --elevation: 0 1px 0 rgb(255 255 255 / 0.03) inset;
+  --elevation-drop: drop-shadow(0 0 0 transparent);
+}
+
+/*
+  Tema claro do Figma: fundo cinza-claro, cartões brancos. O coral de texto
+  é mais escuro para ficar legível no branco.
+*/
+[data-theme="light"] {
+  color-scheme: light;
+  --canvas: #f3f4f6;
+  --surface: #ffffff;
+  --raised: #e8ebef;
+  --line: #d5dae0;
+  --line-strong: #aeb6c3;
+  --ink: #12161c;
+  --muted: #5d6775;
+  --subtle: #6b7482;
+  --accent: #ff5a4e;
+  --accent-strong: #f0453a;
+  --accent-ink: #1f0604;
+  --accent-text: #c4281d;
+  --success: #12754a;
+  --danger: #c81e1e;
+  --warning: #8f4a00;
+  --info: #1d4ed8;
+  --elevation: 0 1px 2px rgb(16 24 40 / 0.06), 0 2px 8px -2px rgb(16 24 40 / 0.08);
+  --elevation-drop: drop-shadow(0 1px 1px rgb(16 24 40 / 0.1)) drop-shadow(0 6px 12px rgb(16 24 40 / 0.07));
+}
+
+@layer base {
+  html {
+    background: var(--canvas);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    font-family: var(--font-sans);
+    background: var(--canvas);
+    font-feature-settings: "cv11", "ss01";
+  }
+  /* Títulos na fonte de destaque do Figma. */
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+  }
+  /* Preços, contadores e métricas com algarismos de mesma largura. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 35%, transparent);
+  }
+  /* Foco visível só para teclado (o mouse não ganha contorno ao clicar). */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* Quem pediu menos movimento no sistema operacional não vê animações. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /*
+    Largura do conteúdo. Cresce em telas grandes (monitores de 1440px ou
+    mais) para não sobrar uma faixa vazia enorme dos lados.
+  */
+  .page-container {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 640px) {
+    .page-container {
+      padding-inline: 1.5rem;
+    }
+  }
+  @media (min-width: 1536px) {
+    .page-container {
+      max-width: 92rem;
+      padding-inline: 2rem;
+    }
+  }
+
+  /* Elevação de cartões: sombra no tema claro, quase nada no escuro. */
+  .elevated {
+    box-shadow: var(--elevation);
+  }
+  /*
+    Para cartões recortados (formato de ingresso): box-shadow seria cortada
+    pela máscara, então a sombra vai como filtro no elemento de fora, e
+    acompanha o contorno do recorte.
+  */
+  .elevated-drop {
+    filter: var(--elevation-drop);
+  }
+
+  /*
+    Recorte de ingresso: dois semicírculos "mordendo" as laterais do cartão,
+    como o picote de um ingresso de papel. É feito com máscara, então o
+    fundo de trás aparece de verdade pelo recorte, em qualquer tema.
+    Use em um elemento com a variável --notch-y (altura do picote).
+  */
+  .ticket-notch {
+    --notch-r: 11px;
+    mask:
+      radial-gradient(circle var(--notch-r) at 0 var(--notch-y, 50%), transparent 98%, #000) left / 51% 100% no-repeat,
+      radial-gradient(circle var(--notch-r) at 100% var(--notch-y, 50%), transparent 98%, #000) right / 51% 100% no-repeat;
+  }
+  /* Linha tracejada do picote, entre os dois recortes. */
+  .ticket-perforation {
+    border-top: 2px dashed var(--line);
+  }
+  /* Brilho laranja do topo da página inicial. */
+  .hero-glow {
+    background: radial-gradient(50% 60% at 50% 0%, color-mix(in oklab, var(--accent) 9%, transparent), transparent 70%);
+  }
+  /* Rótulo curto em coral acima de títulos, como no Figma. */
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-text);
+  }
+  /* Traço vertical coral ao lado do título de cada seção. */
+  .section-rule {
+    display: inline-block;
+    width: 4px;
+    height: 1.4em;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+}
+
+/* Troca de slide do destaque (resposta a clique ou à passagem automática). */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 280ms ease-out;
+}
+
+/* Entrada do diálogo de confirmação (resposta a uma ação do usuário). */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+dialog[open] {
+  animation: dialog-in 160ms ease-out;
+}
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.6);
+  backdrop-filter: blur(2px);
+}
+
+/* Barra de progresso da foto atual na vitrine (dura o mesmo que a foto). */
+@keyframes progress {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+.animate-progress {
+  animation: progress 3000ms linear forwards;
+}
+
+/* Ingresso subindo da fenda na confirmação da compra (resposta ao pagamento). */
+@keyframes ticket-out {
+  from {
+    translate: -50% 40px;
+    rotate: 0deg;
+    opacity: 0;
+  }
+}
+.animate-ticket-out {
+  animation: ticket-out 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}

@@ -1,0 +1,61 @@
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Alert, Button, Field, Textarea } from "../../components/ui";
+
+interface Props {
+  open: boolean;
+  title: string;
+  description: ReactNode;
+  confirmLabel: string;
+  loading: boolean;
+  error: string | null;
+  onConfirm: (reason: string) => void;
+  onClose: () => void;
+}
+
+export default function ReasonDialog({ open, title, description, confirmLabel, loading, error, onConfirm, onClose }: Props) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (reason.trim()) onConfirm(reason.trim());
+  };
+
+  return (
+    <dialog
+      ref={ref}
+      onClose={onClose}
+      onClick={(e) => e.target === ref.current && !loading && onClose()}
+      aria-labelledby="reason-title"
+      className="m-auto w-[min(92vw,480px)] elevated rounded-2xl border border-line bg-surface p-0 text-ink shadow-2xl"
+    >
+      <form onSubmit={submit} className="space-y-4 p-6">
+        <div>
+          <h2 id="reason-title" className="text-lg font-bold">
+            {title}
+          </h2>
+          <div className="mt-1 text-sm text-muted">{description}</div>
+        </div>
+        <Field label="Motivo" hint="Obrigatório, até 500 caracteres.">
+          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={3} required autoFocus />
+        </Field>
+        {error && <Alert>{error}</Alert>}
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="ghost" onClick={onClose} disabled={loading}>
+            Voltar
+          </Button>
+          <Button type="submit" variant="danger" loading={loading} disabled={!reason.trim()}>
+            {confirmLabel}
+          </Button>
+        </div>
+      </form>
+    </dialog>
+  );
+}
