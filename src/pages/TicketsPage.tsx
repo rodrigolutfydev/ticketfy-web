@@ -2,14 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
-import { Expand, ShieldAlert, Ticket } from "lucide-react";
+import { Expand, Send, ShieldAlert, Ticket } from "lucide-react";
 import { listMyTickets } from "../api/endpoints";
 import type { TicketDetails } from "../api/types";
 import Pagination from "../components/Pagination";
+import TransferTicketDialog from "../components/TransferTicketDialog";
 import StatusBadge from "../components/StatusBadge";
 import { Empty, ErrorMessage } from "../components/StateMessage";
 import { TabPanel, Tabs, useTabParam } from "../components/Tabs";
-import { Button, ButtonLink, PageTitle, Skeleton } from "../components/ui";
+import { Alert, Button, ButtonLink, PageTitle, Skeleton } from "../components/ui";
 import { eventStamp, formatShortDate, isPast } from "../utils/format";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -29,6 +30,8 @@ export default function TicketsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Math.max(0, Number.parseInt(searchParams.get("page") ?? "0", 10) || 0);
   const [enlarged, setEnlarged] = useState<TicketDetails | null>(null);
+  const [transferring, setTransferring] = useState<TicketDetails | null>(null);
+  const [transferredTo, setTransferredTo] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["tickets", page],
@@ -50,6 +53,12 @@ export default function TicketsPage() {
           desconhecidos.
         </p>
       </div>
+
+      {transferredTo && (
+        <div className="mb-6">
+          <Alert type="success">Ingresso transferido para {transferredTo}. O código antigo não vale mais.</Alert>
+        </div>
+      )}
 
       <Tabs
         label="Filtrar ingressos"
@@ -83,7 +92,15 @@ export default function TicketsPage() {
         {tickets.length > 0 && (
           <div className="grid gap-5 xl:grid-cols-2">
             {tickets.map((ticket) => (
-              <TicketCard key={ticket.id} ticket={ticket} onEnlarge={() => setEnlarged(ticket)} />
+              <TicketCard
+                key={ticket.id}
+                ticket={ticket}
+                onEnlarge={() => setEnlarged(ticket)}
+                onTransfer={() => {
+                  setTransferredTo(null);
+                  setTransferring(ticket);
+                }}
+              />
             ))}
           </div>
         )}
@@ -101,6 +118,16 @@ export default function TicketsPage() {
       </TabPanel>
 
       {enlarged && <EnlargedQr ticket={enlarged} onClose={() => setEnlarged(null)} />}
+      {transferring && (
+        <TransferTicketDialog
+          ticket={transferring}
+          onClose={() => setTransferring(null)}
+          onTransferred={(email) => {
+            setTransferring(null);
+            setTransferredTo(email);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -111,7 +138,7 @@ export default function TicketsPage() {
 // "Carteira": cada ingresso parece um ingresso de papel. À esquerda os dados
 // do evento; no meio o picote; à direita o canhoto com o QR code.
 // No celular, o canhoto vai para baixo.
-function TicketCard({ ticket, onEnlarge }: { ticket: TicketDetails; onEnlarge: () => void }) {
+function TicketCard({ ticket, onEnlarge, onTransfer }: { ticket: TicketDetails; onEnlarge: () => void; onTransfer: () => void }) {
   const valid = ticket.status === "VALID";
   const stamp = ticket.status === "USED" ? "UTILIZADO" : ticket.status === "CANCELLED" ? "CANCELADO" : null;
   return (
@@ -152,6 +179,11 @@ function TicketCard({ ticket, onEnlarge }: { ticket: TicketDetails; onEnlarge: (
         {valid && (
           <Button variant="secondary" size="sm" onClick={onEnlarge}>
             <Expand size={15} aria-hidden /> Ampliar para a entrada
+          </Button>
+        )}
+        {ticket.transferable && (
+          <Button variant="ghost" size="sm" onClick={onTransfer}>
+            <Send size={15} aria-hidden /> Transferir
           </Button>
         )}
       </div>

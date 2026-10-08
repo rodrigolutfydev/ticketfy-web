@@ -137,7 +137,16 @@ export interface OrderDetails {
   expiresAt: string;
   createdAt: string | null;
   items: OrderItem[];
+  tickets: OrderTicket[];
   eventCancelled?: boolean;
+}
+
+export interface OrderTicket {
+  id: string;
+  ticketTypeName: string;
+  status: TicketStatus;
+  code: string | null;
+  transferred: boolean;
 }
 
 export interface OrderSummary {
@@ -170,6 +179,12 @@ export interface TicketDetails {
   ticketTypeName: string;
   usedAt: string | null;
   createdAt: string | null;
+  transferable: boolean;
+}
+
+export interface TicketTransferResult {
+  ticketId: string;
+  transferredAt: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -326,7 +341,7 @@ export interface OrganizerPayoutStatus {
   blockedBy: string | null;
 }
 
-export type AuditTargetType = "PAYOUT_ACCOUNT" | "PAYOUT" | "ORGANIZER" | "EVENT" | "TICKET_TYPE";
+export type AuditTargetType = "PAYOUT_ACCOUNT" | "PAYOUT" | "ORGANIZER" | "EVENT" | "TICKET_TYPE" | "TICKET" | "USER";
 
 export type AuditAction =
   | "PAYOUT_ACCOUNT_SAVED"
@@ -342,7 +357,10 @@ export type AuditAction =
   | "EVENT_FEATURED"
   | "EVENT_UNFEATURED"
   | "TICKET_TYPE_PRICE_CHANGED"
-  | "EVENT_CANCELLED";
+  | "EVENT_CANCELLED"
+  | "PASSWORD_CHANGED"
+  | "SESSION_REUSE_DETECTED"
+  | "TICKET_TRANSFERRED";
 
 export interface AuditEntry {
   id: string;

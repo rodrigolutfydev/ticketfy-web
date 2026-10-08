@@ -36,6 +36,7 @@ export default function OrderDetailPage() {
   if (error) return <ErrorMessage message={error.message} />;
   const o = order!;
   const actionError = cancel.error ?? refund.error;
+  const hasTransferred = (o.tickets ?? []).some((t) => t.transferred);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -96,10 +97,38 @@ export default function OrderDetailPage() {
         </div>
         <p className="mt-4 text-xs text-subtle">O preço de cada lote fica registrado no momento da compra e não muda depois.</p>
 
+        {(o.tickets ?? []).length > 0 && (
+          <div className="mt-6">
+            <h2 className="text-sm font-semibold text-ink">Ingressos</h2>
+            <ul className="mt-2 divide-y divide-line rounded-xl border border-line">
+              {o.tickets.map((ticket) => (
+                <li key={ticket.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium text-ink">{ticket.ticketTypeName}</p>
+                    {ticket.transferred ? (
+                      <p className="text-xs text-muted">Transferido para outra pessoa. O código fica só com quem recebeu.</p>
+                    ) : (
+                      <p className="tabular font-mono text-xs tracking-[0.12em] text-muted">{ticket.code}</p>
+                    )}
+                  </div>
+                  {ticket.transferred ? (
+                    <span className="rounded-full border border-line px-2.5 py-0.5 text-xs font-semibold text-muted">Transferido</span>
+                  ) : (
+                    <StatusBadge status={ticket.status} />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="mt-6 space-y-3">
           {actionError && <Alert>{actionError.message}</Alert>}
           {refund.isSuccess && <Alert type="success">Reembolso feito. Os ingressos foram cancelados.</Alert>}
           {o.status === "EXPIRED" && <Alert type="info">A reserva expirou e os ingressos voltaram à venda.</Alert>}
+          {o.status === "PAID" && !o.eventCancelled && hasTransferred && (
+            <Alert type="info">Este pedido tem ingresso transferido e não pode mais ser reembolsado.</Alert>
+          )}
 
           <div className="flex flex-wrap gap-3">
             {o.status === "PENDING" && (
@@ -121,7 +150,7 @@ export default function OrderDetailPage() {
             {o.status === "PAID" && (
               <>
                 <ButtonLink to="/tickets">Ver meus ingressos</ButtonLink>
-                {!o.eventCancelled && (
+                {!o.eventCancelled && !hasTransferred && (
                   <ConfirmButton
                     title="Pedir reembolso?"
                     description={`Os ${o.items.reduce((s, i) => s + i.quantity, 0)} ingresso(s) deste pedido serão cancelados e não poderão mais ser usados na entrada.`}

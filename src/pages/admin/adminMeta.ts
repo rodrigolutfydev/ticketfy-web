@@ -15,6 +15,9 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   EVENT_UNFEATURED: "Evento removido dos destaques",
   TICKET_TYPE_PRICE_CHANGED: "Preço de lote alterado",
   EVENT_CANCELLED: "Evento cancelado",
+  PASSWORD_CHANGED: "Senha alterada",
+  SESSION_REUSE_DETECTED: "Reutilização de sessão detectada",
+  TICKET_TRANSFERRED: "Ingresso transferido",
 };
 
 export const AUDIT_TARGET_LABELS: Record<AuditTargetType, string> = {
@@ -23,6 +26,8 @@ export const AUDIT_TARGET_LABELS: Record<AuditTargetType, string> = {
   ORGANIZER: "Organizador",
   EVENT: "Evento",
   TICKET_TYPE: "Lote",
+  TICKET: "Ingresso",
+  USER: "Usuário",
 };
 
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -6,7 +6,7 @@ import { ApiError, api, apiDownload, authApi } from "./client";
 import type {
   EventCancellationResult, EventDashboard, EventDetails, EventInput, EventOrderRow, EventSummary, OrderDetails, OrderStatus, OrderSummary,
   AdminPayout, AuditEntry, AuditTargetType, Balance, LedgerEntry, OrganizerDashboard, OrganizerPayoutStatus, Page, Payout,
-  PayoutAccount, PayoutAccountInput, PaymentDetails, TicketDetails, TicketTypeDetails, TicketTypeInput, TicketTypeSummary,
+  PayoutAccount, PayoutAccountInput, PaymentDetails, TicketDetails, TicketTransferResult, TicketTypeDetails, TicketTypeInput, TicketTypeSummary,
   TicketTypeUpdate, TokenResponse, UserDetails, UserProfile,
 } from "./types";
 
@@ -145,3 +145,5 @@ export const payOrder = (id: string) => api.post<PaymentDetails>(`/orders/${seg(
 export const listMyTickets = (page = 0, size = 30) =>
   api.get<Page<TicketDetails>>(`/tickets/me?page=${page}&size=${size}&sort=createdAt,desc`);
 export const checkIn = (code: string) => api.post<TicketDetails>(`/tickets/${seg(code)}/check-in`);
+export const transferTicket = (id: string, recipientEmail: string, password: string) =>
+  api.post<TicketTransferResult>(`/tickets/${seg(id)}/transfer`, { recipientEmail, password });
