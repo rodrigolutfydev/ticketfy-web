@@ -1,163 +1,256 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { configureClient } from "../api/client";
+import {
+  adoptSession,
+  clearSession,
+  configureClient,
+  getSession,
+  refreshSession,
+  sendLogout,
+  setSession,
+  type Session,
+} from "../api/client";
+import type { TokenResponse } from "../api/types";
 
-// Guarda a sessão: só o token JWT. Quem é o usuário e qual o papel dele
-// vêm sempre da API (GET /users/me), nunca de uma marcação local, porque
-// qualquer coisa guardada no navegador pode ser editada pelo usuário.
-//
-// Camadas de segurança da sessão:
-// 1. Token no sessionStorage: some ao fechar a aba e não é compartilhado
-//    entre abas (um link aberto em outra aba começa deslogado).
-// 2. Formato e expiração conferidos antes de aceitar o token.
-// 3. Expiração conferida de novo a cada 30 segundos.
-// 4. Inatividade: 30 minutos sem mexer na página encerram a sessão
-//    (protege quem esquece o computador aberto).
-// 5. Qualquer 401 da API encerra a sessão.
-// 6. Cache das consultas limpo no login e no logout: os dados de um
-//    usuário nunca aparecem para o próximo.
-//
-// Sobre XSS: um script malicioso rodando na página conseguiria ler o
-// sessionStorage. A defesa contra isso está em outro lugar: a
-// Content-Security-Policy (vite.config.ts) e o fato de o React escapar
-// todo texto exibido.
-
-const TOKEN_KEY = "ticketfy.token";
+const HAS_SESSION_KEY = "ticketfy.hasSession";
+const ACTIVITY_KEY = "ticketfy.lastActivity";
+const CHANNEL_NAME = "ticketfy-auth";
 const IDLE_LIMIT_MS = 30 * 60_000;
 const CHECK_INTERVAL_MS = 30_000;
+const ACTIVITY_WRITE_MS = 15_000;
+const PROACTIVE_REFRESH_MS = 60_000;
 
+export type AuthStatus = "checking" | "authenticated" | "anonymous";
 export type SignOutReason = "manual" | "expired" | "idle" | "unauthorized";
 
-// Um JWT tem 3 partes em base64url separadas por ponto: cabeçalho.dados.assinatura.
-const JWT_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+const SIGN_OUT_REASONS: readonly SignOutReason[] = ["manual", "expired", "idle", "unauthorized"];
 
-// Lê o campo "exp" (expiração, em segundos) de dentro do token.
-// Isto NÃO verifica a assinatura (só a API sabe a chave); serve apenas
-// para não continuar usando um token que já sabemos estar vencido.
-function decodeExp(token: string): number | null {
+type AuthMessage =
+  | { type: "login"; session: Session }
+  | { type: "refreshed"; session: Session }
+  | { type: "logout"; reason: SignOutReason };
+
+function readStorage(key: string): string | null {
   try {
-    const part = token.split(".")[1];
-    const base64 = part.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(part.length / 4) * 4, "=");
-    const exp = JSON.parse(atob(base64)).exp;
-    return typeof exp === "number" ? exp : null;
+    return localStorage.getItem(key);
   } catch {
     return null;
   }
 }
 
-function isUsable(token: string | null): token is string {
-  if (!token || token.length > 4096 || !JWT_PATTERN.test(token)) return false;
-  const exp = decodeExp(token);
-  // Margem de 10 s: não manda um token que vai vencer no meio da requisição.
-  return exp !== null && exp * 1000 > Date.now() + 10_000;
+function writeStorage(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    return;
+  }
 }
 
-function readStoredToken() {
+function removeStorage(key: string) {
   try {
-    const token = sessionStorage.getItem(TOKEN_KEY);
-    if (isUsable(token)) return token;
-    sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(key);
   } catch {
-    // sessionStorage pode estar bloqueado (modo privado restrito): segue deslogado.
+    return;
   }
-  return null;
+}
+
+function storedActivity(): number {
+  const value = Number(readStorage(ACTIVITY_KEY));
+  return Number.isFinite(value) && value > 0 && value <= Date.now() + 60_000 ? value : 0;
 }
 
 interface AuthContextValue {
-  token: string | null;
+  status: AuthStatus;
   isAuthenticated: boolean;
-  // Momento (em ms) em que o token vence, lido do próprio token. Só para exibição.
+  isChecking: boolean;
   expiresAt: number | null;
-  // Motivo do último logout automático, para a tela de login explicar o que houve.
   lastSignOutReason: SignOutReason | null;
-  signIn: (token: string) => void;
-  signOut: (reason?: SignOutReason) => void;
+  signIn: (data: TokenResponse) => void;
+  replaceSession: (data: TokenResponse) => void;
+  signOut: (reason?: SignOutReason, options?: { notifyServer?: boolean }) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const [token, setToken] = useState<string | null>(readStoredToken);
+  const [status, setStatus] = useState<AuthStatus>(() => (readStorage(HAS_SESSION_KEY) ? "checking" : "anonymous"));
+  const [session, setSessionState] = useState<Session | null>(null);
   const [lastSignOutReason, setLastSignOutReason] = useState<SignOutReason | null>(null);
-  // useRef guarda um valor que muda sem redesenhar a tela (ideal para "última atividade").
-  const lastActivity = useRef(Date.now());
+  const channel = useRef<BroadcastChannel | null>(null);
+  const localActivity = useRef(0);
+  const lastActivityWrite = useRef(0);
+  const lastRefreshAt = useRef(0);
 
-  const signOut = useCallback(
-    (reason: SignOutReason = "manual") => {
-      try {
-        sessionStorage.removeItem(TOKEN_KEY);
-      } catch {
-        /* nada a fazer */
-      }
-      setToken(null);
+  const lastActivity = useCallback(() => Math.max(localActivity.current, storedActivity()), []);
+
+  const markActivity = useCallback((force = false) => {
+    const now = Date.now();
+    localActivity.current = now;
+    if (!force && now - lastActivityWrite.current < ACTIVITY_WRITE_MS) return;
+    lastActivityWrite.current = now;
+    writeStorage(ACTIVITY_KEY, String(now));
+  }, []);
+
+  const broadcast = useCallback((message: AuthMessage) => {
+    try {
+      channel.current?.postMessage(message);
+    } catch {
+      return;
+    }
+  }, []);
+
+  const applySession = useCallback((next: Session) => {
+    lastRefreshAt.current = Date.now();
+    writeStorage(HAS_SESSION_KEY, "1");
+    setSessionState(next);
+    setStatus("authenticated");
+  }, []);
+
+  const finish = useCallback(
+    (reason: SignOutReason) => {
+      clearSession();
+      removeStorage(HAS_SESSION_KEY);
+      setSessionState(null);
+      setStatus("anonymous");
       setLastSignOutReason(reason === "manual" ? null : reason);
       queryClient.clear();
     },
     [queryClient]
   );
 
+  const signOut = useCallback(
+    (reason: SignOutReason = "manual", options: { notifyServer?: boolean } = {}) => {
+      if (options.notifyServer ?? true) sendLogout();
+      finish(reason);
+      broadcast({ type: "logout", reason });
+    },
+    [finish, broadcast]
+  );
+
   const signIn = useCallback(
-    (newToken: string) => {
-      // Recusa qualquer coisa que não pareça um JWT válido e vigente.
-      if (!isUsable(newToken)) {
+    (data: TokenResponse) => {
+      const next = setSession(data);
+      if (!next) {
         signOut("unauthorized");
         return;
       }
       queryClient.clear();
-      try {
-        sessionStorage.setItem(TOKEN_KEY, newToken);
-      } catch {
-        /* sem storage: a sessão vale só enquanto a página estiver aberta */
-      }
-      lastActivity.current = Date.now();
+      markActivity(true);
       setLastSignOutReason(null);
-      setToken(newToken);
+      applySession(next);
+      broadcast({ type: "login", session: next });
     },
-    [queryClient, signOut]
+    [queryClient, markActivity, applySession, broadcast, signOut]
   );
 
-  // Fica no corpo do componente (e não num useEffect) para que a primeira
-  // requisição das páginas filhas já saia com o token certo.
-  configureClient({ getToken: () => token, onUnauthorized: () => signOut("unauthorized") });
+  const replaceSession = useCallback(
+    (data: TokenResponse) => {
+      const next = setSession(data);
+      if (!next) {
+        signOut("unauthorized");
+        return;
+      }
+      applySession(next);
+      broadcast({ type: "refreshed", session: next });
+    },
+    [applySession, broadcast, signOut]
+  );
 
-  // Registra atividade do usuário (clique, tecla, toque, rolagem).
+  configureClient({
+    onRefreshed: (next) => {
+      applySession(next);
+      broadcast({ type: "refreshed", session: next });
+    },
+    onSessionEnded: (reason) => {
+      finish(reason);
+      broadcast({ type: "logout", reason });
+    },
+  });
+
   useEffect(() => {
-    if (!token) return;
-    const touch = () => {
-      lastActivity.current = Date.now();
+    if (typeof BroadcastChannel === "undefined") return;
+    const current = new BroadcastChannel(CHANNEL_NAME);
+    channel.current = current;
+    current.onmessage = (event: MessageEvent) => {
+      const message = event.data as Partial<AuthMessage> | null;
+      if (!message || typeof message !== "object") return;
+      if (message.type === "login" || message.type === "refreshed") {
+        const next = adoptSession(message.session);
+        if (!next) return;
+        if (message.type === "login") {
+          queryClient.clear();
+          setLastSignOutReason(null);
+        }
+        applySession(next);
+      } else if (message.type === "logout") {
+        const reason = SIGN_OUT_REASONS.includes(message.reason as SignOutReason) ? (message.reason as SignOutReason) : "unauthorized";
+        finish(reason);
+      }
     };
+    return () => {
+      current.close();
+      if (channel.current === current) channel.current = null;
+    };
+  }, [queryClient, applySession, finish]);
+
+  useEffect(() => {
+    if (!readStorage(HAS_SESSION_KEY) || getSession()) return;
+    const last = storedActivity();
+    if (last > 0 && Date.now() - last > IDLE_LIMIT_MS) {
+      sendLogout();
+      finish("idle");
+      return;
+    }
+    markActivity(true);
+    refreshSession().catch(() => {
+      if (!getSession()) setStatus("anonymous");
+    });
+  }, [finish, markActivity]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const touch = () => markActivity();
     const events = ["pointerdown", "keydown", "scroll", "touchstart"] as const;
     events.forEach((name) => window.addEventListener(name, touch, { passive: true }));
     return () => events.forEach((name) => window.removeEventListener(name, touch));
-  }, [token]);
+  }, [status, markActivity]);
 
-  // Verificação periódica: token vencido ou usuário inativo há muito tempo.
   useEffect(() => {
-    if (!token) return;
+    if (status !== "authenticated") return;
     const check = () => {
-      if (!isUsable(token)) signOut("expired");
-      else if (Date.now() - lastActivity.current > IDLE_LIMIT_MS) signOut("idle");
+      if (getSession() && Date.now() - lastActivity() > IDLE_LIMIT_MS) signOut("idle");
     };
     const interval = setInterval(check, CHECK_INTERVAL_MS);
-    // Ao voltar para a aba depois de um tempo, confere na hora (o setInterval
-    // fica mais lento em abas escondidas).
     const onVisible = () => document.visibilityState === "visible" && check();
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [token, signOut]);
+  }, [status, lastActivity, signOut]);
 
-  // useMemo evita criar um objeto novo a cada render (o que redesenharia
-  // todos os componentes que usam useAuth sem necessidade).
+  useEffect(() => {
+    if (!session) return;
+    const delay = Math.max(session.expiresAt - Date.now() - PROACTIVE_REFRESH_MS, 0);
+    const timer = setTimeout(() => {
+      if (lastActivity() > lastRefreshAt.current) refreshSession().catch(() => undefined);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [session, lastActivity]);
+
   const value = useMemo(
-    () => {
-      const exp = token ? decodeExp(token) : null;
-      return { token, isAuthenticated: token !== null, expiresAt: exp ? exp * 1000 : null, lastSignOutReason, signIn, signOut };
-    },
-    [token, lastSignOutReason, signIn, signOut]
+    () => ({
+      status,
+      isAuthenticated: status === "authenticated",
+      isChecking: status === "checking",
+      expiresAt: session?.expiresAt ?? null,
+      lastSignOutReason,
+      signIn,
+      replaceSession,
+      signOut,
+    }),
+    [status, session, lastSignOutReason, signIn, replaceSession, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

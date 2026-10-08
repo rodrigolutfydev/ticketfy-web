@@ -13,7 +13,7 @@ import Logo from "./Logo";
 import { ButtonLink } from "./ui";
 
 export default function Layout() {
-  const { isAuthenticated, signOut } = useAuth();
+  const { isAuthenticated, isChecking, signOut } = useAuth();
   const { me, isOrganizer, isAdmin } = useMe();
   const navigate = useNavigate();
   const location = useLocation();
@@ -117,7 +117,7 @@ export default function Layout() {
 
           <div className="hidden items-center gap-3 md:flex">
             <ThemeToggle />
-            {isAuthenticated ? (
+            {isChecking ? null : isAuthenticated ? (
               <UserMenu name={firstName} fullName={me?.name} avatarUrl={me?.avatarUrl} onSignOut={handleSignOut} />
             ) : (
               <ButtonLink to="/login" variant="secondary" size="sm" className="h-10 px-4">
@@ -150,7 +150,7 @@ export default function Layout() {
                   {link.label}
                 </NavLink>
               ))}
-              {isAuthenticated ? (
+              {isChecking ? null : isAuthenticated ? (
                 <>
                   <NavLink to="/account" className={mobileLinkClass}>
                     Minha conta

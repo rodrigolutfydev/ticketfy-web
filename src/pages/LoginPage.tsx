@@ -43,7 +43,7 @@ export default function LoginPage() {
     onSuccess: (data) => {
       loginThrottle.registerSuccess();
       setPassword(""); // não deixa a senha parada na memória do componente
-      signIn(data.token);
+      signIn(data);
       navigate(from, { replace: true });
     },
     onError: (error) => {
@@ -74,7 +74,9 @@ export default function LoginPage() {
   const errorText =
     mutation.error instanceof ApiError && (mutation.error.status === 400 || mutation.error.status === 401)
       ? "E-mail ou senha incorretos."
-      : mutation.error?.message;
+      : mutation.error instanceof ApiError && mutation.error.status === 403
+        ? "Não foi possível entrar a partir desta página. Recarregue e tente de novo."
+        : mutation.error?.message;
 
   const locked = lockSeconds > 0;
 

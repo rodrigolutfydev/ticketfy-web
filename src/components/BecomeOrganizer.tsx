@@ -2,21 +2,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, ScanLine, Layers } from "lucide-react";
 import { becomeOrganizer } from "../api/endpoints";
 import { ApiError } from "../api/client";
-import { useAuth } from "../auth/AuthContext";
 import { Alert, Button } from "./ui";
 
-// Promove a conta a organizador. A API devolve um token novo (com o papel
-// ORGANIZER dentro), que substitui o atual; o signIn limpa o cache e o
-// perfil (GET /users/me) é buscado de novo.
 export default function BecomeOrganizer() {
-  const { signIn } = useAuth();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: becomeOrganizer,
-    onSuccess: (data) => signIn(data.token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
     onError: (error) => {
-      // 409 = a conta já é organizadora: só recarrega o perfil.
       if (error instanceof ApiError && error.status === 409) {
         queryClient.invalidateQueries({ queryKey: ["me"] });
       }

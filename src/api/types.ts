@@ -10,6 +10,7 @@ export interface Page<T> {
 
 export interface TokenResponse {
   token: string;
+  expiresIn: number;
 }
 
 export interface UserDetails {

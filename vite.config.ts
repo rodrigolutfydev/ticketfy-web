@@ -5,9 +5,7 @@
 // 1. Content-Security-Policy (CSP): uma lista do que o navegador pode
 //    carregar. Se um atacante conseguir injetar um <script> na página
 //    (XSS), o navegador se recusa a executá-lo, porque só scripts do
-//    próprio site são permitidos. Também limita para onde a página pode
-//    mandar dados (só para a API), então um script malicioso não
-//    conseguiria enviar o token para um servidor de fora.
+//    próprio site são permitidos.
 //
 // 2. Cabeçalhos HTTP de segurança: proteções que só funcionam como
 //    cabeçalho (não como <meta>), como impedir que o site seja aberto
@@ -19,7 +17,7 @@
 // 3. Checagem da URL da API: o build falha se a API de produção não for
 //    https, para nunca publicar um site que manda senha sem criptografia.
 
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin, type ProxyOptions } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -55,6 +53,58 @@ const securityHeaders = {
   "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   "Cross-Origin-Opener-Policy": "same-origin", // outra aba aberta por link não controla esta
 };
+
+const DEV_AUTH_TARGET = "http://localhost:8080";
+
+const DEV_AUTH_ROUTES: Record<string, string> = {
+  "/api/auth/login": "POST",
+  "/api/auth/refresh": "POST",
+  "/api/auth/logout": "POST",
+  "/api/auth/logout-all": "POST",
+  "/api/users/me/password": "PATCH",
+};
+
+const DEV_AUTH_REQUEST_HEADERS = new Set([
+  "host", "connection", "content-length", "transfer-encoding",
+  "cookie", "content-type", "authorization", "origin", "x-ticketfy-auth", "x-request-id",
+]);
+
+const DEV_AUTH_RESPONSE_HEADERS = new Set([
+  "content-length", "transfer-encoding", "content-type", "set-cookie", "retry-after", "x-request-id",
+]);
+
+function devAuthProxy(): ProxyOptions {
+  return {
+    target: DEV_AUTH_TARGET,
+    changeOrigin: true,
+    rewrite: (path) => path.split("?")[0].replace(/^\/api/, ""),
+    bypass(req, res) {
+      const path = (req.url ?? "").split("?")[0];
+      const method = DEV_AUTH_ROUTES[path];
+      const rejection =
+        !method ? 404 : req.method !== method ? 405 : req.headers.origin !== `http://${req.headers.host}` ? 403 : null;
+      if (rejection === null || !res) return;
+      res.statusCode = rejection;
+      res.setHeader("Cache-Control", "no-store");
+      if (rejection === 405 && method) res.setHeader("Allow", method);
+      res.end();
+      return req.url ?? "";
+    },
+    configure(proxy) {
+      proxy.on("proxyReq", (proxyReq) => {
+        for (const name of proxyReq.getHeaderNames()) {
+          if (!DEV_AUTH_REQUEST_HEADERS.has(name.toLowerCase())) proxyReq.removeHeader(name);
+        }
+      });
+      proxy.on("proxyRes", (proxyRes) => {
+        for (const name of Object.keys(proxyRes.headers)) {
+          if (!DEV_AUTH_RESPONSE_HEADERS.has(name.toLowerCase())) delete proxyRes.headers[name];
+        }
+        proxyRes.headers["cache-control"] = "no-store";
+      });
+    },
+  };
+}
 
 function securityPlugin(apiOrigin: string): Plugin {
   const headerCsp = buildCsp(apiOrigin, { forHeader: true });
@@ -99,7 +149,12 @@ export default defineConfig(({ command, mode }) => {
   return {
     plugins: [react(), tailwindcss(), securityPlugin(apiOrigin)],
     // Em dev, só os cabeçalhos que não atrapalham o recarregamento automático.
-    server: { port: 5173, strictPort: true, headers: securityHeaders },
+    server: {
+      port: 5173,
+      strictPort: true,
+      headers: securityHeaders,
+      proxy: { "^/api/(auth|users/me/password)(/|$|\\?)": devAuthProxy() },
+    },
     // "npm run preview" serve o build igual à produção, com CSP completa.
     preview: {
       port: 4173,

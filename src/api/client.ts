@@ -1,26 +1,28 @@
-// Ponto único de comunicação com a API Spring Boot.
-// Toda requisição passa por aqui: endereço da API, token, tempo limite e erros.
-// Se algo precisa valer para TODAS as chamadas (ex.: um cabeçalho novo),
-// é aqui que muda, e não em cada tela.
-
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
+const AUTH_BASE = "/api";
+const AUTH_HEADER = "X-Ticketfy-Auth";
+const REFRESH_LOCK = "ticketfy-refresh";
 
-// Requisição que passar disso é cancelada. Sem limite, uma API travada
-// deixaria o botão "carregando" para sempre.
 const TIMEOUT_MS = 15_000;
-
-// Mensagens de erro vindas da API são exibidas na tela. Limitar o tamanho
-// evita que uma resposta enorme (ex.: stack trace) quebre o layout.
 const MAX_MESSAGE_LENGTH = 300;
+const MIN_VALIDITY_MS = 10_000;
+const MAX_EXPIRES_IN_SECONDS = 86_400;
+
+const JWT_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+
+const AUTH_ROUTES: Record<string, string> = {
+  "/auth/login": "POST",
+  "/auth/refresh": "POST",
+  "/auth/logout": "POST",
+  "/auth/logout-all": "POST",
+  "/users/me/password": "PATCH",
+};
 
 export type FieldError = { field: string; message: string };
 
-// Erro padronizado: as telas olham "status" para decidir o que mostrar
-// (401 = faça login, 403 = sem permissão, 409 = conflito...).
 export class ApiError extends Error {
   status: number;
   fieldErrors: FieldError[];
-  // Segundos até poder tentar de novo (cabeçalho Retry-After do 429).
   retryAfter: number | null;
   problemType: string | null;
   requestId: string | null;
@@ -43,21 +45,98 @@ export class ApiError extends Error {
   }
 }
 
-// Retry-After vem em segundos. Valores absurdos são ignorados.
-function parseRetryAfter(value: string | null): number | null {
-  if (!value || !/^\d{1,5}$/.test(value.trim())) return null;
-  const seconds = Number(value.trim());
-  return seconds > 0 && seconds <= 86_400 ? seconds : null;
+export interface Session {
+  token: string;
+  expiresAt: number;
 }
 
-// O AuthProvider registra aqui como ler o token e o que fazer num 401.
-// (O cliente não importa o AuthContext direto para não criar dependência circular.)
-let getToken: () => string | null = () => null;
-let onUnauthorized: () => void = () => {};
+export type SessionEndReason = "expired" | "unauthorized";
 
-export function configureClient(options: { getToken: () => string | null; onUnauthorized: () => void }) {
-  getToken = options.getToken;
-  onUnauthorized = options.onUnauthorized;
+interface ClientHooks {
+  onRefreshed: (session: Session) => void;
+  onSessionEnded: (reason: SessionEndReason) => void;
+}
+
+let session: Session | null = null;
+let epoch = 0;
+let refreshing: Promise<boolean> | null = null;
+let hooks: ClientHooks = { onRefreshed: () => {}, onSessionEnded: () => {} };
+
+export function configureClient(options: Partial<ClientHooks>) {
+  hooks = { ...hooks, ...options };
+}
+
+export function getSession(): Session | null {
+  return session;
+}
+
+export function setSession(data: { token: unknown; expiresIn: unknown }): Session | null {
+  const { token, expiresIn } = data;
+  if (typeof token !== "string" || token.length > 4096 || !JWT_PATTERN.test(token)) return null;
+  if (typeof expiresIn !== "number" || !Number.isFinite(expiresIn) || expiresIn <= 0 || expiresIn > MAX_EXPIRES_IN_SECONDS) return null;
+  session = { token, expiresAt: Date.now() + expiresIn * 1000 };
+  return session;
+}
+
+export function adoptSession(value: unknown): Session | null {
+  if (typeof value !== "object" || value === null) return null;
+  const { token, expiresAt } = value as Record<string, unknown>;
+  if (typeof token !== "string" || token.length > 4096 || !JWT_PATTERN.test(token)) return null;
+  if (typeof expiresAt !== "number" || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) return null;
+  if (expiresAt > Date.now() + MAX_EXPIRES_IN_SECONDS * 1000) return null;
+  session = { token, expiresAt };
+  return session;
+}
+
+export function clearSession() {
+  session = null;
+  epoch += 1;
+}
+
+function isFresh(current: Session | null): current is Session {
+  return current !== null && current.expiresAt - Date.now() > MIN_VALIDITY_MS;
+}
+
+function endSession(reason: SessionEndReason) {
+  session = null;
+  hooks.onSessionEnded(reason);
+}
+
+export function refreshSession(): Promise<boolean> {
+  if (!refreshing) {
+    const startedWith = session?.token ?? null;
+    refreshing = withRefreshLock(() => performRefresh(startedWith)).finally(() => {
+      refreshing = null;
+    });
+  }
+  return refreshing;
+}
+
+async function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+  if (!locks || typeof locks.request !== "function") return task();
+  return locks.request(REFRESH_LOCK, { mode: "exclusive" }, task) as Promise<T>;
+}
+
+async function performRefresh(startedWith: string | null): Promise<boolean> {
+  if (isFresh(session) && session.token !== startedWith) return true;
+  const startedEpoch = epoch;
+  const response = await authFetch("POST", "/auth/refresh", {});
+  if (startedEpoch !== epoch) return false;
+  if (response.ok) {
+    const next = setSession((await readJson(response)) ?? {});
+    if (!next) {
+      endSession("unauthorized");
+      return false;
+    }
+    hooks.onRefreshed(next);
+    return true;
+  }
+  if (response.status === 401 || response.status === 403) {
+    endSession("expired");
+    return false;
+  }
+  throw await toApiError(response);
 }
 
 interface RequestOptions {
@@ -79,39 +158,92 @@ export async function apiDownload(path: string): Promise<{ blob: Blob; filename:
 }
 
 async function send(method: string, path: string, options: RequestOptions, accept: string): Promise<Response> {
-  // Defesa extra: o caminho tem que ser uma rota da própria API.
-  // Os IDs já chegam codificados pelos endpoints (veja seg() em endpoints.ts),
-  // então ".." ou "//" aqui só apareceriam por erro de programação.
   if (!path.startsWith("/") || path.startsWith("//") || path.includes("..")) {
     throw new ApiError(0, "Rota inválida.");
   }
 
+  let response = await sendOnce(method, path, options, accept);
+  if (response.used !== null && response.result.status === 401) {
+    const current = getSession();
+    const renewed = current !== null && current.token !== response.used ? true : await refreshSession();
+    if (!renewed) throw await toApiError(response.result);
+    response = await sendOnce(method, path, options, accept);
+  }
+
+  if (!response.result.ok) throw await toApiError(response.result);
+  return response.result;
+}
+
+async function sendOnce(
+  method: string,
+  path: string,
+  options: RequestOptions,
+  accept: string
+): Promise<{ result: Response; used: string | null }> {
   const headers: Record<string, string> = { Accept: accept, ...options.headers };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
 
-  const token = getToken();
+  const token = session?.token ?? null;
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  // AbortController permite cancelar o fetch quando o tempo estoura.
+  const result = await timedFetch(`${API_URL}${path}`, {
+    method,
+    headers,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    credentials: "omit",
+    cache: token ? "no-store" : "default",
+  });
+  return { result, used: token };
+}
+
+interface AuthOptions {
+  body?: unknown;
+  authenticated?: boolean;
+  keepalive?: boolean;
+}
+
+async function authFetch(method: string, path: string, options: AuthOptions): Promise<Response> {
+  if (AUTH_ROUTES[path] !== method) throw new ApiError(0, "Rota inválida.");
+
+  const headers: Record<string, string> = { Accept: "application/json", [AUTH_HEADER]: "1" };
+  if (options.body !== undefined) headers["Content-Type"] = "application/json";
+  if (options.authenticated && session) headers["Authorization"] = `Bearer ${session.token}`;
+
+  return timedFetch(`${AUTH_BASE}${path}`, {
+    method,
+    headers,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    credentials: "same-origin",
+    cache: "no-store",
+    keepalive: options.keepalive ?? false,
+  });
+}
+
+export async function authRequest<T>(method: string, path: string, options: AuthOptions = {}): Promise<T> {
+  if (options.authenticated) {
+    if (!isFresh(session)) {
+      const renewed = await refreshSession();
+      if (!renewed || !isFresh(session)) throw new ApiError(401, defaultMessage(401));
+    }
+  }
+  const response = await authFetch(method, path, options);
+  if (!response.ok) {
+    if (options.authenticated && response.status === 401) endSession("unauthorized");
+    throw await toApiError(response);
+  }
+  if (response.status === 204) return undefined as T;
+  return (await readJson(response)) as T;
+}
+
+export function sendLogout() {
+  authFetch("POST", "/auth/logout", { keepalive: true }).catch(() => {});
+}
+
+async function timedFetch(url: string, init: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-  let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, {
-      method,
-      headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-      signal: controller.signal,
-      // O token vai no cabeçalho Authorization, nunca em cookie. Com
-      // "omit", o navegador não anexa cookies de jeito nenhum, o que
-      // elimina a classe de ataque CSRF (outro site disparando ações
-      // em nome do usuário usando os cookies dele).
-      credentials: "omit",
-      // Dados de usuário logado não ficam guardados no cache HTTP do navegador
-      // (num computador compartilhado, o próximo usuário não os veria).
-      cache: token ? "no-store" : "default",
-    });
+    return await fetch(url, { ...init, signal: controller.signal });
   } catch (error) {
     const timedOut = error instanceof DOMException && error.name === "AbortError";
     throw new ApiError(
@@ -121,36 +253,32 @@ async function send(method: string, path: string, options: RequestOptions, accep
   } finally {
     clearTimeout(timer);
   }
+}
 
-  if (response.status === 401 && token) {
-    // Token vencido, inválido ou revogado: encerra a sessão local.
-    onUnauthorized();
-  }
+async function toApiError(response: Response): Promise<ApiError> {
+  const body = await readJson(response);
+  const fieldErrors: FieldError[] = Array.isArray(body?.errors) ? body.errors.filter(isFieldError).slice(0, 10) : [];
+  const detail = typeof body?.detail === "string" && body.detail.trim() ? body.detail.trim() : null;
+  const raw =
+    fieldErrors.length > 0
+      ? fieldErrors.map((e) => `${e.field}: ${e.message}`).join(" · ")
+      : detail ?? defaultMessage(response.status);
+  const requestId = parseRequestId(response.headers.get("X-Request-Id")) ?? parseRequestId(body?.requestId);
+  const message = response.status >= 500 && requestId ? `${truncate(raw)} Código do erro: ${requestId}` : truncate(raw);
+  return new ApiError(
+    response.status,
+    message,
+    fieldErrors,
+    parseRetryAfter(response.headers.get("Retry-After")),
+    problemSlug(body?.type),
+    requestId
+  );
+}
 
-  if (!response.ok) {
-    const body = await readJson(response);
-    const fieldErrors: FieldError[] = Array.isArray(body?.errors)
-      ? body.errors.filter(isFieldError).slice(0, 10)
-      : [];
-    const detail = typeof body?.detail === "string" && body.detail.trim() ? body.detail.trim() : null;
-    const raw =
-      fieldErrors.length > 0
-        ? fieldErrors.map((e) => `${e.field}: ${e.message}`).join(" · ")
-        : detail ?? defaultMessage(response.status);
-    const requestId = parseRequestId(response.headers.get("X-Request-Id")) ?? parseRequestId(body?.requestId);
-    const message =
-      response.status >= 500 && requestId ? `${truncate(raw)} Código do erro: ${requestId}` : truncate(raw);
-    throw new ApiError(
-      response.status,
-      message,
-      fieldErrors,
-      parseRetryAfter(response.headers.get("Retry-After")),
-      problemSlug(body?.type),
-      requestId
-    );
-  }
-
-  return response;
+function parseRetryAfter(value: string | null): number | null {
+  if (!value || !/^\d{1,5}$/.test(value.trim())) return null;
+  const seconds = Number(value.trim());
+  return seconds > 0 && seconds <= 86_400 ? seconds : null;
 }
 
 function parseRequestId(value: unknown): string | null {
@@ -182,7 +310,6 @@ export function hasUnmappedError(error: unknown, fields: readonly string[]): boo
   return error.fieldErrors.some((e) => !fields.includes(e.field));
 }
 
-// Lê JSON sem explodir: corpo vazio ou que não é JSON vira null.
 async function readJson(response: Response) {
   const text = await response.text().catch(() => "");
   if (!text) return null;
@@ -208,7 +335,6 @@ function defaultMessage(status: number) {
   return `Erro ${status}`;
 }
 
-// Atalhos por método HTTP, usados em endpoints.ts.
 export const api = {
   get: <T>(path: string) => apiRequest<T>("GET", path),
   post: <T>(path: string, body?: unknown, headers?: Record<string, string>) =>
@@ -216,4 +342,11 @@ export const api = {
   put: <T>(path: string, body: unknown) => apiRequest<T>("PUT", path, { body }),
   patch: <T>(path: string, body: unknown) => apiRequest<T>("PATCH", path, { body }),
   delete: <T>(path: string) => apiRequest<T>("DELETE", path),
+};
+
+export const authApi = {
+  post: <T>(path: string, body?: unknown, options: { authenticated?: boolean } = {}) =>
+    authRequest<T>("POST", path, { body, ...options }),
+  patch: <T>(path: string, body: unknown, options: { authenticated?: boolean } = {}) =>
+    authRequest<T>("PATCH", path, { body, ...options }),
 };

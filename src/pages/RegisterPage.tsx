@@ -27,7 +27,7 @@ export default function RegisterPage() {
     },
     onSuccess: (data) => {
       setForm({ name: "", email: "", password: "", confirm: "" });
-      signIn(data.token);
+      signIn(data);
       navigate(from, { replace: true });
     },
   });

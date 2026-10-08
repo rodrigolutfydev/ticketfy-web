@@ -2,7 +2,7 @@
 // chamam getEvent(id), createOrder(...) etc. Se uma rota mudar no backend,
 // só este arquivo muda.
 
-import { ApiError, api, apiDownload } from "./client";
+import { ApiError, api, apiDownload, authApi } from "./client";
 import type {
   EventCancellationResult, EventDashboard, EventDetails, EventInput, EventOrderRow, EventSummary, OrderDetails, OrderStatus, OrderSummary,
   AdminPayout, AuditEntry, AuditTargetType, Balance, LedgerEntry, OrganizerDashboard, OrganizerPayoutStatus, Page, Payout,
@@ -18,8 +18,11 @@ const seg = (value: string) => encodeURIComponent(value);
 // Usuários e autenticação
 export const register = (data: { name: string; email: string; password: string }) =>
   api.post<UserDetails>("/users", data);
-export const login = (data: { email: string; password: string }) => api.post<TokenResponse>("/login", data);
-export const becomeOrganizer = () => api.post<TokenResponse>("/users/me/organizer");
+export const login = (data: { email: string; password: string }) => authApi.post<TokenResponse>("/auth/login", data);
+export const logoutAll = () => authApi.post<void>("/auth/logout-all", undefined, { authenticated: true });
+export const changePassword = (data: { currentPassword: string; newPassword: string }) =>
+  authApi.patch<TokenResponse>("/users/me/password", data, { authenticated: true });
+export const becomeOrganizer = () => api.post<void>("/users/me/organizer");
 export const getMe = () => api.get<UserProfile>("/users/me");
 // "" remove a foto; uma URL https troca.
 export const updateAvatar = (avatarUrl: string) => api.patch<UserProfile>("/users/me/avatar", { avatarUrl });
