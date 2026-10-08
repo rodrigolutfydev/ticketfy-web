@@ -30,7 +30,7 @@ export default function OrderConfirmationPage() {
         </div>
       )}
 
-      {paid && <p className="mt-8 inline-block rounded-md bg-success/15 px-2.5 py-1 text-[11px] font-bold tracking-wide text-success">PAGAMENTO APROVADO</p>}
+      {paid && <p className="mt-8 inline-block rounded-md bg-success/15 px-2.5 py-1 text-[11px] font-bold tracking-wide text-success">{o.totalAmount === 0 ? "PEDIDO CONFIRMADO" : "PAGAMENTO APROVADO"}</p>}
       <h1 className="mt-4 text-4xl font-semibold tracking-tight text-ink">{paid ? "Seu lugar está garantido" : "Este pedido não está pago"}</h1>
       <p className="mt-3 text-muted">
         {paid ? `${plural(totalTickets, "ingresso emitido", "ingressos emitidos")}. Eles já estão na sua conta, com QR code para a entrada.` : "Abra o pedido para ver o que aconteceu com ele."}

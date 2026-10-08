@@ -14,11 +14,13 @@ export default function CheckoutSummary({
   event,
   lines,
   total,
+  discount,
   footer,
 }: {
   event?: { name: string; startsAt: string; imageUrl?: string | null };
   lines: SummaryLine[];
   total: number;
+  discount?: { code: string; amount: number; subtotal: number } | null;
   footer?: ReactNode;
 }) {
   return (
@@ -45,6 +47,20 @@ export default function CheckoutSummary({
           </li>
         ))}
       </ul>
+      {discount && (
+        <dl className="space-y-2 border-b border-line py-4 text-sm">
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted">Subtotal</dt>
+            <dd className="tabular font-semibold text-ink">{formatPrice(discount.subtotal)}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted">
+              Desconto <span className="font-semibold text-success">{discount.code}</span>
+            </dt>
+            <dd className="tabular font-semibold text-success">−{formatPrice(discount.amount)}</dd>
+          </div>
+        </dl>
+      )}
       <div className="flex items-center justify-between pt-4">
         <span className="font-semibold text-ink">Total</span>
         <span className="tabular text-2xl font-bold text-accent-text">{formatPrice(total)}</span>

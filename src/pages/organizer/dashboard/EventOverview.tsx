@@ -23,10 +23,11 @@ export default function EventOverview({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi label="Receita bruta" value={formatPrice(t.revenue)} hint="Só pedidos pagos, no preço da compra" />
-        <Kpi label="Taxa da plataforma" value={formatPrice(t.platformFee)} hint="Percentual vigente na criação de cada pedido" />
-        <Kpi label="Receita líquida" value={formatPrice(t.netRevenue)} hint="Bruto menos a taxa da plataforma" accent />
+        <Kpi label="Descontos" value={formatPrice(t.discounts)} hint="Cupons usados em pedidos pagos" />
+        <Kpi label="Taxa da plataforma" value={formatPrice(t.platformFee)} hint="Calculada sobre o valor pago" />
+        <Kpi label="Receita líquida" value={formatPrice(t.netRevenue)} hint="Bruto menos descontos e taxa" accent />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Kpi label="Ingressos vendidos" value={formatInt(t.ticketsSold)} hint={`${formatPercent(t.percentSold)} de ${formatInt(t.capacity)}`} progress={t.percentSold} />
@@ -56,6 +57,7 @@ export default function EventOverview({ eventId }: { eventId: string }) {
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <LotPerformance lots={d.ticketTypes} />
         <div className="space-y-6">
+          {d.coupons.length > 0 && <CouponUsage coupons={d.coupons} />}
           <OrdersByStatus rows={d.ordersByStatus} />
           <Attendance checkIn={d.checkIn} />
         </div>
@@ -124,6 +126,37 @@ function LotPerformance({ lots }: { lots: EventDashboard["ticketTypes"] }) {
           );
         })}
       </ul>
+    </section>
+  );
+}
+
+function CouponUsage({ coupons }: { coupons: EventDashboard["coupons"] }) {
+  return (
+    <section className="elevated rounded-2xl border border-line bg-surface p-5 sm:p-6">
+      <h2 className="text-lg font-semibold text-ink">Cupons</h2>
+      <table className="mt-4 w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs text-muted">
+            <th className="pb-2 font-medium">Código</th>
+            <th className="pb-2 text-right font-medium">Usos</th>
+            <th className="pb-2 text-right font-medium">Pagos</th>
+            <th className="pb-2 text-right font-medium">Desconto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {coupons.map((coupon) => (
+            <tr key={coupon.id} className={`border-t border-line ${coupon.active ? "" : "opacity-60"}`}>
+              <td className="py-2.5 font-mono font-semibold text-ink">{coupon.code}</td>
+              <td className="tabular py-2.5 text-right text-muted">
+                {formatInt(coupon.uses)}
+                {coupon.maxUses !== null && ` / ${formatInt(coupon.maxUses)}`}
+              </td>
+              <td className="tabular py-2.5 text-right text-muted">{formatInt(coupon.paidOrders)}</td>
+              <td className="tabular py-2.5 text-right font-semibold text-ink">{formatPrice(coupon.discountTotal)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </section>
   );
 }

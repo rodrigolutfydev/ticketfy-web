@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChartColumn, ExternalLink, Layers, Pencil, Plus, Receipt, Settings, X } from "lucide-react";
+import { ChartColumn, ExternalLink, Layers, Pencil, Plus, Receipt, Settings, TicketPercent, X } from "lucide-react";
 import { ApiError, fieldError, hasUnmappedError } from "../../api/client";
 import { cancelEvent, createTicketType, deleteEvent, getEvent, getEventDashboard, listManagedTicketTypes, updateTicketType } from "../../api/endpoints";
 import type { EventCancellationResult, EventDetails, TicketTypeDetails, TicketTypeUpdate } from "../../api/types";
@@ -11,6 +11,7 @@ import { ErrorMessage, Loading } from "../../components/StateMessage";
 import { TabPanel, Tabs, useTabParam } from "../../components/Tabs";
 import { Alert, BackLink, Button, ButtonLink, Card, Field, Input, Textarea } from "../../components/ui";
 import FeaturedToggle from "../../components/FeaturedToggle";
+import CouponsTab from "./CouponsTab";
 import EventOrders from "./dashboard/EventOrders";
 import EventOverview from "./dashboard/EventOverview";
 import { eventStamp, formatInt, formatPrice, formatShortDate, isPast, plural } from "../../utils/format";
@@ -19,7 +20,7 @@ import NotFoundPage from "../NotFoundPage";
 import OwnershipGuard from "./OwnershipGuard";
 import { usePageTitle } from "../../hooks/usePageTitle";
 
-const TABS = ["visao", "lotes", "pedidos", "configuracoes"] as const;
+const TABS = ["visao", "lotes", "cupons", "pedidos", "configuracoes"] as const;
 
 // Painel de um evento do organizador, dividido em abas:
 // visão geral, lotes de ingresso e configurações (exclusão).
@@ -78,6 +79,7 @@ export default function OrganizerEventManagePage() {
           items={[
             { key: "visao", label: "Visão geral", icon: <ChartColumn size={16} /> },
             { key: "lotes", label: "Lotes", icon: <Layers size={16} /> },
+            { key: "cupons", label: "Cupons", icon: <TicketPercent size={16} /> },
             { key: "pedidos", label: "Pedidos", icon: <Receipt size={16} /> },
             { key: "configuracoes", label: "Configurações", icon: <Settings size={16} /> },
           ]}
@@ -85,6 +87,7 @@ export default function OrganizerEventManagePage() {
         <TabPanel idPrefix="gerenciar" activeKey={tab}>
           {tab === "visao" && <EventOverview eventId={id} />}
           {tab === "lotes" && <TicketTypesTab eventId={id} />}
+          {tab === "cupons" && <CouponsTab eventId={id} cancelled={!!event.cancelledAt} />}
           {tab === "pedidos" && <EventOrders eventId={id} />}
           {tab === "configuracoes" && <SettingsTab event={event} />}
         </TabPanel>
@@ -213,7 +216,7 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
             <Field label="Nome">
               <Input required maxLength={100} value={form.name} onChange={set("name")} placeholder="Pista, VIP..." />
             </Field>
-            <Field label="Preço (R$)">
+            <Field label="Preço (R$)" hint="Use 0 para lote gratuito.">
               <Input required type="number" inputMode="decimal" min="0" max="100000" step="0.01" value={form.price} onChange={set("price")} />
             </Field>
           </div>
@@ -437,6 +440,7 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
     const description = form.description.trim();
     const price = Math.round(Number(form.price) * 100) / 100;
     const quantityTotal = Number(form.quantityTotal);
+    if (form.price.trim() === "" || !Number.isFinite(price) || price < 0) return setLocalError("O preço precisa ser zero ou maior. Use zero para lote gratuito.");
     if (!Number.isInteger(quantityTotal) || quantityTotal < 1) return setLocalError("A quantidade total precisa ser um número inteiro maior que zero.");
     if (form.maxPerOrder !== "" && (!Number.isInteger(Number(form.maxPerOrder)) || Number(form.maxPerOrder) < 1)) {
       return setLocalError("O máximo por pedido precisa ser um número inteiro maior que zero.");
@@ -486,7 +490,7 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
             <Input maxLength={500} value={form.description} onChange={set("description")} />
           </Field>
           <Field label="Preço (R$)" hint="Pedidos já feitos continuam com o preço da compra.">
-            <Input required type="number" inputMode="decimal" min="0.01" max="100000" step="0.01" value={form.price} onChange={set("price")} />
+            <Input required type="number" inputMode="decimal" min="0" max="100000" step="0.01" value={form.price} onChange={set("price")} />
           </Field>
           <Field label="Quantidade total" hint={`${formatInt(lot.quantitySold)} já vendidos ou reservados.`} error={quantityError}>
             <Input required type="number" inputMode="numeric" min={Math.max(1, lot.quantitySold)} max="1000000" step="1" value={form.quantityTotal} onChange={set("quantityTotal")} />

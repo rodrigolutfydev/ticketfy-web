@@ -18,6 +18,11 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   PASSWORD_CHANGED: "Senha alterada",
   SESSION_REUSE_DETECTED: "Reutilização de sessão detectada",
   TICKET_TRANSFERRED: "Ingresso transferido",
+  COUPON_CREATED: "Cupom criado",
+  COUPON_UPDATED: "Cupom alterado",
+  COUPON_DEACTIVATED: "Cupom desativado",
+  COUPON_REACTIVATED: "Cupom reativado",
+  COUPON_DELETED: "Cupom excluído",
 };
 
 export const AUDIT_TARGET_LABELS: Record<AuditTargetType, string> = {
@@ -28,6 +33,7 @@ export const AUDIT_TARGET_LABELS: Record<AuditTargetType, string> = {
   TICKET_TYPE: "Lote",
   TICKET: "Ingresso",
   USER: "Usuário",
+  COUPON: "Cupom",
 };
 
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

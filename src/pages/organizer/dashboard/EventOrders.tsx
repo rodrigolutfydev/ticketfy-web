@@ -122,6 +122,14 @@ export default function EventOrders({ eventId }: { eventId: string }) {
                                 <span className="font-semibold text-ink">{formatPrice(item.subtotal)}</span>
                               </li>
                             ))}
+                            {order.couponCode && (
+                              <li className="tabular flex justify-between gap-4 text-sm">
+                                <span className="text-muted">
+                                  Cupom <span className="font-mono font-semibold text-ink">{order.couponCode}</span>
+                                </span>
+                                <span className="font-semibold text-success">−{formatPrice(order.discount)}</span>
+                              </li>
+                            )}
                           </ul>
                         </td>
                       </tr>

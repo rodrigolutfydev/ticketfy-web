@@ -51,9 +51,10 @@ export default function OrganizerDashboardPage() {
 
       {data && (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Stat label="Eventos ativos" value={formatInt(data.totals.events)} />
             <Stat label="Ingressos vendidos" value={formatInt(data.totals.ticketsSold)} />
+            <Stat label="Descontos em cupons" value={formatPrice(data.totals.discounts)} />
             <Stat label="Receita total" value={formatPrice(data.totals.revenue)} accent />
           </div>
 

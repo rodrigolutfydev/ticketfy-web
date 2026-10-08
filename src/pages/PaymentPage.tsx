@@ -112,6 +112,7 @@ export default function PaymentPage() {
       <div className="space-y-4 lg:pt-12">
         <CheckoutSummary
           total={o.totalAmount}
+          discount={o.couponCode ? { code: o.couponCode, amount: o.discountAmount, subtotal: o.subtotalAmount } : null}
           lines={o.items.map((item) => ({ key: item.ticketTypeId, label: item.ticketTypeName, quantity: item.quantity, subtotal: item.subtotal }))}
         />
         {(pay.error || cancel.error) && <Alert>{(pay.error ?? cancel.error)!.message}</Alert>}

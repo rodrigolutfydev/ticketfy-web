@@ -133,12 +133,56 @@ export interface OrderItem {
 export interface OrderDetails {
   id: string;
   status: OrderStatus;
+  subtotalAmount: number;
+  discountAmount: number;
   totalAmount: number;
+  couponCode: string | null;
   expiresAt: string;
   createdAt: string | null;
   items: OrderItem[];
   tickets: OrderTicket[];
   eventCancelled?: boolean;
+}
+
+export type DiscountType = "PERCENT" | "FIXED";
+
+export interface Coupon {
+  id: string;
+  eventId: string;
+  code: string;
+  discountType: DiscountType;
+  discountValue: number;
+  maxUses: number | null;
+  usesCount: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+  used: boolean;
+  paidOrders: number;
+  discountTotal: number;
+  createdAt: string;
+}
+
+export interface CouponSettings {
+  discountType: DiscountType;
+  discountValue: number;
+  maxUses: number | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+}
+
+export interface CouponInput extends CouponSettings {
+  code: string;
+}
+
+export interface CouponPreview {
+  code: string;
+  discountType: DiscountType;
+  discountValue: number;
+  subtotal: number;
+  discount: number;
+  total: number;
 }
 
 export interface OrderTicket {
@@ -210,6 +254,7 @@ export interface EventDashboard {
     paidOrders: number;
     averageOrderValue: number | null;
     averageTicketPrice: number | null;
+    discounts: number;
   };
   ordersByStatus: { status: OrderStatus; orders: number; tickets: number }[];
   checkIn: { checkedIn: number; issued: number; attendanceRate: number | null };
@@ -225,6 +270,15 @@ export interface EventDashboard {
     percentSold: number | null;
   }[];
   dailySales: { date: string; tickets: number; revenue: number }[];
+  coupons: {
+    id: string;
+    code: string;
+    active: boolean;
+    uses: number;
+    maxUses: number | null;
+    paidOrders: number;
+    discountTotal: number;
+  }[];
 }
 
 export interface EventOrderRow {
@@ -237,10 +291,13 @@ export interface EventOrderRow {
   total: number;
   platformFee: number;
   netAmount: number;
+  subtotal: number;
+  discount: number;
+  couponCode: string | null;
 }
 
 export interface OrganizerDashboard {
-  totals: { events: number; ticketsSold: number; revenue: number; platformFee: number; netRevenue: number };
+  totals: { events: number; ticketsSold: number; revenue: number; platformFee: number; netRevenue: number; discounts: number };
   events: Page<{
     eventId: string;
     name: string;
@@ -252,6 +309,7 @@ export interface OrganizerDashboard {
     revenue: number;
     platformFee: number;
     netRevenue: number;
+    discounts: number;
   }>;
 }
 
@@ -341,7 +399,7 @@ export interface OrganizerPayoutStatus {
   blockedBy: string | null;
 }
 
-export type AuditTargetType = "PAYOUT_ACCOUNT" | "PAYOUT" | "ORGANIZER" | "EVENT" | "TICKET_TYPE" | "TICKET" | "USER";
+export type AuditTargetType = "PAYOUT_ACCOUNT" | "PAYOUT" | "ORGANIZER" | "EVENT" | "TICKET_TYPE" | "TICKET" | "USER" | "COUPON";
 
 export type AuditAction =
   | "PAYOUT_ACCOUNT_SAVED"
@@ -360,7 +418,12 @@ export type AuditAction =
   | "EVENT_CANCELLED"
   | "PASSWORD_CHANGED"
   | "SESSION_REUSE_DETECTED"
-  | "TICKET_TRANSFERRED";
+  | "TICKET_TRANSFERRED"
+  | "COUPON_CREATED"
+  | "COUPON_UPDATED"
+  | "COUPON_DEACTIVATED"
+  | "COUPON_REACTIVATED"
+  | "COUPON_DELETED";
 
 export interface AuditEntry {
   id: string;

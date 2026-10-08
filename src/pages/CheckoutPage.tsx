@@ -1,12 +1,14 @@
-import { useRef } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Timer } from "lucide-react";
-import { createOrder, getEvent, listTicketTypes } from "../api/endpoints";
+import { ArrowRight, TicketPercent, Timer, X } from "lucide-react";
+import { createOrder, getEvent, listTicketTypes, previewCoupon } from "../api/endpoints";
+import type { CouponPreview } from "../api/types";
 import CheckoutSummary from "../components/CheckoutSummary";
 import { Empty, ErrorMessage, Loading } from "../components/StateMessage";
-import { Alert, BackLink, Button, ButtonLink } from "../components/ui";
+import { Alert, BackLink, Button, ButtonLink, Field, Input } from "../components/ui";
 import { decodeItems } from "../utils/cart";
+import { couponErrorMessage, formatDiscount, isCouponError, normalizeCouponCode } from "../utils/coupon";
 import { formatPrice } from "../utils/format";
 import { newIdempotencyKey } from "../utils/idempotency";
 import { isValidId } from "../utils/security";
@@ -31,18 +33,49 @@ export default function CheckoutPage() {
   // Clicar de novo em "Confirmar" reenvia a MESMA chave, e a API devolve o
   // mesmo pedido em vez de criar um segundo.
   const idempotencyKey = useRef(newIdempotencyKey());
+  const [couponInput, setCouponInput] = useState("");
+  const [applied, setApplied] = useState<CouponPreview | null>(null);
 
   const eventQuery = useQuery({ queryKey: ["event", eventId], queryFn: () => getEvent(eventId), enabled: !!eventId });
   const typesQuery = useQuery({ queryKey: ["ticket-types", eventId], queryFn: () => listTicketTypes(eventId), enabled: !!eventId });
 
+  const preview = useMutation({
+    mutationFn: (code: string) => previewCoupon(eventId, code, items),
+    onSuccess: (result) => setApplied(result),
+    onError: () => setApplied(null),
+  });
+
   const mutation = useMutation({
-    mutationFn: () => createOrder(items, idempotencyKey.current),
+    mutationFn: () => createOrder(items, idempotencyKey.current, applied?.code),
     onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ["ticket-types", eventId] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-      navigate(`/orders/${order.id}/payment`, { replace: true });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      const next = order.status === "PAID" ? "confirmation" : "payment";
+      navigate(`/orders/${order.id}/${next}`, { replace: true });
+    },
+    onError: (error) => {
+      if (isCouponError(error)) {
+        setApplied(null);
+        idempotencyKey.current = newIdempotencyKey();
+      }
     },
   });
+
+  function applyCoupon(e: FormEvent) {
+    e.preventDefault();
+    const code = normalizeCouponCode(couponInput);
+    if (!code) return;
+    mutation.reset();
+    preview.mutate(code);
+  }
+
+  function removeCoupon() {
+    setApplied(null);
+    setCouponInput("");
+    preview.reset();
+    mutation.reset();
+  }
 
   if (!eventId || items.length === 0) {
     return (
@@ -65,7 +98,10 @@ export default function CheckoutPage() {
       (l.type.remaining !== null && l.type.remaining < l.quantity) ||
       (l.type.maxPerOrder !== null && l.quantity > l.type.maxPerOrder),
   );
-  const total = lines.reduce((sum, l) => sum + (l.type ? l.type.price * l.quantity : 0), 0);
+  const subtotal = lines.reduce((sum, l) => sum + (l.type ? l.type.price * l.quantity : 0), 0);
+  const total = applied ? applied.total : subtotal;
+  const couponError = couponErrorMessage(preview.error) ?? (isCouponError(mutation.error) ? couponErrorMessage(mutation.error) : null);
+  const orderError = mutation.error && !isCouponError(mutation.error) ? mutation.error.message : null;
 
   return (
     <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1fr_360px] lg:gap-12">
@@ -107,6 +143,7 @@ export default function CheckoutPage() {
         <CheckoutSummary
           event={event}
           total={total}
+          discount={applied ? { code: applied.code, amount: applied.discount, subtotal: applied.subtotal } : null}
           lines={lines.map((l) => ({
             key: l.ticketTypeId,
             label: l.type?.name ?? "Lote indisponível",
@@ -114,10 +151,45 @@ export default function CheckoutPage() {
             subtotal: l.type ? l.type.price * l.quantity : null,
           }))}
         />
+        <div className="rounded-2xl border border-line bg-surface p-5">
+          {applied ? (
+            <div className="flex items-center justify-between gap-3">
+              <p className="flex items-center gap-2 text-sm text-ink">
+                <TicketPercent size={18} className="text-success" aria-hidden />
+                <span>
+                  Cupom <span className="font-semibold">{applied.code}</span> aplicado ({formatDiscount(applied.discountType, applied.discountValue)})
+                </span>
+              </p>
+              <Button size="sm" variant="ghost" onClick={removeCoupon} disabled={mutation.isPending}>
+                <X size={15} aria-hidden /> Remover
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={applyCoupon} noValidate className="flex items-end gap-2">
+              <div className="min-w-0 flex-1">
+                <Field label="Cupom" error={couponError ?? undefined}>
+                  <Input
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value)}
+                    maxLength={30}
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    placeholder="Código do cupom"
+                  />
+                </Field>
+              </div>
+              <Button type="submit" variant="secondary" loading={preview.isPending} disabled={!couponInput.trim() || unavailable}>
+                Aplicar
+              </Button>
+            </form>
+          )}
+          {applied && couponError && <p className="mt-2 text-sm text-danger">{couponError}</p>}
+        </div>
         {unavailable && <Alert>Algum lote esgotou ou não aceita essa quantidade. Volte e ajuste a seleção.</Alert>}
-        {mutation.error && <Alert>{mutation.error.message}</Alert>}
-        <Button size="lg" className="w-full" disabled={unavailable} loading={mutation.isPending} onClick={() => mutation.mutate()}>
-          Reservar e ir para pagamento <ArrowRight size={17} aria-hidden />
+        {orderError && <Alert>{orderError}</Alert>}
+        <Button size="lg" className="w-full" disabled={unavailable || preview.isPending} loading={mutation.isPending} onClick={() => mutation.mutate()}>
+          {total === 0 ? "Confirmar pedido" : "Reservar e ir para pagamento"} <ArrowRight size={17} aria-hidden />
         </Button>
       </div>
     </div>

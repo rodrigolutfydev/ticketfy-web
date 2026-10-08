@@ -5,7 +5,7 @@
 import { ApiError, api, apiDownload, authApi } from "./client";
 import type {
   EventCancellationResult, EventDashboard, EventDetails, EventInput, EventOrderRow, EventSummary, OrderDetails, OrderStatus, OrderSummary,
-  AdminPayout, AuditEntry, AuditTargetType, Balance, LedgerEntry, OrganizerDashboard, OrganizerPayoutStatus, Page, Payout,
+  AdminPayout, AuditEntry, AuditTargetType, Balance, Coupon, CouponInput, CouponPreview, CouponSettings, LedgerEntry, OrganizerDashboard, OrganizerPayoutStatus, Page, Payout,
   PayoutAccount, PayoutAccountInput, PaymentDetails, TicketDetails, TicketTransferResult, TicketTypeDetails, TicketTypeInput, TicketTypeSummary,
   TicketTypeUpdate, TokenResponse, UserDetails, UserProfile,
 } from "./types";
@@ -61,6 +61,12 @@ export const listManagedTicketTypes = (eventId: string) =>
   api.get<TicketTypeDetails[]>(`/events/${seg(eventId)}/ticket-types/manage`);
 export const updateTicketType = (eventId: string, ticketTypeId: string, data: TicketTypeUpdate) =>
   api.patch<TicketTypeDetails>(`/events/${seg(eventId)}/ticket-types/${seg(ticketTypeId)}`, data);
+
+export const listCoupons = (eventId: string) => api.get<Coupon[]>(`/events/${seg(eventId)}/coupons`);
+export const createCoupon = (eventId: string, data: CouponInput) => api.post<Coupon>(`/events/${seg(eventId)}/coupons`, data);
+export const updateCoupon = (eventId: string, couponId: string, data: CouponSettings) =>
+  api.put<Coupon>(`/events/${seg(eventId)}/coupons/${seg(couponId)}`, data);
+export const deleteCoupon = (eventId: string, couponId: string) => api.delete<void>(`/events/${seg(eventId)}/coupons/${seg(couponId)}`);
 
 // Dashboards do organizador
 export const getEventDashboard = (eventId: string) => api.get<EventDashboard>(`/events/${seg(eventId)}/dashboard`);
@@ -132,8 +138,10 @@ export function listAudit(filters: {
 }
 
 // Pedidos e pagamento
-export const createOrder = (items: { ticketTypeId: string; quantity: number }[], idempotencyKey: string) =>
-  api.post<OrderDetails>("/orders", { items }, { "Idempotency-Key": idempotencyKey });
+export const createOrder = (items: { ticketTypeId: string; quantity: number }[], idempotencyKey: string, couponCode?: string | null) =>
+  api.post<OrderDetails>("/orders", couponCode ? { items, couponCode } : { items }, { "Idempotency-Key": idempotencyKey });
+export const previewCoupon = (eventId: string, code: string, items: { ticketTypeId: string; quantity: number }[]) =>
+  api.post<CouponPreview>(`/events/${seg(eventId)}/coupons/preview`, { code, items });
 export const listMyOrders = (page = 0, size = 20) =>
   api.get<Page<OrderSummary>>(`/orders?page=${page}&size=${size}&sort=createdAt,desc`);
 export const getOrder = (id: string) => api.get<OrderDetails>(`/orders/${seg(id)}`);

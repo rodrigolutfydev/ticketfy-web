@@ -36,6 +36,7 @@ export default function OrderDetailPage() {
   if (error) return <ErrorMessage message={error.message} />;
   const o = order!;
   const actionError = cancel.error ?? refund.error;
+  const free = o.totalAmount === 0;
   const hasTransferred = (o.tickets ?? []).some((t) => t.transferred);
 
   return (
@@ -86,6 +87,22 @@ export default function OrderDetailPage() {
               ))}
             </tbody>
             <tfoot>
+              {o.couponCode && (
+                <>
+                  <tr>
+                    <td colSpan={3} className="pt-4 text-right text-muted">
+                      Subtotal
+                    </td>
+                    <td className="pt-4 text-right text-ink">{formatPrice(o.subtotalAmount)}</td>
+                  </tr>
+                  <tr>
+                    <td colSpan={3} className="pt-2 text-right text-muted">
+                      Desconto <span className="font-semibold text-success">{o.couponCode}</span>
+                    </td>
+                    <td className="pt-2 text-right text-success">−{formatPrice(o.discountAmount)}</td>
+                  </tr>
+                </>
+              )}
               <tr>
                 <td colSpan={3} className="pt-4 text-right font-semibold text-muted">
                   Total
@@ -124,7 +141,7 @@ export default function OrderDetailPage() {
 
         <div className="mt-6 space-y-3">
           {actionError && <Alert>{actionError.message}</Alert>}
-          {refund.isSuccess && <Alert type="success">Reembolso feito. Os ingressos foram cancelados.</Alert>}
+          {refund.isSuccess && <Alert type="success">{free ? "Ingressos cancelados." : "Reembolso feito. Os ingressos foram cancelados."}</Alert>}
           {o.status === "EXPIRED" && <Alert type="info">A reserva expirou e os ingressos voltaram à venda.</Alert>}
           {o.status === "PAID" && !o.eventCancelled && hasTransferred && (
             <Alert type="info">Este pedido tem ingresso transferido e não pode mais ser reembolsado.</Alert>
@@ -152,14 +169,14 @@ export default function OrderDetailPage() {
                 <ButtonLink to="/tickets">Ver meus ingressos</ButtonLink>
                 {!o.eventCancelled && !hasTransferred && (
                   <ConfirmButton
-                    title="Pedir reembolso?"
+                    title={free ? "Cancelar os ingressos?" : "Pedir reembolso?"}
                     description={`Os ${o.items.reduce((s, i) => s + i.quantity, 0)} ingresso(s) deste pedido serão cancelados e não poderão mais ser usados na entrada.`}
-                    confirmLabel="Pedir reembolso"
+                    confirmLabel={free ? "Cancelar ingressos" : "Pedir reembolso"}
                     danger
                     loading={refund.isPending}
                     onConfirm={() => refund.mutate()}
                   >
-                    Pedir reembolso
+                    {free ? "Cancelar ingressos" : "Pedir reembolso"}
                   </ConfirmButton>
                 )}
               </>
@@ -181,13 +198,14 @@ export default function OrderDetailPage() {
 function StatusTrack({ order }: { order: OrderDetails }) {
   type Step = { label: string; done: boolean; tone?: "danger" | "muted" };
   const created: Step = { label: "Pedido criado", done: true };
+  const free = order.totalAmount === 0;
   const steps: Step[] =
     order.status === "PENDING"
       ? [created, { label: "Aguardando pagamento", done: false }, { label: "Ingressos emitidos", done: false }]
       : order.status === "PAID"
-        ? [created, { label: "Pagamento aprovado", done: true }, { label: "Ingressos emitidos", done: true }]
+        ? [created, { label: free ? "Pedido confirmado" : "Pagamento aprovado", done: true }, { label: "Ingressos emitidos", done: true }]
         : order.status === "REFUNDED"
-          ? [created, { label: "Pagamento aprovado", done: true }, { label: "Reembolsado, ingressos cancelados", done: true, tone: "muted" }]
+          ? [created, { label: free ? "Pedido confirmado" : "Pagamento aprovado", done: true }, { label: free ? "Ingressos cancelados" : "Reembolsado, ingressos cancelados", done: true, tone: "muted" }]
           : [created, { label: order.status === "EXPIRED" ? "Reserva expirada" : "Pedido cancelado", done: true, tone: "danger" }];
   return (
     <ol className="mt-5" aria-label="Andamento do pedido">
