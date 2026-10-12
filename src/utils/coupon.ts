@@ -12,7 +12,10 @@ export const formatDiscount = (type: DiscountType, value: number) =>
 export const couponErrorMessage = (error: unknown) => errorMessage(error, "checkout-coupon");
 
 export const isCouponError = (error: unknown) =>
-  error instanceof ApiError && (error.problemType === "invalid-coupon" || error.problemType === "too-many-coupon-attempts");
+  error instanceof ApiError &&
+  (error.problemType === "invalid-coupon" ||
+    error.problemType === "too-many-coupon-attempts" ||
+    error.problemType === "coupon-buyer-limit-reached");
 
 export const couponManagementError = (error: unknown) => errorMessage(error, "coupon-management");
 

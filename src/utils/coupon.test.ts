@@ -38,6 +38,7 @@ describe("couponErrorMessage", () => {
   it("only treats coupon problems as coupon errors", () => {
     expect(isCouponError(problem(422, "invalid-coupon"))).toBe(true);
     expect(isCouponError(problem(429, "too-many-coupon-attempts"))).toBe(true);
+    expect(isCouponError(problem(422, "coupon-buyer-limit-reached"))).toBe(true);
     expect(isCouponError(problem(409, "insufficient-stock"))).toBe(false);
     expect(isCouponError(new Error("network"))).toBe(false);
   });

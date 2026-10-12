@@ -307,10 +307,10 @@ function InfoTab({ event }: { event: EventDetails }) {
 }
 
 // Escolha de quantidades por lote. A seleção vai para o checkout pela URL.
-// Limite de ingressos por lote num pedido: o máximo do lote, o que resta
-// (quando a API informa) e um teto de segurança de 20.
+// Limite de ingressos por lote num pedido: o máximo do lote, o limite por pessoa,
+// o que resta (quando a API informa) e um teto de segurança de 20.
 function maxFor(ticketType: TicketTypeSummary) {
-  return Math.min(ticketType.maxPerOrder ?? 20, ticketType.remaining ?? 20, 20);
+  return Math.min(ticketType.maxPerOrder ?? 20, ticketType.maxPerBuyer ?? 20, ticketType.remaining ?? 20, 20);
 }
 
 function TicketSelector({ eventId, ticketTypes }: { eventId: string; ticketTypes: TicketTypeSummary[] }) {
@@ -373,6 +373,7 @@ function TicketSelector({ eventId, ticketTypes }: { eventId: string; ticketTypes
                 </div>
                 {ticketType.description && <p className="mt-1 text-sm leading-snug text-muted">{ticketType.description}</p>}
                 <p className="tabular mt-2 font-bold text-accent-text">{formatPrice(ticketType.price)}</p>
+                {ticketType.maxPerBuyer !== null && <p className="mt-1 text-xs text-muted">Até {ticketType.maxPerBuyer} por pessoa</p>}
               </div>
 
               <div className="flex w-[7.5rem] shrink-0 flex-col items-center justify-center gap-1.5 border-l border-dashed border-line-strong px-2">

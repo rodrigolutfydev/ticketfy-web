@@ -15,6 +15,7 @@ import CouponsTab from "./CouponsTab";
 import EventOrders from "./dashboard/EventOrders";
 import EventOverview from "./dashboard/EventOverview";
 import { eventStamp, formatInt, formatPrice, formatShortDate, isPast, plural } from "../../utils/format";
+import { maxPerBuyerChange, suggestedMaxPerBuyer } from "../../utils/lots";
 import { isValidId } from "../../utils/security";
 import NotFoundPage from "../NotFoundPage";
 import OwnershipGuard from "./OwnershipGuard";
@@ -99,8 +100,9 @@ export default function OrganizerEventManagePage() {
 function TicketTypesTab({ eventId }: { eventId: string }) {
   const queryClient = useQueryClient();
   const typesQuery = useQuery({ queryKey: ["ticket-types-manage", eventId], queryFn: () => listManagedTicketTypes(eventId) });
-  const empty = { name: "", description: "", price: "", quantityTotal: "", maxPerOrder: "" };
+  const empty = { name: "", description: "", price: "", quantityTotal: "", maxPerOrder: "", maxPerBuyer: "" };
   const [form, setForm] = useState(empty);
+  const [buyerLimitTouched, setBuyerLimitTouched] = useState(false);
   const [created, setCreated] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [editing, setEditing] = useState<TicketTypeDetails | null>(null);
@@ -115,9 +117,11 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
         price: Math.round(Number(form.price) * 100) / 100,
         quantityTotal: Number(form.quantityTotal),
         maxPerOrder: form.maxPerOrder ? Number(form.maxPerOrder) : null,
+        maxPerBuyer: form.maxPerBuyer ? Number(form.maxPerBuyer) : null,
       }),
     onSuccess: () => {
       setForm(empty);
+      setBuyerLimitTouched(false);
       setCreated(true);
       queryClient.invalidateQueries({ queryKey: ["ticket-types", eventId] });
       queryClient.invalidateQueries({ queryKey: ["ticket-types-manage", eventId] });
@@ -128,13 +132,24 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
   const set = (field: keyof typeof form) => (e: { target: { value: string } }) => {
     setCreated(false);
     setLocalError(null);
-    setForm((current) => ({ ...current, [field]: e.target.value }));
+    if (field === "maxPerBuyer") setBuyerLimitTouched(true);
+    const value = e.target.value;
+    setForm((current) => {
+      const next = { ...current, [field]: value };
+      return field === "price"
+        ? { ...next, maxPerBuyer: suggestedMaxPerBuyer(value, current.maxPerBuyer, buyerLimitTouched) }
+        : next;
+    });
   };
 
   function submit(e: FormEvent) {
     e.preventDefault();
     const quantity = Number(form.quantityTotal);
     const max = form.maxPerOrder ? Number(form.maxPerOrder) : null;
+    const perBuyer = form.maxPerBuyer ? Number(form.maxPerBuyer) : null;
+    if (perBuyer !== null && (!Number.isInteger(perBuyer) || perBuyer < 1)) {
+      return setLocalError("O limite por comprador precisa ser um número inteiro maior que zero.");
+    }
     // Regras que o HTML sozinho não garante.
     if (!Number.isInteger(quantity) || (max !== null && !Number.isInteger(max))) {
       return setLocalError("Quantidades precisam ser números inteiros.");
@@ -161,13 +176,14 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
         )}
         {lots.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="border-b border-line text-left text-xs text-muted">
                   <th className="px-5 py-3 font-medium">Lote</th>
                   <th className="px-3 py-3 text-right font-medium">Preço</th>
                   <th className="px-3 py-3 font-medium">Vendidos + reservados</th>
                   <th className="px-3 py-3 text-right font-medium">Máx. por pedido</th>
+                  <th className="px-3 py-3 text-right font-medium">Máx. por comprador</th>
                   <th className="px-5 py-3">
                     <span className="sr-only">Ações</span>
                   </th>
@@ -193,6 +209,7 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
                       </div>
                     </td>
                     <td className="tabular px-3 py-3.5 text-right text-muted">{lot.maxPerOrder ?? "—"}</td>
+                    <td className="tabular px-3 py-3.5 text-right text-muted">{lot.maxPerBuyer ?? "—"}</td>
                     <td className="px-5 py-3.5 text-right">
                       <Button size="sm" variant="ghost" onClick={() => setEditing(lot)}>
                         <Pencil size={15} aria-hidden /> Editar
@@ -231,6 +248,9 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
               <Input type="number" inputMode="numeric" min="1" max="100" step="1" value={form.maxPerOrder} onChange={set("maxPerOrder")} />
             </Field>
           </div>
+          <Field label="Limite por comprador" hint="Opcional. Soma todos os pedidos da mesma conta neste lote. Em lote gratuito, sugerimos 2.">
+            <Input type="number" inputMode="numeric" min="1" max="1000" step="1" value={form.maxPerBuyer} onChange={set("maxPerBuyer")} />
+          </Field>
           {(localError || mutation.error) && <Alert>{localError ?? mutation.error?.message}</Alert>}
           {created && <Alert type="success">Lote criado.</Alert>}
           <Button type="submit" loading={mutation.isPending}>
@@ -400,7 +420,7 @@ function DeleteEventSection({ eventId }: { eventId: string }) {
 }
 
 // Painel lateral de edição de lote (PATCH parcial: só o que mudou vai para a API).
-const LOT_FIELDS = ["name", "quantityTotal"] as const;
+const LOT_FIELDS = ["name", "quantityTotal", "maxPerBuyer"] as const;
 
 function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketTypeDetails; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -411,6 +431,7 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
     price: String(lot.price),
     quantityTotal: String(lot.quantityTotal),
     maxPerOrder: lot.maxPerOrder === null ? "" : String(lot.maxPerOrder),
+    maxPerBuyer: lot.maxPerBuyer === null ? "" : String(lot.maxPerBuyer),
   });
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -446,6 +467,9 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
       return setLocalError("O máximo por pedido precisa ser um número inteiro maior que zero.");
     }
     if (lot.maxPerOrder !== null && form.maxPerOrder === "") return setLocalError("O limite por pedido não pode ser removido, só alterado.");
+    if (form.maxPerBuyer !== "" && (!Number.isInteger(Number(form.maxPerBuyer)) || Number(form.maxPerBuyer) < 1)) {
+      return setLocalError("O limite por comprador precisa ser um número inteiro maior que zero.");
+    }
     if (quantityTotal < lot.quantitySold) {
       return setLocalError(`A quantidade total não pode ficar abaixo dos ${lot.quantitySold} ingressos já vendidos ou reservados.`);
     }
@@ -454,6 +478,8 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
     if (price !== lot.price) changes.price = price;
     if (quantityTotal !== lot.quantityTotal) changes.quantityTotal = quantityTotal;
     if (form.maxPerOrder !== "" && Number(form.maxPerOrder) !== lot.maxPerOrder) changes.maxPerOrder = Number(form.maxPerOrder);
+    const perBuyer = maxPerBuyerChange(lot.maxPerBuyer, form.maxPerBuyer);
+    if (perBuyer !== undefined) changes.maxPerBuyer = perBuyer;
     if (Object.keys(changes).length === 0) return ref.current?.close();
     mutation.mutate(changes);
   }
@@ -463,6 +489,7 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
   const belowSold = apiError?.problemType === "invalid-ticket-type-quantity" && /quantityTotal/i.test(apiError.detail ?? "");
   const nameError = nameConflict ? errorMessage(apiError, "lot") ?? undefined : fieldError(mutation.error, "name");
   const quantityError = belowSold ? errorMessage(apiError, "lot") ?? undefined : fieldError(mutation.error, "quantityTotal");
+  const buyerLimitError = fieldError(mutation.error, "maxPerBuyer");
   const showApiAlert = !nameConflict && !belowSold && hasUnmappedError(mutation.error, LOT_FIELDS);
 
   return (
@@ -497,6 +524,13 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
           </Field>
           <Field label="Máximo por pedido" hint={lot.maxPerOrder === null ? "Opcional." : "Pode ser alterado, mas não removido."}>
             <Input type="number" inputMode="numeric" min="1" max="100" step="1" value={form.maxPerOrder} onChange={set("maxPerOrder")} />
+          </Field>
+          <Field
+            label="Limite por comprador"
+            hint="Opcional. Deixe em branco para remover. Diminuir o limite não cancela compras já feitas."
+            error={buyerLimitError}
+          >
+            <Input type="number" inputMode="numeric" min="1" max="1000" step="1" value={form.maxPerBuyer} onChange={set("maxPerBuyer")} />
           </Field>
           {localError && <Alert>{localError}</Alert>}
           {mutation.error && showApiAlert && <Alert>{mutation.error.message}</Alert>}

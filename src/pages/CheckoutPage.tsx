@@ -97,7 +97,8 @@ export default function CheckoutPage() {
       !l.type ||
       l.type.soldOut ||
       (l.type.remaining !== null && l.type.remaining < l.quantity) ||
-      (l.type.maxPerOrder !== null && l.quantity > l.type.maxPerOrder),
+      (l.type.maxPerOrder !== null && l.quantity > l.type.maxPerOrder) ||
+      (l.type.maxPerBuyer !== null && l.quantity > l.type.maxPerBuyer),
   );
   const subtotal = lines.reduce((sum, l) => sum + (l.type ? l.type.price * l.quantity : 0), 0);
   const total = applied ? applied.total : subtotal;

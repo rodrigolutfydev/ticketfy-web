@@ -75,6 +75,21 @@ describe("messages with extra data", () => {
     );
   });
 
+  it("tells how many tickets the buyer can still get from the lot", () => {
+    expect(problemMessage("max-per-buyer-exceeded", context({ properties: { maxPerBuyer: 4, remaining: 1 } }))).toBe(
+      "Cada pessoa pode comprar no máximo 4 ingressos deste lote. Você ainda pode comprar 1.",
+    );
+    expect(problemMessage("max-per-buyer-exceeded", context({ properties: { maxPerBuyer: 1, remaining: 0 } }))).toBe(
+      "Cada pessoa pode comprar no máximo 1 ingresso deste lote, e você já chegou a esse limite.",
+    );
+  });
+
+  it("explains the coupon limit per buyer", () => {
+    expect(problemMessage("coupon-buyer-limit-reached", context({ properties: { maxUsesPerBuyer: 2 } }))).toBe(
+      "Você já usou este cupom 2 vezes, o máximo permitido por pessoa.",
+    );
+  });
+
   it("counts events and tickets", () => {
     expect(problemMessage("account-has-upcoming-tickets", context({ properties: { ticketCount: 3 } }))).toMatch(/3 ingressos válidos/);
     expect(problemMessage("account-has-active-events", context({ properties: { eventIds: ["a"] } }))).toMatch(/o evento com vendas/);

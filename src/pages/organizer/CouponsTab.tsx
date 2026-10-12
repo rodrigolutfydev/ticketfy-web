@@ -14,12 +14,22 @@ interface CouponForm {
   discountType: DiscountType;
   discountValue: string;
   maxUses: string;
+  maxUsesPerBuyer: string;
   startsAt: string;
   endsAt: string;
   active: boolean;
 }
 
-const EMPTY_FORM: CouponForm = { code: "", discountType: "PERCENT", discountValue: "", maxUses: "", startsAt: "", endsAt: "", active: true };
+const EMPTY_FORM: CouponForm = {
+  code: "",
+  discountType: "PERCENT",
+  discountValue: "",
+  maxUses: "",
+  maxUsesPerBuyer: "",
+  startsAt: "",
+  endsAt: "",
+  active: true,
+};
 const CODE_PATTERN = /^[A-Z0-9_-]{3,30}$/;
 
 const STATUS_STYLES = {
@@ -36,10 +46,14 @@ function toSettings(form: CouponForm): CouponSettings | string {
   if (form.discountType === "PERCENT" && value > 100) return "O percentual vai de 0,01 a 100.";
   const maxUses = form.maxUses.trim() === "" ? null : Number(form.maxUses);
   if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) return "O limite de usos precisa ser um número inteiro maior que zero.";
+  const maxUsesPerBuyer = form.maxUsesPerBuyer.trim() === "" ? null : Number(form.maxUsesPerBuyer);
+  if (maxUsesPerBuyer !== null && (!Number.isInteger(maxUsesPerBuyer) || maxUsesPerBuyer < 1)) {
+    return "O limite de usos por comprador precisa ser um número inteiro maior que zero.";
+  }
   const startsAt = form.startsAt ? fromInputDateTime(form.startsAt) : null;
   const endsAt = form.endsAt ? fromInputDateTime(form.endsAt) : null;
   if (startsAt && endsAt && new Date(endsAt) <= new Date(startsAt)) return "O fim da validade precisa ser depois do início.";
-  return { discountType: form.discountType, discountValue: value, maxUses, startsAt, endsAt, active: form.active };
+  return { discountType: form.discountType, discountValue: value, maxUses, startsAt, endsAt, active: form.active, maxUsesPerBuyer };
 }
 
 function settingsOf(coupon: Coupon, overrides: Partial<CouponSettings> = {}): CouponSettings {
@@ -50,6 +64,7 @@ function settingsOf(coupon: Coupon, overrides: Partial<CouponSettings> = {}): Co
     startsAt: coupon.startsAt,
     endsAt: coupon.endsAt,
     active: coupon.active,
+    maxUsesPerBuyer: coupon.maxUsesPerBuyer,
     ...overrides,
   };
 }
@@ -125,6 +140,9 @@ export default function CouponsTab({ eventId, cancelled }: { eventId: string; ca
                       <td className="tabular px-3 py-3.5 text-right text-muted">
                         {formatInt(coupon.usesCount)}
                         {coupon.maxUses !== null && ` / ${formatInt(coupon.maxUses)}`}
+                        {coupon.maxUsesPerBuyer !== null && (
+                          <span className="block text-xs text-subtle">até {formatInt(coupon.maxUsesPerBuyer)} por pessoa</span>
+                        )}
                       </td>
                       <td className="tabular px-3 py-3.5 text-right text-muted">{formatInt(coupon.paidOrders)}</td>
                       <td className="tabular px-3 py-3.5 text-right text-muted">{formatPrice(coupon.discountTotal)}</td>
@@ -208,6 +226,19 @@ function CouponFields({ form, set, lockDiscount }: {
       <Field label="Limite de usos" hint="Opcional. Pedido pendente que expira ou é cancelado devolve o uso.">
         <Input type="number" inputMode="numeric" min="1" step="1" value={form.maxUses} onChange={(e) => set("maxUses", e.target.value)} />
       </Field>
+      <Field
+        label="Usos por comprador"
+        hint="Opcional. Quantas vezes a mesma conta pode usar o cupom. Reembolso não devolve o uso; diminuir o limite não afeta pedidos já feitos."
+      >
+        <Input
+          type="number"
+          inputMode="numeric"
+          min="1"
+          step="1"
+          value={form.maxUsesPerBuyer}
+          onChange={(e) => set("maxUsesPerBuyer", e.target.value)}
+        />
+      </Field>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Início da validade" hint="Opcional.">
           <Input type="datetime-local" value={form.startsAt} onChange={(e) => set("startsAt", e.target.value)} />
@@ -288,6 +319,7 @@ function CouponEditor({ eventId, coupon, onSaved, onClose }: { eventId: string; 
     discountType: coupon.discountType,
     discountValue: String(coupon.discountValue),
     maxUses: coupon.maxUses === null ? "" : String(coupon.maxUses),
+    maxUsesPerBuyer: coupon.maxUsesPerBuyer === null ? "" : String(coupon.maxUsesPerBuyer),
     startsAt: toInputDateTime(coupon.startsAt),
     endsAt: toInputDateTime(coupon.endsAt),
     active: coupon.active,

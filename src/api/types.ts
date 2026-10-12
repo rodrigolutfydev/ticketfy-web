@@ -89,6 +89,7 @@ export interface TicketTypeSummary {
   maxPerOrder: number | null;
   soldOut: boolean;
   remaining: number | null;
+  maxPerBuyer: number | null;
 }
 
 // Rota do organizador (/manage) e resposta de criação/edição de lote.
@@ -102,6 +103,7 @@ export interface TicketTypeDetails {
   available: number;
   maxPerOrder: number | null;
   active: boolean;
+  maxPerBuyer: number | null;
 }
 
 // Edição parcial: só os campos enviados mudam.
@@ -111,6 +113,7 @@ export interface TicketTypeUpdate {
   price?: number;
   quantityTotal?: number;
   maxPerOrder?: number;
+  maxPerBuyer?: number;
 }
 
 export interface TicketTypeInput {
@@ -119,6 +122,7 @@ export interface TicketTypeInput {
   price: number;
   quantityTotal: number;
   maxPerOrder: number | null;
+  maxPerBuyer: number | null;
 }
 
 export type OrderStatus = "PENDING" | "PAID" | "EXPIRED" | "CANCELLED" | "REFUNDED";
@@ -162,6 +166,7 @@ export interface Coupon {
   paidOrders: number;
   discountTotal: number;
   createdAt: string;
+  maxUsesPerBuyer: number | null;
 }
 
 export interface CouponSettings {
@@ -171,6 +176,7 @@ export interface CouponSettings {
   startsAt: string | null;
   endsAt: string | null;
   active: boolean;
+  maxUsesPerBuyer: number | null;
 }
 
 export interface CouponInput extends CouponSettings {

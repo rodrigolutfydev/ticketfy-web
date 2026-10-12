@@ -69,6 +69,16 @@ const PT_BR: Catalog = {
     "insufficient-stock": "Não há mais ingressos suficientes neste lote.",
     "mixed-events-order": "Um pedido só pode ter ingressos de um mesmo evento.",
     "max-per-order-exceeded": "A quantidade passa do limite de ingressos por pedido deste lote.",
+    "max-per-buyer-exceeded": ({ properties }) => {
+      const limit = count(properties.maxPerBuyer);
+      const remaining = count(properties.remaining);
+      if (limit === null) return "Você chegou ao limite de ingressos deste lote por pessoa.";
+      const base = `Cada pessoa pode comprar no máximo ${limit} ${limit === 1 ? "ingresso" : "ingressos"} deste lote`;
+      if (remaining === null) return `${base}.`;
+      return remaining === 0
+        ? `${base}, e você já chegou a esse limite.`
+        : `${base}. Você ainda pode comprar ${remaining}.`;
+    },
     "order-not-found": "Pedido não encontrado.",
     "order-has-transferred-tickets": "Este pedido não pode ser reembolsado porque algum ingresso dele já foi transferido.",
     "invalid-payment-state": "Este pedido já foi pago.",
@@ -121,6 +131,12 @@ const PT_BR: Catalog = {
     "coupon-already-used": "Este cupom já foi usado: tipo e valor não podem mudar e ele não pode ser excluído, só desativado.",
     "invalid-coupon-settings": "Confira as configurações do cupom.",
     "invalid-coupon": "Cupom inválido ou indisponível para este pedido.",
+    "coupon-buyer-limit-reached": ({ properties }) => {
+      const limit = count(properties.maxUsesPerBuyer);
+      return limit === null
+        ? "Você já usou este cupom o máximo de vezes permitido."
+        : `Você já usou este cupom ${limit === 1 ? "1 vez" : `${limit} vezes`}, o máximo permitido por pessoa.`;
+    },
     "too-many-coupon-attempts": ({ retryAfter }) => `Muitas tentativas com cupom. Tente de novo em ${minutes(retryAfter)} min.`,
     "email-not-allowed": "Este e-mail não pode ser usado. Informe outro.",
     "too-many-data-exports": ({ retryAfter }) => `Você atingiu o limite de exportações. Tente de novo em ${minutes(retryAfter)} min.`,
