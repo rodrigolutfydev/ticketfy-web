@@ -21,9 +21,9 @@ const ACTIVITY_WRITE_MS = 15_000;
 const PROACTIVE_REFRESH_MS = 60_000;
 
 export type AuthStatus = "checking" | "authenticated" | "anonymous";
-export type SignOutReason = "manual" | "expired" | "idle" | "unauthorized";
+export type SignOutReason = "manual" | "expired" | "idle" | "unauthorized" | "suspended";
 
-const SIGN_OUT_REASONS: readonly SignOutReason[] = ["manual", "expired", "idle", "unauthorized"];
+const SIGN_OUT_REASONS: readonly SignOutReason[] = ["manual", "expired", "idle", "unauthorized", "suspended"];
 
 type AuthMessage =
   | { type: "login"; session: Session }

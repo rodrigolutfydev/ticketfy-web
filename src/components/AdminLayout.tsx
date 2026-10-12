@@ -10,7 +10,7 @@ export default function AdminLayout() {
 
   const links = [
     { to: "/admin", label: "Saques em análise", icon: <ClipboardCheck size={18} />, end: true },
-    { to: "/admin/organizers", label: "Organizadores", icon: <UserCog size={18} /> },
+    { to: "/admin/users", label: "Usuários", icon: <UserCog size={18} /> },
     { to: "/admin/audit", label: "Auditoria", icon: <ScrollText size={18} /> },
   ];
 

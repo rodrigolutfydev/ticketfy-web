@@ -6,6 +6,7 @@ import { login } from "../api/endpoints";
 import { useAuth, type SignOutReason } from "../auth/AuthContext";
 import AuthShell from "../components/AuthShell";
 import { Alert, Button, Field, Input, PasswordInput } from "../components/ui";
+import { ACCOUNT_SUSPENDED_MESSAGE, loginErrorMessage } from "../utils/account";
 import { loginThrottle, safeRedirectPath } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -15,6 +16,7 @@ const reasonMessages: Record<SignOutReason, string | null> = {
   idle: "Sua sessão foi encerrada após 30 minutos sem atividade.",
   expired: "Sua sessão expirou. Entre de novo para continuar.",
   unauthorized: "Sua sessão não é mais válida. Entre de novo para continuar.",
+  suspended: ACCOUNT_SUSPENDED_MESSAGE,
 };
 
 export default function LoginPage() {
@@ -71,12 +73,7 @@ export default function LoginPage() {
 
   // Mensagem genérica para credenciais erradas: não revela se o e-mail
   // existe (isso ajudaria alguém a descobrir quem tem conta no site).
-  const errorText =
-    mutation.error instanceof ApiError && (mutation.error.status === 400 || mutation.error.status === 401)
-      ? "E-mail ou senha incorretos."
-      : mutation.error instanceof ApiError && mutation.error.status === 403
-        ? "Não foi possível entrar a partir desta página. Recarregue e tente de novo."
-        : mutation.error?.message;
+  const errorText = loginErrorMessage(mutation.error);
 
   const locked = lockSeconds > 0;
 

@@ -390,6 +390,21 @@ export interface AdminPayout {
   organizerPayoutsBlocked: boolean;
 }
 
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  createdAt: string;
+  suspended: boolean;
+  suspendedAt: string | null;
+  suspensionReason: string | null;
+  suspendedBy: string | null;
+  payoutsBlocked: boolean;
+  payoutBlockReason: string | null;
+  payoutBlockedAt: string | null;
+}
+
 export interface OrganizerPayoutStatus {
   id: string;
   name: string;
@@ -424,7 +439,11 @@ export type AuditAction =
   | "COUPON_UPDATED"
   | "COUPON_DEACTIVATED"
   | "COUPON_REACTIVATED"
-  | "COUPON_DELETED";
+  | "COUPON_DELETED"
+  | "DATA_EXPORTED"
+  | "ACCOUNT_DELETED"
+  | "ACCOUNT_SUSPENDED"
+  | "ACCOUNT_REACTIVATED";
 
 export interface AuditEntry {
   id: string;

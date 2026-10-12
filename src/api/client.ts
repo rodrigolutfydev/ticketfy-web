@@ -50,7 +50,7 @@ export interface Session {
   expiresAt: number;
 }
 
-export type SessionEndReason = "expired" | "unauthorized";
+export type SessionEndReason = "expired" | "unauthorized" | "suspended";
 
 interface ClientHooks {
   onRefreshed: (session: Session) => void;
@@ -133,7 +133,8 @@ async function performRefresh(startedWith: string | null): Promise<boolean> {
     return true;
   }
   if (response.status === 401 || response.status === 403) {
-    endSession("expired");
+    const error = await toApiError(response);
+    endSession(error.problemType === "account-suspended" ? "suspended" : "expired");
     return false;
   }
   throw await toApiError(response);

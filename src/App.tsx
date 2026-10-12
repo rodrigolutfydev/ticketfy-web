@@ -2,7 +2,7 @@
 // Rotas aninhadas herdam a moldura do pai (Layout, OrganizerLayout).
 
 import type { ReactNode } from "react";
-import { Route, Routes } from "react-router";
+import { Navigate, Route, Routes } from "react-router";
 import RequireAuth from "./auth/RequireAuth";
 import Layout from "./components/Layout";
 import OrganizerLayout from "./components/OrganizerLayout";
@@ -28,8 +28,8 @@ import OrganizerEventsPage from "./pages/organizer/OrganizerEventsPage";
 import OrganizerFinancePage from "./pages/organizer/OrganizerFinancePage";
 import AdminLayout from "./components/AdminLayout";
 import AdminAuditPage from "./pages/admin/AdminAuditPage";
-import AdminOrganizersPage from "./pages/admin/AdminOrganizersPage";
 import AdminPayoutsPage from "./pages/admin/AdminPayoutsPage";
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
 
 // Envolve a tela na guarda de login.
 const privateRoute = (element: ReactNode) => <RequireAuth>{element}</RequireAuth>;
@@ -70,7 +70,8 @@ export default function App() {
 
         <Route path="admin" element={privateRoute(<AdminLayout />)}>
           <Route index element={<AdminPayoutsPage />} />
-          <Route path="organizers" element={<AdminOrganizersPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="organizers" element={<Navigate to="/admin/users" replace />} />
           <Route path="audit" element={<AdminAuditPage />} />
         </Route>
 

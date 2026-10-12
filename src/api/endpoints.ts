@@ -5,7 +5,7 @@
 import { ApiError, api, apiDownload, authApi } from "./client";
 import type {
   EventCancellationResult, EventDashboard, EventDetails, EventInput, EventOrderRow, EventSummary, OrderDetails, OrderStatus, OrderSummary,
-  AdminPayout, AuditEntry, AuditTargetType, Balance, Coupon, CouponInput, CouponPreview, CouponSettings, LedgerEntry, OrganizerDashboard, OrganizerPayoutStatus, Page, Payout,
+  AdminPayout, AdminUser, AuditEntry, AuditTargetType, Balance, Coupon, CouponInput, CouponPreview, CouponSettings, LedgerEntry, OrganizerDashboard, OrganizerPayoutStatus, Page, Payout,
   PayoutAccount, PayoutAccountInput, PaymentDetails, TicketDetails, TicketTransferResult, TicketTypeDetails, TicketTypeInput, TicketTypeSummary,
   TicketTypeUpdate, TokenResponse, UserDetails, UserProfile,
 } from "./types";
@@ -113,6 +113,11 @@ export const listPayoutsForReview = (page = 0, size = 20) =>
   api.get<Page<AdminPayout>>(`/admin/payouts?status=UNDER_REVIEW&page=${page}&size=${size}`);
 export const approvePayout = (id: string) => api.post<Payout>(`/admin/payouts/${seg(id)}/approve`);
 export const rejectPayout = (id: string, reason: string) => api.post<Payout>(`/admin/payouts/${seg(id)}/reject`, { reason });
+export const findUserByEmail = (email: string) =>
+  api.get<AdminUser>(`/admin/users?${new URLSearchParams({ email: email.trim() })}`);
+export const suspendUser = (userId: string, reason: string) =>
+  api.post<AdminUser>(`/admin/users/${seg(userId)}/suspension`, { reason });
+export const reactivateUser = (userId: string) => api.delete<AdminUser>(`/admin/users/${seg(userId)}/suspension`);
 export const findOrganizerPayoutStatus = (email: string) =>
   api.get<OrganizerPayoutStatus>(`/admin/organizers?${new URLSearchParams({ email: email.trim() })}`);
 export const blockOrganizerPayouts = (organizerId: string, reason: string) =>

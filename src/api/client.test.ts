@@ -100,6 +100,21 @@ describe("renovação da sessão", () => {
     expect(onSessionEnded).not.toHaveBeenCalled();
   });
 
+  it("renovação recusada por conta suspensa encerra a sessão com o motivo suspended", async () => {
+    const { refreshCount, countFor } = mockFetch((url) =>
+      url === "/api/auth/refresh"
+        ? json(403, { type: "https://x/problems/account-suspended", detail: "This account is suspended. Contact support." })
+        : json(401)
+    );
+
+    await expect(api.get("/orders")).rejects.toMatchObject({ status: 401 });
+    expect(refreshCount()).toBe(1);
+    expect(countFor("/orders")).toBe(1);
+    expect(onSessionEnded).toHaveBeenCalledTimes(1);
+    expect(onSessionEnded).toHaveBeenCalledWith("suspended");
+    expect(getSession()).toBeNull();
+  });
+
   it("401 sem token não dispara renovação", async () => {
     clearSession();
     const { refreshCount, countFor } = mockFetch(() => json(401));

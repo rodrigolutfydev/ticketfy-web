@@ -23,6 +23,10 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   COUPON_DEACTIVATED: "Cupom desativado",
   COUPON_REACTIVATED: "Cupom reativado",
   COUPON_DELETED: "Cupom excluído",
+  DATA_EXPORTED: "Dados exportados",
+  ACCOUNT_DELETED: "Conta excluída",
+  ACCOUNT_SUSPENDED: "Conta suspensa",
+  ACCOUNT_REACTIVATED: "Conta reativada",
 };
 
 export const AUDIT_TARGET_LABELS: Record<AuditTargetType, string> = {
