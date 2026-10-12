@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../api/client";
 import { couponErrorMessage } from "./coupon";
-import { SALES_CLOSED_MESSAGE, isSalesClosedError, orderErrorMessage, salesPanel } from "./sales";
+import { isSalesClosedError, salesPanel } from "./sales";
 
 const problem = (status: number, type: string, message = "x") => new ApiError(status, message, [], null, type);
 
@@ -26,13 +26,9 @@ describe("sales-closed errors", () => {
     expect(isSalesClosedError(new Error("x"))).toBe(false);
   });
 
-  it("translates the order error and keeps the others", () => {
-    expect(orderErrorMessage(problem(409, "sales-closed", "Ticket sales for this event have ended"))).toBe(SALES_CLOSED_MESSAGE);
-    expect(orderErrorMessage(problem(409, "insufficient-stock", "Not enough tickets"))).toBe("Not enough tickets");
-    expect(orderErrorMessage(null)).toBeNull();
-  });
-
-  it("translates the coupon preview error", () => {
-    expect(couponErrorMessage(problem(409, "sales-closed"))).toBe(SALES_CLOSED_MESSAGE);
+  it("uses the translated message in the coupon preview", () => {
+    expect(couponErrorMessage(problem(409, "sales-closed", "As vendas deste evento foram encerradas."))).toBe(
+      "As vendas deste evento foram encerradas.",
+    );
   });
 });

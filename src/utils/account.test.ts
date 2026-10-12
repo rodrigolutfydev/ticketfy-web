@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../api/client";
-import { ACCOUNT_SUSPENDED_MESSAGE, isAccountSuspendedError, loginErrorMessage, suspensionConsequences } from "./account";
+import { accountSuspendedMessage, isAccountSuspendedError, loginErrorMessage, suspensionConsequences } from "./account";
 
 const problem = (status: number, type: string | null, message = "x") => new ApiError(status, message, [], null, type);
 
 describe("loginErrorMessage", () => {
   it("shows the suspended account message without any internal reason", () => {
     expect(loginErrorMessage(problem(403, "account-suspended", "This account is suspended. Contact support."))).toBe(
-      ACCOUNT_SUSPENDED_MESSAGE,
+      accountSuspendedMessage(),
     );
   });
 

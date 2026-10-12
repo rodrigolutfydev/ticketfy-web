@@ -11,7 +11,7 @@ export default function BecomeOrganizer() {
     mutationFn: becomeOrganizer,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
     onError: (error) => {
-      if (error instanceof ApiError && error.status === 409) {
+      if (error instanceof ApiError && error.problemType === "invalid-role-change") {
         queryClient.invalidateQueries({ queryKey: ["me"] });
       }
     },

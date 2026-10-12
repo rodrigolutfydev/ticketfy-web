@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ApiError, fieldError } from "../api/client";
+import { ApiError, errorMessage, fieldError } from "../api/client";
 import { transferTicket } from "../api/endpoints";
 import type { TicketDetails } from "../api/types";
 import { Alert, Button, Field, Input, PasswordInput } from "./ui";
@@ -13,10 +13,6 @@ interface Props {
 
 const STALE_TICKET = new Set(["invalid-ticket-state", "invalid-event-state", "ticket-not-found", "ticket-transfer-closed", "ticket-transfer-limit-reached"]);
 
-function minutes(seconds: number | null) {
-  return Math.max(1, Math.ceil((seconds ?? 60) / 60));
-}
-
 interface TransferErrors {
   email?: string | null;
   password?: string | null;
@@ -24,31 +20,22 @@ interface TransferErrors {
 }
 
 function describe(error: unknown): TransferErrors {
-  if (!(error instanceof ApiError)) return { general: error instanceof Error ? error.message : null };
+  if (!(error instanceof ApiError)) return { general: errorMessage(error) };
+  const message = errorMessage(error, "transfer");
   switch (error.problemType) {
     case "invalid-password":
-      return { password: "Senha incorreta." };
+      return { password: message };
     case "self-transfer":
-      return { email: "Informe o e-mail de outra pessoa." };
     case "transfer-recipient-unavailable":
-      return { email: "Não foi possível transferir para este e-mail. Confira se a pessoa já tem conta no Ticketfy." };
-    case "too-many-password-attempts":
-    case "too-many-transfer-attempts":
-      return { general: `Muitas tentativas. Tente de novo em ${minutes(error.retryAfter)} min.` };
-    case "ticket-transfer-closed":
-      return { general: "O evento já começou. Este ingresso não pode mais ser transferido." };
-    case "ticket-transfer-limit-reached":
-      return { general: "Este ingresso já atingiu o limite de transferências." };
-    case "invalid-ticket-state":
-    case "invalid-event-state":
-    case "ticket-not-found":
-      return { general: "Este ingresso não pode mais ser transferido." };
-    default:
+      return { email: message };
+    case "validation-failed":
       return {
         email: fieldError(error, "recipientEmail"),
         password: fieldError(error, "password"),
-        general: error.fieldErrors.length === 0 ? error.message : null,
+        general: error.fieldErrors.length === 0 ? message : null,
       };
+    default:
+      return { general: message };
   }
 }
 

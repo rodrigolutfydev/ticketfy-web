@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "../api/client";
 import { couponErrorMessage, couponManagementError, couponStatus, formatDiscount, isCouponError, normalizeCouponCode } from "./coupon";
 
-const problem = (status: number, type: string, message = "x", retryAfter: number | null = null) =>
-  new ApiError(status, message, [], retryAfter, type);
+const problem = (status: number, type: string, detail = "x", retryAfter: number | null = null) =>
+  new ApiError(status, detail, [], retryAfter, type, null, detail);
 
 describe("normalizeCouponCode", () => {
   it("trims and uppercases", () => {

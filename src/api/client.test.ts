@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
-import { ApiError, api, authApi, clearSession, configureClient, getSession, setSession, type Session, type SessionEndReason } from "./client";
+import { ApiError, api, authApi, clearSession, configureClient, errorMessage, getSession, setSession, type Session, type SessionEndReason } from "./client";
 
 const OLD_TOKEN = "header.old.signature";
 const NEW_TOKEN = "header.new.signature";
@@ -122,6 +122,56 @@ describe("renovação da sessão", () => {
     await expect(api.get("/orders")).rejects.toMatchObject({ status: 401 });
     expect(refreshCount()).toBe(0);
     expect(countFor("/orders")).toBe(1);
+  });
+});
+
+describe("mensagens de erro", () => {
+  it("traduz o tipo do problema e guarda o detail original e as propriedades", async () => {
+    mockFetch(() =>
+      json(409, {
+        type: "https://x/problems/payout-exceeds-available",
+        detail: "Payout exceeds the available balance",
+        status: 409,
+        available: 150.75,
+      })
+    );
+
+    const error = (await api.get("/organizer/payouts").catch((e: unknown) => e)) as ApiError;
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.problemType).toBe("payout-exceeds-available");
+    expect(error.message).toMatch(/^O valor passa do seu saldo disponível \(R\$\s150,75\)\.$/);
+    expect(error.detail).toBe("Payout exceeds the available balance");
+    expect(error.properties).toEqual({ available: 150.75 });
+  });
+
+  it("tipo desconhecido usa a mensagem genérica com o código do erro", async () => {
+    mockFetch(() => json(409, { type: "https://x/problems/brand-new-type", detail: "Something new" }, { "X-Request-Id": "req-42" }));
+
+    const error = (await api.get("/x").catch((e: unknown) => e)) as ApiError;
+
+    expect(error.message).toBe("Essa ação conflita com o estado atual. Atualize a página. Código do erro: req-42");
+    expect(error.detail).toBe("Something new");
+  });
+
+  it("erro interno mostra a mensagem traduzida com o código do erro", async () => {
+    mockFetch(() => json(500, { type: "https://x/problems/internal-error", requestId: "req-500" }));
+
+    await expect(api.get("/x")).rejects.toMatchObject({
+      status: 500,
+      message: "Tivemos um problema do nosso lado. Tente de novo em instantes. Código do erro: req-500",
+    });
+  });
+
+  it("errorMessage usa a mensagem do contexto da tela quando houver", async () => {
+    mockFetch(() => json(404, { type: "https://x/problems/ticket-not-found" }));
+
+    const error = await api.get("/x").catch((e: unknown) => e);
+
+    expect(errorMessage(error)).toBe("Ingresso não encontrado.");
+    expect(errorMessage(error, "check-in")).toBe("Código não encontrado.");
+    expect(errorMessage(new Error("falhou"))).toBe("falhou");
+    expect(errorMessage(null)).toBeNull();
   });
 });
 

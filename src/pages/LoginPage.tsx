@@ -6,7 +6,7 @@ import { login } from "../api/endpoints";
 import { useAuth, type SignOutReason } from "../auth/AuthContext";
 import AuthShell from "../components/AuthShell";
 import { Alert, Button, Field, Input, PasswordInput } from "../components/ui";
-import { ACCOUNT_SUSPENDED_MESSAGE, loginErrorMessage } from "../utils/account";
+import { accountSuspendedMessage, loginErrorMessage } from "../utils/account";
 import { loginThrottle, safeRedirectPath } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -16,7 +16,7 @@ const reasonMessages: Record<SignOutReason, string | null> = {
   idle: "Sua sessão foi encerrada após 30 minutos sem atividade.",
   expired: "Sua sessão expirou. Entre de novo para continuar.",
   unauthorized: "Sua sessão não é mais válida. Entre de novo para continuar.",
-  suspended: ACCOUNT_SUSPENDED_MESSAGE,
+  suspended: null,
 };
 
 export default function LoginPage() {
@@ -50,12 +50,12 @@ export default function LoginPage() {
     },
     onError: (error) => {
       // Só conta como tentativa errada se a API recusou as credenciais.
-      if (error instanceof ApiError && (error.status === 400 || error.status === 401)) {
+      if (error instanceof ApiError && (error.problemType === "invalid-credentials" || error.problemType === "validation-failed")) {
         loginThrottle.registerFailure();
         setLockSeconds(Math.ceil(loginThrottle.remainingMs() / 1000));
       }
-      // 429: a API bloqueou novas tentativas e diz por quanto tempo (Retry-After).
-      if (error instanceof ApiError && error.status === 429) {
+      // too-many-login-attempts: a API bloqueou novas tentativas e diz por quanto tempo (Retry-After).
+      if (error instanceof ApiError && error.problemType === "too-many-login-attempts") {
         loginThrottle.lockFor(error.retryAfter ?? 60);
         setLockSeconds(Math.ceil(loginThrottle.remainingMs() / 1000));
       }
@@ -76,14 +76,14 @@ export default function LoginPage() {
   const errorText = loginErrorMessage(mutation.error);
 
   const locked = lockSeconds > 0;
+  const signOutMessage =
+    lastSignOutReason === "suspended" ? accountSuspendedMessage() : lastSignOutReason ? reasonMessages[lastSignOutReason] : null;
 
   return (
     <AuthShell eyebrow="Bem-vindo de volta" title="Entre na sua conta" subtitle="Acesse seus ingressos e pedidos.">
       <div className="space-y-4">
         {state?.registered && <Alert type="success">Conta criada. Faça login para continuar.</Alert>}
-        {lastSignOutReason && reasonMessages[lastSignOutReason] && !mutation.error && (
-          <Alert type="info">{reasonMessages[lastSignOutReason]}</Alert>
-        )}
+        {signOutMessage && !mutation.error && <Alert type="info">{signOutMessage}</Alert>}
       </div>
       <form onSubmit={submit} className="mt-4 space-y-5">
         <Field label="E-mail">

@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { CircleCheck, CircleX, ScanLine } from "lucide-react";
-import { ApiError } from "../../api/client";
+import { errorMessage } from "../../api/client";
 import { checkIn } from "../../api/endpoints";
 import { Button, Card, PageTitle } from "../../components/ui";
 import { formatTime } from "../../utils/format";
@@ -96,11 +96,7 @@ export default function CheckInPage() {
 
 // Traduz o erro da API para algo que o porteiro entende na hora.
 function describe(error: unknown) {
-  if (!(error instanceof ApiError)) return "Erro inesperado.";
-  if (error.status === 409) return "Ingresso já utilizado ou cancelado.";
-  if (error.status === 404) return "Código não encontrado.";
-  if (error.status === 403) return "Este ingresso é de um evento de outro organizador.";
-  return error.message;
+  return errorMessage(error, "check-in") ?? "";
 }
 
 function Result({ ok, title, detail }: { ok: boolean; title: string; detail: string }) {

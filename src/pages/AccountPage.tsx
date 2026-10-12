@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ApiError, fieldError, hasUnmappedError } from "../api/client";
+import { ApiError, errorMessage, fieldError, hasUnmappedError } from "../api/client";
 import { changePassword, logoutAll, updateAvatar } from "../api/endpoints";
 import type { UserProfile } from "../api/types";
 import Avatar from "../components/Avatar";
@@ -242,7 +242,7 @@ function PasswordCard() {
     },
     onError: (error) => {
       setForm((current) => ({ ...current, current: "" }));
-      if (error instanceof ApiError && error.status === 429) setLockSeconds(error.retryAfter ?? 60);
+      if (error instanceof ApiError && error.problemType === "too-many-password-attempts") setLockSeconds(error.retryAfter ?? 60);
     },
   });
 
@@ -255,7 +255,7 @@ function PasswordCard() {
   const strength = passwordStrength(form.next, [me?.name ?? "", me?.email ?? ""]);
   const locked = lockSeconds > 0;
   const error = mutation.error;
-  const status = error instanceof ApiError ? error.status : null;
+  const problemType = error instanceof ApiError ? error.problemType : null;
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -267,9 +267,9 @@ function PasswordCard() {
   }
 
   const errorText =
-    status === 403
-      ? "Senha atual incorreta."
-      : status === 429
+    problemType === "invalid-password"
+      ? errorMessage(error, "password-change")
+      : problemType === "too-many-password-attempts"
         ? null
         : error && hasUnmappedError(error, PASSWORD_FIELDS)
           ? error.message

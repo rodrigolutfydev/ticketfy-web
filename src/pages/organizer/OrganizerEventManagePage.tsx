@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChartColumn, ExternalLink, Layers, Pencil, Plus, Receipt, Settings, TicketPercent, X } from "lucide-react";
-import { ApiError, fieldError, hasUnmappedError } from "../../api/client";
+import { ApiError, errorMessage, fieldError, hasUnmappedError } from "../../api/client";
 import { cancelEvent, createTicketType, deleteEvent, getEvent, getEventDashboard, listManagedTicketTypes, updateTicketType } from "../../api/endpoints";
 import type { EventCancellationResult, EventDetails, TicketTypeDetails, TicketTypeUpdate } from "../../api/types";
 import { ConfirmButton } from "../../components/ConfirmDialog";
@@ -460,9 +460,9 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
 
   const apiError = mutation.error instanceof ApiError ? mutation.error : null;
   const nameConflict = apiError?.problemType === "ticket-type-name-already-exists";
-  const belowSold = apiError?.problemType === "invalid-ticket-type-quantity" && /quantityTotal/i.test(apiError.message);
-  const nameError = nameConflict ? "Já existe um lote com esse nome neste evento." : fieldError(mutation.error, "name");
-  const quantityError = belowSold ? "Abaixo do que já foi vendido ou reservado." : fieldError(mutation.error, "quantityTotal");
+  const belowSold = apiError?.problemType === "invalid-ticket-type-quantity" && /quantityTotal/i.test(apiError.detail ?? "");
+  const nameError = nameConflict ? errorMessage(apiError, "lot") ?? undefined : fieldError(mutation.error, "name");
+  const quantityError = belowSold ? errorMessage(apiError, "lot") ?? undefined : fieldError(mutation.error, "quantityTotal");
   const showApiAlert = !nameConflict && !belowSold && hasUnmappedError(mutation.error, LOT_FIELDS);
 
   return (

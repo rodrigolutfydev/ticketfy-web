@@ -1,3 +1,5 @@
+import { clientMessage, genericMessage, problemMessage, withErrorCode, type ProblemScope } from "../i18n/problems";
+
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
 const AUTH_BASE = "/api";
 const AUTH_HEADER = "X-Ticketfy-Auth";
@@ -26,6 +28,8 @@ export class ApiError extends Error {
   retryAfter: number | null;
   problemType: string | null;
   requestId: string | null;
+  detail: string | null;
+  properties: Record<string, unknown>;
 
   constructor(
     status: number,
@@ -33,7 +37,9 @@ export class ApiError extends Error {
     fieldErrors: FieldError[] = [],
     retryAfter: number | null = null,
     problemType: string | null = null,
-    requestId: string | null = null
+    requestId: string | null = null,
+    detail: string | null = null,
+    properties: Record<string, unknown> = {}
   ) {
     super(message);
     this.name = "ApiError";
@@ -42,6 +48,8 @@ export class ApiError extends Error {
     this.retryAfter = retryAfter;
     this.problemType = problemType;
     this.requestId = requestId;
+    this.detail = detail;
+    this.properties = properties;
   }
 }
 
@@ -160,7 +168,7 @@ export async function apiDownload(path: string): Promise<{ blob: Blob; filename:
 
 async function send(method: string, path: string, options: RequestOptions, accept: string): Promise<Response> {
   if (!path.startsWith("/") || path.startsWith("//") || path.includes("..")) {
-    throw new ApiError(0, "Rota inválida.");
+    throw new ApiError(0, clientMessage("invalidRoute"));
   }
 
   let response = await sendOnce(method, path, options, accept);
@@ -204,7 +212,7 @@ interface AuthOptions {
 }
 
 async function authFetch(method: string, path: string, options: AuthOptions): Promise<Response> {
-  if (AUTH_ROUTES[path] !== method) throw new ApiError(0, "Rota inválida.");
+  if (AUTH_ROUTES[path] !== method) throw new ApiError(0, clientMessage("invalidRoute"));
 
   const headers: Record<string, string> = { Accept: "application/json", [AUTH_HEADER]: "1" };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
@@ -224,7 +232,7 @@ export async function authRequest<T>(method: string, path: string, options: Auth
   if (options.authenticated) {
     if (!isFresh(session)) {
       const renewed = await refreshSession();
-      if (!renewed || !isFresh(session)) throw new ApiError(401, defaultMessage(401));
+      if (!renewed || !isFresh(session)) throw new ApiError(401, genericMessage(401, null));
     }
   }
   const response = await authFetch(method, path, options);
@@ -247,33 +255,50 @@ async function timedFetch(url: string, init: RequestInit): Promise<Response> {
     return await fetch(url, { ...init, signal: controller.signal });
   } catch (error) {
     const timedOut = error instanceof DOMException && error.name === "AbortError";
-    throw new ApiError(
-      0,
-      timedOut ? "A API demorou demais para responder. Tente de novo." : "Não foi possível conectar à API. Ela está no ar?"
-    );
+    throw new ApiError(0, clientMessage(timedOut ? "timeout" : "network"));
   } finally {
     clearTimeout(timer);
   }
 }
 
+const STANDARD_PROBLEM_FIELDS = new Set(["type", "title", "status", "detail", "instance", "errors", "requestId"]);
+
 async function toApiError(response: Response): Promise<ApiError> {
   const body = await readJson(response);
   const fieldErrors: FieldError[] = Array.isArray(body?.errors) ? body.errors.filter(isFieldError).slice(0, 10) : [];
-  const detail = typeof body?.detail === "string" && body.detail.trim() ? body.detail.trim() : null;
-  const raw =
-    fieldErrors.length > 0
-      ? fieldErrors.map((e) => `${e.field}: ${e.message}`).join(" · ")
-      : detail ?? defaultMessage(response.status);
+  const detail = typeof body?.detail === "string" && body.detail.trim() ? truncate(body.detail.trim()) : null;
   const requestId = parseRequestId(response.headers.get("X-Request-Id")) ?? parseRequestId(body?.requestId);
-  const message = response.status >= 500 && requestId ? `${truncate(raw)} Código do erro: ${requestId}` : truncate(raw);
-  return new ApiError(
-    response.status,
-    message,
-    fieldErrors,
-    parseRetryAfter(response.headers.get("Retry-After")),
-    problemSlug(body?.type),
-    requestId
-  );
+  const retryAfter = parseRetryAfter(response.headers.get("Retry-After"));
+  const problemType = problemSlug(body?.type);
+  const properties = problemProperties(body);
+  const known = problemMessage(problemType, { status: response.status, retryAfter, detail, properties });
+  const message =
+    known === null
+      ? genericMessage(response.status, requestId)
+      : response.status >= 500
+        ? withErrorCode(known, requestId)
+        : known;
+  return new ApiError(response.status, message, fieldErrors, retryAfter, problemType, requestId, detail, properties);
+}
+
+function problemProperties(body: unknown): Record<string, unknown> {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) return {};
+  return Object.fromEntries(Object.entries(body).filter(([key]) => !STANDARD_PROBLEM_FIELDS.has(key)));
+}
+
+export function errorMessage(error: unknown, scope?: ProblemScope): string | null {
+  if (!error) return null;
+  if (error instanceof ApiError) {
+    if (!scope) return error.message;
+    const scoped = problemMessage(error.problemType, {
+      status: error.status,
+      retryAfter: error.retryAfter,
+      detail: error.detail,
+      properties: error.properties,
+    }, scope);
+    return scoped ?? error.message;
+  }
+  return error instanceof Error ? error.message : clientMessage("unexpected");
 }
 
 function parseRetryAfter(value: string | null): number | null {
@@ -323,17 +348,6 @@ async function readJson(response: Response) {
 
 function truncate(text: string) {
   return text.length > MAX_MESSAGE_LENGTH ? `${text.slice(0, MAX_MESSAGE_LENGTH)}…` : text;
-}
-
-function defaultMessage(status: number) {
-  if (status === 400) return "Dados inválidos. Confira os campos.";
-  if (status === 401) return "Faça login para continuar.";
-  if (status === 403) return "Você não tem permissão para esta ação.";
-  if (status === 404) return "Não encontrado.";
-  if (status === 409) return "Essa ação conflita com o estado atual. Atualize a página.";
-  if (status === 429) return "Muitas tentativas. Aguarde um pouco e tente de novo.";
-  if (status >= 500) return "A API teve um problema interno. Tente de novo em instantes.";
-  return `Erro ${status}`;
 }
 
 export const api = {
