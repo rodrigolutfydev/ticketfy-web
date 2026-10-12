@@ -14,7 +14,8 @@ import { Alert, BackLink, Button, ButtonLink, InfoRow, Skeleton } from "../compo
 import Avatar from "../components/Avatar";
 import FeaturedToggle from "../components/FeaturedToggle";
 import { encodeItems } from "../utils/cart";
-import { formatDate, formatPrice, formatTime, isPast, relativeDay } from "../utils/format";
+import { formatDate, formatPrice, formatTime, relativeDay } from "../utils/format";
+import { salesPanel } from "../utils/sales";
 import { isValidId, mapsUrl, safeImageUrl } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
 import NotFoundPage from "./NotFoundPage";
@@ -38,8 +39,8 @@ export default function EventDetailPage() {
   if (eventQuery.error) return <ErrorMessage message={eventQuery.error.message} />;
 
   const event = eventQuery.data!;
-  const past = isPast(event.endsAt ?? event.startsAt);
-  const cancelled = Boolean(event.cancelledAt);
+  const panel = salesPanel(event);
+  const cancelled = panel === "cancelled";
   const photo = safeImageUrl(event.imageUrl);
   const onSale = (ticketTypesQuery.data ?? []).filter((t) => !t.soldOut);
   const minPrice = onSale.length > 0 ? Math.min(...onSale.map((t) => t.price)) : null;
@@ -148,8 +149,11 @@ export default function EventDetailPage() {
             <div className="mt-5">
               {cancelled ? (
                 <p className="rounded-xl bg-raised p-4 text-center text-sm text-muted">Este evento foi cancelado. As vendas estão encerradas.</p>
-              ) : past ? (
-                <p className="rounded-xl bg-raised p-4 text-center text-sm text-muted">Este evento já aconteceu. As vendas estão encerradas.</p>
+              ) : panel === "closed" ? (
+                <div className="rounded-xl bg-raised p-4 text-center">
+                  <p className="font-semibold text-ink">Vendas encerradas</p>
+                  <p className="mt-1 text-sm text-muted">As vendas terminam no início do evento.</p>
+                </div>
               ) : (
                 <>
                   {ticketTypesQuery.isLoading && <Loading text="Carregando ingressos..." />}
@@ -163,7 +167,7 @@ export default function EventDetailPage() {
       </div>
 
       {/* Celular: barra fixa no rodapé com o menor preço e atalho para os lotes. */}
-      {!past && !cancelled && minPrice !== null && (
+      {panel === "open" && minPrice !== null && (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between gap-4">
             <div>

@@ -11,6 +11,7 @@ import { decodeItems } from "../utils/cart";
 import { couponErrorMessage, formatDiscount, isCouponError, normalizeCouponCode } from "../utils/coupon";
 import { formatPrice } from "../utils/format";
 import { newIdempotencyKey } from "../utils/idempotency";
+import { orderErrorMessage } from "../utils/sales";
 import { isValidId } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -101,7 +102,7 @@ export default function CheckoutPage() {
   const subtotal = lines.reduce((sum, l) => sum + (l.type ? l.type.price * l.quantity : 0), 0);
   const total = applied ? applied.total : subtotal;
   const couponError = couponErrorMessage(preview.error) ?? (isCouponError(mutation.error) ? couponErrorMessage(mutation.error) : null);
-  const orderError = mutation.error && !isCouponError(mutation.error) ? mutation.error.message : null;
+  const orderError = mutation.error && !isCouponError(mutation.error) ? orderErrorMessage(mutation.error) : null;
 
   return (
     <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1fr_360px] lg:gap-12">

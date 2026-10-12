@@ -1,6 +1,7 @@
 import { ApiError } from "../api/client";
 import type { DiscountType } from "../api/types";
 import { formatPrice } from "./format";
+import { SALES_CLOSED_MESSAGE } from "./sales";
 
 const percentFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
 
@@ -19,6 +20,8 @@ export function couponErrorMessage(error: unknown): string | null {
       return `Muitas tentativas com cupom. Tente de novo em ${Math.max(1, Math.ceil((error.retryAfter ?? 60) / 60))} min.`;
     case "ticket-type-not-found":
       return "Algum ingresso do pedido não está mais à venda.";
+    case "sales-closed":
+      return SALES_CLOSED_MESSAGE;
     default:
       return error.fieldErrors.length > 0 ? "Confira o código do cupom." : error.message;
   }

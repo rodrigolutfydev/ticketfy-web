@@ -55,6 +55,7 @@ export interface EventDetails extends Omit<EventSummary, "minPrice" | "soldOut">
   // Necessário para saber se o evento é do usuário logado.
   organizerId?: string;
   cancellationReason?: string | null;
+  salesClosed: boolean;
 }
 
 export interface EventCancellationResult {
