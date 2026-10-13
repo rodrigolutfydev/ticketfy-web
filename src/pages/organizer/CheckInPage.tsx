@@ -7,6 +7,7 @@ import { Button, Card, PageTitle } from "../../components/ui";
 import { formatTime } from "../../utils/format";
 import { normalizeTicketCode } from "../../utils/security";
 import { usePageTitle } from "../../hooks/usePageTitle";
+import { useI18n } from "../../i18n/LocaleContext";
 
 type HistoryEntry = { code: string; ok: boolean; detail: string; at: string };
 
@@ -14,7 +15,9 @@ type HistoryEntry = { code: string; ok: boolean; detail: string; at: string };
 // O código só vale uma vez: a API marca como USED no primeiro check-in
 // e devolve 409 nas tentativas seguintes.
 export default function CheckInPage() {
-  usePageTitle("Check-in");
+  const { t, locale } = useI18n();
+  const c = t.organizer.checkIn;
+  usePageTitle(c.pageTitle);
   const [code, setCode] = useState("");
   // Últimas validações desta sessão, para o porteiro conferir o que passou.
   // Fica só na memória da página: some ao recarregar.
@@ -43,11 +46,11 @@ export default function CheckInPage() {
 
   return (
     <div className="max-w-2xl">
-      <PageTitle title="Check-in" subtitle="Digite o código do ingresso ou use um leitor de QR que digita no campo." />
+      <PageTitle title={c.title} subtitle={c.subtitle} />
       <Card>
         <form onSubmit={submit} className="space-y-4">
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-ink">Código do ingresso</span>
+            <span className="mb-1.5 block text-sm font-medium text-ink">{c.code}</span>
             <input
               ref={inputRef}
               autoFocus
@@ -65,26 +68,26 @@ export default function CheckInPage() {
             />
           </label>
           <Button type="submit" size="lg" className="w-full" loading={mutation.isPending} disabled={code.length < 6}>
-            <ScanLine size={18} aria-hidden /> Validar entrada
+            <ScanLine size={18} aria-hidden /> {c.submit}
           </Button>
         </form>
 
         {mutation.isSuccess && (
-          <Result ok title="Entrada liberada" detail={`${mutation.data.eventName}, ${mutation.data.ticketTypeName}`} />
+          <Result ok title={c.allowed} detail={`${mutation.data.eventName}, ${mutation.data.ticketTypeName}`} />
         )}
-        {mutation.isError && <Result ok={false} title="Entrada negada" detail={describe(mutation.error)} />}
+        {mutation.isError && <Result ok={false} title={c.denied} detail={describe(mutation.error)} />}
       </Card>
 
       {history.length > 0 && (
         <section className="mt-8">
-          <h2 className="mb-3 font-bold text-ink">Últimas validações</h2>
+          <h2 className="mb-3 font-bold text-ink">{c.history}</h2>
           <ul className="divide-y divide-line overflow-hidden elevated rounded-2xl border border-line bg-surface text-sm">
             {history.map((entry, index) => (
               <li key={`${entry.at}-${index}`} className="flex items-center gap-3 px-4 py-3">
-                {entry.ok ? <CircleCheck size={18} className="shrink-0 text-success" aria-label="Liberado" /> : <CircleX size={18} className="shrink-0 text-danger" aria-label="Negado" />}
+                {entry.ok ? <CircleCheck size={18} className="shrink-0 text-success" aria-label={c.allowedShort} /> : <CircleX size={18} className="shrink-0 text-danger" aria-label={c.deniedShort} />}
                 <span className="font-mono font-semibold text-ink">{entry.code}</span>
                 <span className="min-w-0 flex-1 truncate text-muted">{entry.detail}</span>
-                <span className="text-subtle">{formatTime(entry.at)}</span>
+                <span className="text-subtle">{formatTime(entry.at, locale)}</span>
               </li>
             ))}
           </ul>

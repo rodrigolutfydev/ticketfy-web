@@ -28,6 +28,10 @@ export const getMe = () => api.get<UserProfile>("/users/me");
 // "" remove a foto; uma URL https troca.
 export const updateAvatar = (avatarUrl: string) => api.patch<UserProfile>("/users/me/avatar", { avatarUrl });
 export const updateLanguage = (language: string) => api.patch<UserProfile>("/users/me/language", { language });
+export const exportMyData = (password: string) =>
+  apiDownload("/users/me/data-export", { method: "POST", body: { password }, accept: "application/json, application/problem+json" });
+export const deleteAccount = (password: string, confirmation: string) =>
+  authApi.post<void>("/users/me/deletion", { password, confirmation }, { authenticated: true });
 
 // Eventos
 export function listEvents({

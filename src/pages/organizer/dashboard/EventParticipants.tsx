@@ -9,7 +9,8 @@ import { Empty, ErrorMessage } from "../../../components/StateMessage";
 import { Alert, Button, Input, Select, Skeleton } from "../../../components/ui";
 import { saveBlob } from "../../../utils/download";
 import { formatShortDate } from "../../../utils/format";
-import { TICKET_STATUS_LABELS, maskedCode } from "../../../utils/participants";
+import { maskedCode } from "../../../utils/participants";
+import { useI18n } from "../../../i18n/LocaleContext";
 
 const STATUSES: TicketStatus[] = ["VALID", "USED", "CANCELLED"];
 const PAGE_SIZE = 20;
@@ -22,6 +23,8 @@ const STATUS_STYLES: Record<TicketStatus, string> = {
 };
 
 export default function EventParticipants({ eventId }: { eventId: string }) {
+  const { t, locale } = useI18n();
+  const p = t.organizer.participants;
   const [ticketTypeId, setTicketTypeId] = useState("");
   const [status, setStatus] = useState<TicketStatus | "">("");
   const [qInput, setQInput] = useState("");
@@ -55,7 +58,7 @@ export default function EventParticipants({ eventId }: { eventId: string }) {
     setExportError(null);
     try {
       const { blob, filename } = await downloadParticipantsCsv(eventId, filters);
-      saveBlob(blob, filename ?? "participantes-ticketfy.csv");
+      saveBlob(blob, filename ?? p.csvName);
     } catch (failure) {
       setExportError(errorMessage(failure));
     } finally {
@@ -69,49 +72,47 @@ export default function EventParticipants({ eventId }: { eventId: string }) {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row">
         <label className="relative flex-1">
-          <span className="sr-only">Buscar participante</span>
+          <span className="sr-only">{p.searchLabel}</span>
           <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-subtle" aria-hidden />
-          <Input value={qInput} onChange={(e) => setQInput(e.target.value)} maxLength={100} placeholder="Nome do participante" className="pl-10" />
+          <Input value={qInput} onChange={(e) => setQInput(e.target.value)} maxLength={100} placeholder={p.searchPlaceholder} className="pl-10" />
         </label>
         <label className="lg:w-56">
-          <span className="sr-only">Lote</span>
+          <span className="sr-only">{p.lot}</span>
           <Select value={ticketTypeId} onChange={(e) => setTicketTypeId(e.target.value)}>
-            <option value="">Todos os lotes</option>
+            <option value="">{p.allLots}</option>
             {(lotsQuery.data ?? []).map((lot) => (
               <option key={lot.id} value={lot.id}>
                 {lot.name}
-                {lot.active ? "" : " (desativado)"}
+                {lot.active ? "" : p.inactiveLot}
               </option>
             ))}
           </Select>
         </label>
         <label className="lg:w-48">
-          <span className="sr-only">Situação</span>
+          <span className="sr-only">{p.status}</span>
           <Select value={status} onChange={(e) => setStatus(e.target.value as TicketStatus | "")}>
-            <option value="">Todas as situações</option>
+            <option value="">{p.allStatuses}</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
-                {TICKET_STATUS_LABELS[s]}
+                {t.labels.ticketStatus[s]}
               </option>
             ))}
           </Select>
         </label>
         <Button variant="secondary" onClick={exportCsv} loading={exporting}>
-          <Download size={16} aria-hidden /> Baixar CSV
+          <Download size={16} aria-hidden /> {p.exportCsv}
         </Button>
       </div>
-      <p className="text-xs text-muted">
-        Por segurança, só aparecem o nome do dono atual e os 4 últimos caracteres do código. O check-in continua sendo feito pelo código completo.
-      </p>
+      <p className="text-xs text-muted">{p.privacyNote}</p>
       {exportError && <Alert>{exportError}</Alert>}
 
       {isLoading && <Skeleton className="h-64 rounded-2xl" />}
-      {error && <ErrorMessage message={error.message} />}
+      {error && <ErrorMessage message={errorMessage(error) ?? ""} />}
       {data && data.content.length === 0 && (
         <Empty
           icon={<Users size={22} />}
-          title={filtered ? "Nenhum participante com esses filtros" : "Nenhum ingresso emitido ainda"}
-          hint={filtered ? "Tente outro nome, lote ou situação." : "Os participantes aparecem aqui assim que os ingressos forem emitidos."}
+          title={filtered ? p.emptyFilteredTitle : p.emptyTitle}
+          hint={filtered ? p.emptyFilteredHint : p.emptyHint}
         />
       )}
 
@@ -120,11 +121,11 @@ export default function EventParticipants({ eventId }: { eventId: string }) {
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs text-muted">
-                <th className="px-5 py-3 font-medium">Participante</th>
-                <th className="px-3 py-3 font-medium">Lote</th>
-                <th className="px-3 py-3 font-medium">Situação</th>
-                <th className="px-3 py-3 font-medium">Check-in</th>
-                <th className="px-3 py-3 font-medium">Código</th>
+                <th className="px-5 py-3 font-medium">{p.participant}</th>
+                <th className="px-3 py-3 font-medium">{p.lot}</th>
+                <th className="px-3 py-3 font-medium">{p.status}</th>
+                <th className="px-3 py-3 font-medium">{p.checkIn}</th>
+                <th className="px-3 py-3 font-medium">{p.code}</th>
               </tr>
             </thead>
             <tbody>
@@ -134,17 +135,17 @@ export default function EventParticipants({ eventId }: { eventId: string }) {
                     <p className="font-medium text-ink">{participant.holderName}</p>
                     {participant.transferred && (
                       <span className="mt-1 inline-block rounded bg-warning/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-warning">
-                        TRANSFERIDO
+                        {p.transferred}
                       </span>
                     )}
                   </td>
                   <td className="px-3 py-3.5 text-muted">{participant.ticketTypeName}</td>
                   <td className="px-3 py-3.5">
                     <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${STATUS_STYLES[participant.status]}`}>
-                      {TICKET_STATUS_LABELS[participant.status]}
+                      {t.labels.ticketStatus[participant.status]}
                     </span>
                   </td>
-                  <td className="tabular px-3 py-3.5 text-muted">{participant.checkedInAt ? formatShortDate(participant.checkedInAt) : "—"}</td>
+                  <td className="tabular px-3 py-3.5 text-muted">{participant.checkedInAt ? formatShortDate(participant.checkedInAt, locale) : "—"}</td>
                   <td className="tabular px-3 py-3.5 font-mono text-muted">{maskedCode(participant.codeSuffix)}</td>
                 </tr>
               ))}
@@ -154,9 +155,7 @@ export default function EventParticipants({ eventId }: { eventId: string }) {
       )}
 
       {data && (
-        <p className="text-xs text-muted">
-          {data.page.totalElements} {data.page.totalElements === 1 ? "ingresso" : "ingressos"}
-        </p>
+        <p className="text-xs text-muted">{p.count(data.page.totalElements)}</p>
       )}
       {data && <Pagination page={page} totalPages={data.page.totalPages} onChange={setPage} />}
     </div>

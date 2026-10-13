@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ApiError, fieldError, hasUnmappedError } from "../../../api/client";
+import { ApiError, errorMessage, fieldError, hasUnmappedError } from "../../../api/client";
+import { useI18n } from "../../../i18n/LocaleContext";
 import { requestPayout } from "../../../api/endpoints";
 import type { Balance, PayoutAccount } from "../../../api/types";
 import { Alert, Button, Field, Input, PasswordInput } from "../../../components/ui";
 import { formatPrice } from "../../../utils/format";
 import { newIdempotencyKey } from "../../../utils/idempotency";
-import { PIX_KEY_LABELS } from "./payoutMeta";
 
 interface Props {
   open: boolean;
@@ -18,6 +18,8 @@ interface Props {
 export default function PayoutDialog({ open, balance, account, onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const queryClient = useQueryClient();
+  const { t, locale } = useI18n();
+  const d = t.organizer.payoutDialog;
   const [amount, setAmount] = useState("");
   const [password, setPassword] = useState("");
   const [idempotencyKey] = useState(newIdempotencyKey);
@@ -59,14 +61,14 @@ export default function PayoutDialog({ open, balance, account, onClose }: Props)
       <form onSubmit={submit} className="space-y-4 p-6">
         <div>
           <h2 id="payout-title" className="text-lg font-bold">
-            Sacar saldo
+            {d.title}
           </h2>
           <p className="mt-1 text-sm text-muted">
-            Disponível: <span className="tabular font-semibold text-ink">{formatPrice(balance.available)}</span>. O valor vai por Pix para a
-            chave {PIX_KEY_LABELS[account.pixKeyType]} <span className="tabular">{account.pixKey}</span>.
+            {d.available} <span className="tabular font-semibold text-ink">{formatPrice(balance.available, locale)}</span>.{" "}
+            {d.destination(t.labels.pixKeyTypes[account.pixKeyType])} <span className="tabular">{account.pixKey}</span>.
           </p>
         </div>
-        <Field label="Valor" hint={`Mínimo de ${formatPrice(balance.minPayoutAmount)}`} error={fieldError(error, "amount")}>
+        <Field label={d.amount} hint={d.minimum(formatPrice(balance.minPayoutAmount, locale))} error={fieldError(error, "amount")}>
           <Input
             type="number"
             inputMode="decimal"
@@ -79,16 +81,16 @@ export default function PayoutDialog({ open, balance, account, onClose }: Props)
             autoFocus
           />
         </Field>
-        <Field label="Confirme sua senha" error={wrongPassword ? "Senha incorreta." : fieldError(error, "password")}>
+        <Field label={d.password} error={wrongPassword ? d.wrongPassword : fieldError(error, "password")}>
           <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" maxLength={100} required />
         </Field>
-        {error && !wrongPassword && hasUnmappedError(error, ["amount", "password"]) && <Alert>{error.message}</Alert>}
+        {error && !wrongPassword && hasUnmappedError(error, ["amount", "password"]) && <Alert>{errorMessage(error)}</Alert>}
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={mutation.isPending}>
-            Voltar
+            {d.back}
           </Button>
           <Button type="submit" loading={mutation.isPending}>
-            Solicitar saque
+            {d.submit}
           </Button>
         </div>
       </form>

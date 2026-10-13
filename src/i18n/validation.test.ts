@@ -22,6 +22,8 @@ describe("validation messages", () => {
     expect(validationMessage("url", { protocol: "https" }, "pt-BR")).toBe("Informe um endereço que comece com https://.");
     expect(validationMessage("one-of", { allowed: ["pt-BR", "en"] }, "en")).toBe("Choose pt-BR or en.");
     expect(validationMessage("confirmation", { expected: "EXCLUIR" }, "en")).toBe("Type EXCLUIR to confirm.");
+    expect(validationMessage("confirmation", { allowed: ["EXCLUIR", "DELETE"] }, "pt-BR")).toBe("Digite EXCLUIR ou DELETE para confirmar.");
+    expect(validationMessage("confirmation", { allowed: ["EXCLUIR", "DELETE"] }, "en")).toBe("Type EXCLUIR or DELETE to confirm.");
     expect(validationMessage("invalid-pix-key", { pixKeyType: "EMAIL" }, "pt-BR")).toBe("Chave Pix inválida para o tipo e-mail.");
     expect(validationMessage("count", { min: 1 }, "pt-BR")).toBe("Escolha pelo menos 1 item.");
   });

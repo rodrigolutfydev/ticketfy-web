@@ -27,6 +27,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = locale;
+    document.querySelector('meta[name="description"]')?.setAttribute("content", MESSAGES[locale].layout.metaDescription);
   }, [locale]);
 
   const accountLocale = isLocale(me?.language) ? me.language : null;

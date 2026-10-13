@@ -50,4 +50,10 @@ describe("suspensionConsequences", () => {
     expect(items.join(" ")).toMatch(/vendas dos eventos deste organizador ficam pausadas/);
     expect(items.join(" ")).toMatch(/saques solicitados ficam retidos/);
   });
+
+  it("lists the consequences in English", () => {
+    const items = suspensionConsequences("ORGANIZER", "en");
+    expect(items).toHaveLength(5);
+    expect(items.join(" ")).toMatch(/Requested withdrawals are held/);
+  });
 });

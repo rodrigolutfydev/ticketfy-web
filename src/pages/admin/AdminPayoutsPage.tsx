@@ -9,11 +9,15 @@ import { Empty, ErrorMessage } from "../../components/StateMessage";
 import { Alert, Button, PageTitle, Skeleton } from "../../components/ui";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { formatPrice } from "../../utils/format";
-import { PIX_KEY_LABELS, formatDateTime } from "../organizer/finance/payoutMeta";
+import { formatDateTime } from "../organizer/finance/payoutMeta";
+import { errorMessage } from "../../api/client";
+import { useI18n } from "../../i18n/LocaleContext";
 import ReasonDialog from "./ReasonDialog";
 
 export default function AdminPayoutsPage() {
-  usePageTitle("Saques em análise");
+  const { t } = useI18n();
+  const p = t.admin.payouts;
+  usePageTitle(p.pageTitle);
   const [page, setPage] = useState(0);
   const { data, isLoading, error } = useQuery({
     queryKey: ["admin-payouts", page],
@@ -23,12 +27,12 @@ export default function AdminPayoutsPage() {
 
   return (
     <div>
-      <PageTitle title="Saques em análise" subtitle="Primeiros saques de cada organizador e saques acima do limite de análise." />
+      <PageTitle title={p.title} subtitle={p.subtitle} />
       {isLoading && <Skeleton className="h-40 rounded-2xl" />}
-      {error && <ErrorMessage message={error.message} />}
+      {error && <ErrorMessage message={errorMessage(error) ?? ""} />}
       {data &&
         (data.content.length === 0 ? (
-          <Empty icon={<ClipboardCheck size={22} />} title="Nenhum saque aguardando análise" hint="Os novos pedidos aparecem aqui." />
+          <Empty icon={<ClipboardCheck size={22} />} title={p.emptyTitle} hint={p.emptyHint} />
         ) : (
           <>
             <ul className="elevated overflow-hidden rounded-2xl border border-line bg-surface">
@@ -45,6 +49,8 @@ export default function AdminPayoutsPage() {
 
 function PayoutReviewRow({ payout }: { payout: AdminPayout }) {
   const queryClient = useQueryClient();
+  const { t, locale } = useI18n();
+  const p = t.admin.payouts;
   const [rejecting, setRejecting] = useState(false);
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin-payouts"] });
   const approve = useMutation({ mutationFn: () => approvePayout(payout.id), onSettled: refresh });
@@ -60,44 +66,44 @@ function PayoutReviewRow({ payout }: { payout: AdminPayout }) {
     <li className="border-b border-line px-4 py-4 last:border-0 sm:px-5">
       <div className="flex flex-wrap items-center gap-4 sm:flex-nowrap">
         <div className="min-w-0 flex-1">
-          <p className="tabular text-lg font-semibold text-ink">{formatPrice(payout.amount)}</p>
+          <p className="tabular text-lg font-semibold text-ink">{formatPrice(payout.amount, locale)}</p>
           <p className="truncate text-sm text-ink">
-            {payout.organizerName ?? "Organizador"} <span className="text-muted">· {payout.organizerEmail}</span>
+            {payout.organizerName ?? p.organizer} <span className="text-muted">· {payout.organizerEmail}</span>
           </p>
           <p className="truncate text-xs text-muted">
-            Solicitado em {formatDateTime(payout.requestedAt)} · {PIX_KEY_LABELS[payout.pixKeyType]}{" "}
-            <span className="tabular">{payout.pixKey}</span> · titular {payout.holderName}
+            {p.requested(formatDateTime(payout.requestedAt, locale))} · {t.labels.pixKeyTypes[payout.pixKeyType]}{" "}
+            <span className="tabular">{payout.pixKey}</span> · {p.holder(payout.holderName)}
           </p>
-          {payout.organizerPayoutsBlocked && <p className="text-xs text-warning">Os saques deste organizador estão bloqueados.</p>}
+          {payout.organizerPayoutsBlocked && <p className="text-xs text-warning">{p.blocked}</p>}
         </div>
         <div className="flex shrink-0 gap-2">
           <Button variant="secondary" size="sm" onClick={() => setRejecting(true)} disabled={approve.isPending}>
-            Recusar
+            {p.reject}
           </Button>
           <ConfirmButton
             variant="primary"
-            title="Aprovar este saque?"
-            description={`${formatPrice(payout.amount)} serão enviados por Pix na próxima execução da rotina de saques.`}
-            confirmLabel="Aprovar"
+            title={p.approveTitle}
+            description={p.approveText(formatPrice(payout.amount, locale))}
+            confirmLabel={p.approve}
             loading={approve.isPending}
             onConfirm={() => approve.mutate()}
           >
-            Aprovar
+            {p.approve}
           </ConfirmButton>
         </div>
       </div>
       {approve.error && (
         <div className="mt-3">
-          <Alert>{approve.error.message}</Alert>
+          <Alert>{errorMessage(approve.error)}</Alert>
         </div>
       )}
       <ReasonDialog
         open={rejecting}
-        title="Recusar este saque?"
-        description={`O valor de ${formatPrice(payout.amount)} volta para o saldo disponível do organizador, que verá o motivo.`}
-        confirmLabel="Recusar saque"
+        title={p.rejectTitle}
+        description={p.rejectText(formatPrice(payout.amount, locale))}
+        confirmLabel={p.rejectConfirm}
         loading={reject.isPending}
-        error={reject.error?.message ?? null}
+        error={errorMessage(reject.error)}
         onConfirm={(reason) => reject.mutate(reason)}
         onClose={() => setRejecting(false)}
       />

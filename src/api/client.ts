@@ -19,6 +19,7 @@ const AUTH_ROUTES: Record<string, string> = {
   "/auth/logout": "POST",
   "/auth/logout-all": "POST",
   "/users/me/password": "PATCH",
+  "/users/me/deletion": "POST",
 };
 
 export type FieldError = { field: string; message: string; code: string | null; params: Record<string, unknown> };
@@ -165,8 +166,14 @@ export async function apiRequest<T>(method: string, path: string, options: Reque
   return (await readJson(response)) as T;
 }
 
-export async function apiDownload(path: string): Promise<{ blob: Blob; filename: string | null }> {
-  const response = await send("GET", path, {}, "text/csv, application/problem+json");
+interface DownloadOptions {
+  method?: string;
+  body?: unknown;
+  accept?: string;
+}
+
+export async function apiDownload(path: string, options: DownloadOptions = {}): Promise<{ blob: Blob; filename: string | null }> {
+  const response = await send(options.method ?? "GET", path, { body: options.body }, options.accept ?? "text/csv, application/problem+json");
   const disposition = response.headers.get("Content-Disposition") ?? "";
   const match = /filename="?([^";]+)"?/i.exec(disposition);
   return { blob: await response.blob(), filename: match ? match[1] : null };

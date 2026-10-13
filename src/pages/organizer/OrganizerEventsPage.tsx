@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, CalendarPlus, ChevronRight, MapPin } from "lucide-react";
-import { ApiError } from "../../api/client";
+import { ApiError, errorMessage } from "../../api/client";
 import { listMyEvents } from "../../api/endpoints";
-import BackendNotice, { Code } from "../../components/BackendNotice";
+import BackendNotice from "../../components/BackendNotice";
+import { useI18n } from "../../i18n/LocaleContext";
 import EventCover from "../../components/EventCover";
 import Pagination from "../../components/Pagination";
 import { Empty, ErrorMessage, Loading } from "../../components/StateMessage";
@@ -17,7 +18,9 @@ const TABS = ["proximos", "realizados"] as const;
 
 // Lista dos eventos do organizador, separada em próximos e já realizados.
 export default function OrganizerEventsPage() {
-  usePageTitle("Meus eventos");
+  const { t, locale } = useI18n();
+  const e = t.organizer.events;
+  usePageTitle(e.pageTitle);
   const [page, setPage] = useState(0);
   const [tab, setTab] = useTabParam(TABS, "proximos");
   const location = useLocation();
@@ -31,16 +34,16 @@ export default function OrganizerEventsPage() {
 
   // /events/mine ainda não existe: o Spring tenta tratar "mine" como id e devolve 400 ou 404.
   const endpointMissing = error instanceof ApiError && [400, 404, 405].includes(error.status);
-  const events = (data?.content ?? []).filter((e) => (tab === "proximos" ? !isPast(e.startsAt) : isPast(e.startsAt)));
+  const events = (data?.content ?? []).filter((item) => (tab === "proximos" ? !isPast(item.startsAt) : isPast(item.startsAt)));
 
   return (
     <div>
       <PageTitle
-        title="Meus eventos"
-        subtitle="Eventos que você organiza."
+        title={e.title}
+        subtitle={e.subtitle}
         actions={
           <ButtonLink to="/organizer/events/new">
-            <CalendarPlus size={16} aria-hidden /> Criar evento
+            <CalendarPlus size={16} aria-hidden /> {e.newEvent}
           </ButtonLink>
         }
       />
@@ -51,30 +54,27 @@ export default function OrganizerEventsPage() {
       )}
 
       <Tabs
-        label="Filtrar eventos"
+        label={e.tabsLabel}
         idPrefix="meus-eventos"
         value={tab}
         onChange={setTab}
         items={[
-          { key: "proximos", label: "Próximos" },
-          { key: "realizados", label: "Realizados" },
+          { key: "proximos", label: e.tabs.upcoming },
+          { key: "realizados", label: e.tabs.past },
         ]}
       />
       <TabPanel idPrefix="meus-eventos" activeKey={tab}>
         {isLoading && <Loading />}
         {endpointMissing && (
-          <BackendNotice title="A API ainda não lista os eventos do organizador">
-            <p>
-              Esta tela usa <Code>GET /events/mine</Code>, que devolve uma página com os eventos ativos do usuário logado.
-              Enquanto ela não existe, abra o evento pela listagem pública e use o botão "Gerenciar este evento".
-            </p>
+          <BackendNotice title={e.endpointMissingTitle}>
+            <p>{e.endpointMissingText}</p>
           </BackendNotice>
         )}
-        {error && !endpointMissing && <ErrorMessage message={error.message} />}
+        {error && !endpointMissing && <ErrorMessage message={errorMessage(error) ?? ""} />}
 
         {data && events.length === 0 && (
-          <Empty icon={<CalendarDays size={22} />} title={tab === "proximos" ? "Nenhum evento futuro" : "Nenhum evento realizado"}>
-            {tab === "proximos" && <ButtonLink to="/organizer/events/new">Criar evento</ButtonLink>}
+          <Empty icon={<CalendarDays size={22} />} title={tab === "proximos" ? e.emptyUpcoming : e.emptyPast}>
+            {tab === "proximos" && <ButtonLink to="/organizer/events/new">{e.newEvent}</ButtonLink>}
           </Empty>
         )}
         {events.length > 0 && (
@@ -94,18 +94,18 @@ export default function OrganizerEventsPage() {
                       {event.cancelledAt && (
                         <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-raised px-2.5 py-1 text-xs font-semibold text-muted">
                           <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
-                          Cancelado
+                          {e.cancelled}
                         </span>
                       )}
                       {!event.cancelledAt && event.soldOut && (
                         <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-danger/30 bg-danger/12 px-2.5 py-1 text-xs font-semibold text-danger">
                           <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
-                          Esgotado
+                          {e.soldOut}
                         </span>
                       )}
                     </div>
                     <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
-                      <CalendarDays size={14} aria-hidden /> {formatShortDate(event.startsAt)}
+                      <CalendarDays size={14} aria-hidden /> {formatShortDate(event.startsAt, locale)}
                     </p>
                     <p className="flex items-center gap-1.5 truncate text-sm text-muted">
                       <MapPin size={14} aria-hidden /> {event.venueName}, {event.city}

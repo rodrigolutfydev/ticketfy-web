@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { fieldError, hasUnmappedError } from "../api/client";
+import { errorMessage, fieldError, hasUnmappedError } from "../api/client";
+import { useI18n } from "../i18n/LocaleContext";
 import type { EventCategory, EventDetails, EventInput } from "../api/types";
 import { EVENT_CATEGORIES, categoryLabel, isEventCategory } from "../i18n/categories";
 import { fromInputDateTime, toInputDateTime, UFS } from "../utils/format";
@@ -28,6 +29,8 @@ const API_FIELDS = ["imageUrl", "startsAt", "endsAt", "category"] as const;
 // A API valida tudo de novo com Bean Validation: isto é só para o usuário
 // descobrir o erro antes de esperar a resposta.
 export default function EventForm({ initial, submitLabel, loading, error, onSubmit }: Props) {
+  const { t, locale } = useI18n();
+  const f = t.organizer.eventForm;
   // Um único objeto de estado para o formulário inteiro.
   const [form, setForm] = useState({
     name: initial?.name ?? "",
@@ -52,16 +55,16 @@ export default function EventForm({ initial, submitLabel, loading, error, onSubm
   function validate() {
     const found: typeof errors = {};
     if (form.imageUrl.trim() && !safeImageUrl(form.imageUrl)) {
-      found.imageUrl = "Use um endereço que comece com https://";
+      found.imageUrl = f.imageInvalid;
     }
     if (!isEventCategory(form.category)) {
-      found.category = "Escolha uma categoria.";
+      found.category = f.categoryRequired;
     }
     if (form.endsAt && form.startsAt && form.endsAt <= form.startsAt) {
-      found.endsAt = "O fim precisa ser depois do início.";
+      found.endsAt = f.endBeforeStart;
     }
     if (!initial && form.startsAt && new Date(form.startsAt).getTime() < Date.now()) {
-      found.startsAt = "Escolha uma data futura.";
+      found.startsAt = f.startInPast;
     }
     setErrors(found);
     return Object.keys(found).length === 0;
@@ -89,63 +92,63 @@ export default function EventForm({ initial, submitLabel, loading, error, onSubm
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      <Section title="Informações" description="O que as pessoas veem primeiro na página do evento.">
-        <Field label="Nome do evento">
-          <Input required maxLength={150} value={form.name} onChange={set("name")} placeholder="Ex.: Noite de Jazz na Praia" />
+      <Section title={f.infoTitle} description={f.infoText}>
+        <Field label={f.name}>
+          <Input required maxLength={150} value={form.name} onChange={set("name")} placeholder={f.namePlaceholder} />
         </Field>
-        <Field label="Categoria" hint="Ajuda o público a encontrar o evento na vitrine." error={errors.category ?? fieldError(error, "category")}>
+        <Field label={f.category} hint={f.categoryHint} error={errors.category ?? fieldError(error, "category")}>
           <Select required value={form.category} onChange={set("category")}>
             <option value="" disabled>
-              Escolha uma categoria
+              {f.chooseCategory}
             </option>
             {EVENT_CATEGORIES.map((category) => (
               <option key={category} value={category}>
-                {categoryLabel(category)}
+                {categoryLabel(category, locale)}
               </option>
             ))}
           </Select>
         </Field>
-        <Field label="Descrição" hint={`${form.description.length}/${DESCRIPTION_MAX} caracteres`}>
-          <Textarea rows={5} maxLength={DESCRIPTION_MAX} value={form.description} onChange={set("description")} placeholder="Atrações, classificação, o que levar..." />
+        <Field label={f.description} hint={f.descriptionCount(form.description.length, DESCRIPTION_MAX)}>
+          <Textarea rows={5} maxLength={DESCRIPTION_MAX} value={form.description} onChange={set("description")} placeholder={f.descriptionPlaceholder} />
         </Field>
       </Section>
 
-      <Section title="Foto de capa" description="Aparece no cartão do evento e no topo da página.">
+      <Section title={f.coverTitle} description={f.coverText}>
         <div className="grid gap-5 sm:grid-cols-[1fr_220px]">
           <Field
-            label="Endereço da imagem"
+            label={f.imageUrl}
             error={errors.imageUrl ?? fieldError(error, "imageUrl")}
-            hint="Opcional. Link https de uma imagem já hospedada (formato paisagem, 16:9, fica melhor)."
+            hint={f.imageHint}
           >
             <Input type="url" inputMode="url" maxLength={500} value={form.imageUrl} onChange={set("imageUrl")} placeholder="https://..." />
           </Field>
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-ink">Prévia</span>
+            <span className="mb-1.5 block text-sm font-medium text-ink">{f.preview}</span>
             <div className="aspect-[16/9] overflow-hidden rounded-xl border border-line">
-              <EventCover name={form.name || "Novo evento"} startsAt={form.startsAt ? fromInputDateTime(form.startsAt) : new Date().toISOString()} imageUrl={previewUrl} />
+              <EventCover name={form.name || f.newEventName} startsAt={form.startsAt ? fromInputDateTime(form.startsAt) : new Date().toISOString()} imageUrl={previewUrl} />
             </div>
           </div>
         </div>
       </Section>
 
-      <Section title="Local" description="Onde o evento acontece.">
+      <Section title={f.venueTitle} description={f.venueText}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Nome do local">
-            <Input required maxLength={150} value={form.venueName} onChange={set("venueName")} placeholder="Arena, teatro, bar..." />
+          <Field label={f.venueName}>
+            <Input required maxLength={150} value={form.venueName} onChange={set("venueName")} placeholder={f.venuePlaceholder} />
           </Field>
-          <Field label="Endereço">
-            <Input required maxLength={255} value={form.address} onChange={set("address")} placeholder="Rua, número, bairro" />
+          <Field label={f.address}>
+            <Input required maxLength={255} value={form.address} onChange={set("address")} placeholder={f.addressPlaceholder} />
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-[1fr_140px]">
-          <Field label="Cidade">
+          <Field label={f.city}>
             <Input required maxLength={100} value={form.city} onChange={set("city")} />
           </Field>
           {/* Lista fechada de UFs: impossível digitar uma sigla que não existe. */}
-          <Field label="UF">
+          <Field label={f.state}>
             <Select required value={form.state} onChange={set("state")}>
               <option value="" disabled>
-                Escolha
+                {f.chooseState}
               </option>
               {UFS.map((uf) => (
                 <option key={uf} value={uf}>
@@ -157,18 +160,18 @@ export default function EventForm({ initial, submitLabel, loading, error, onSubm
         </div>
       </Section>
 
-      <Section title="Data e horário" description="No fuso horário do seu navegador.">
+      <Section title={f.dateTitle} description={f.dateText}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Início" error={errors.startsAt ?? fieldError(error, "startsAt")}>
+          <Field label={f.startsAt} error={errors.startsAt ?? fieldError(error, "startsAt")}>
             <Input required type="datetime-local" value={form.startsAt} onChange={set("startsAt")} />
           </Field>
-          <Field label="Fim" hint="Opcional" error={errors.endsAt ?? fieldError(error, "endsAt")}>
+          <Field label={f.endsAt} hint={f.optional} error={errors.endsAt ?? fieldError(error, "endsAt")}>
             <Input type="datetime-local" min={form.startsAt || undefined} value={form.endsAt} onChange={set("endsAt")} />
           </Field>
         </div>
       </Section>
 
-      {error && hasUnmappedError(error, API_FIELDS) && <Alert>{error.message}</Alert>}
+      {error && hasUnmappedError(error, API_FIELDS) && <Alert>{errorMessage(error)}</Alert>}
       <div className="flex justify-end border-t border-line pt-6">
         <Button type="submit" size="lg" loading={loading}>
           {submitLabel}

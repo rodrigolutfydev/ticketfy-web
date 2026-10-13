@@ -71,6 +71,17 @@ export default function RegisterPage() {
         </Field>
         {localError && <Alert>{localError}</Alert>}
         {!localError && mutation.error && hasUnmappedError(mutation.error, REGISTER_FIELDS) && <Alert>{errorMessage(mutation.error)}</Alert>}
+        <p className="text-xs text-muted">
+          {t.legal.registerConsent.before}
+          <Link to="/terms" target="_blank" className="font-semibold text-accent-text hover:underline">
+            {t.legal.registerConsent.terms}
+          </Link>
+          {t.legal.registerConsent.middle}
+          <Link to="/privacy" target="_blank" className="font-semibold text-accent-text hover:underline">
+            {t.legal.registerConsent.privacy}
+          </Link>
+          {t.legal.registerConsent.after}
+        </p>
         <Button type="submit" size="lg" className="w-full" loading={mutation.isPending}>
           {t.register.submit}
         </Button>

@@ -18,7 +18,8 @@ import CouponsTab from "./CouponsTab";
 import EventOrders from "./dashboard/EventOrders";
 import EventParticipants from "./dashboard/EventParticipants";
 import EventOverview from "./dashboard/EventOverview";
-import { eventStamp, formatInt, formatPrice, formatShortDate, isPast, plural } from "../../utils/format";
+import { eventStamp, formatInt, formatPrice, formatShortDate, isPast } from "../../utils/format";
+import { useI18n } from "../../i18n/LocaleContext";
 import { maxPerBuyerChange, suggestedMaxPerBuyer } from "../../utils/lots";
 import { lotToggleCopy } from "../../utils/participants";
 import { isValidId } from "../../utils/security";
@@ -31,7 +32,9 @@ const TABS = ["visao", "lotes", "cupons", "pedidos", "participantes", "configura
 // Painel de um evento do organizador, dividido em abas:
 // visão geral, lotes de ingresso e configurações (exclusão).
 export default function OrganizerEventManagePage() {
-  usePageTitle("Gerenciar evento");
+  const { t, locale } = useI18n();
+  const m = t.organizer.manage;
+  usePageTitle(m.pageTitle);
   const { id = "" } = useParams();
   const validId = isValidId(id);
   const [tab, setTab] = useTabParam(TABS, "visao");
@@ -39,12 +42,12 @@ export default function OrganizerEventManagePage() {
 
   if (!validId) return <NotFoundPage />;
   if (eventQuery.isLoading) return <Loading />;
-  if (eventQuery.error) return <ErrorMessage message={eventQuery.error.message} />;
+  if (eventQuery.error) return <ErrorMessage message={errorMessage(eventQuery.error) ?? ""} />;
   const event = eventQuery.data!;
 
   return (
     <div>
-      <BackLink to="/organizer/events">Meus eventos</BackLink>
+      <BackLink to="/organizer/events">{m.myEvents}</BackLink>
       <OwnershipGuard event={event}>
         <div className="mb-6 mt-5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
@@ -52,11 +55,11 @@ export default function OrganizerEventManagePage() {
               <EventCover name={event.name} startsAt={event.startsAt} imageUrl={event.imageUrl} />
             </div>
             <div className="min-w-0">
-              <p className="tabular text-[11px] font-bold tracking-wide text-accent-text">{eventStamp(event.startsAt)}</p>
+              <p className="tabular text-[11px] font-bold tracking-wide text-accent-text">{eventStamp(event.startsAt, locale)}</p>
               <div className="mt-1 flex min-w-0 items-center gap-3">
                 <h1 className="truncate text-3xl font-semibold tracking-tight text-ink">{event.name}</h1>
                 {event.cancelledAt && (
-                  <span className="shrink-0 rounded-full border border-danger/30 bg-danger/12 px-2.5 py-1 text-xs font-semibold text-danger">Cancelado</span>
+                  <span className="shrink-0 rounded-full border border-danger/30 bg-danger/12 px-2.5 py-1 text-xs font-semibold text-danger">{m.cancelled}</span>
                 )}
               </div>
               <p className="text-sm text-muted">
@@ -67,28 +70,28 @@ export default function OrganizerEventManagePage() {
           <div className="flex flex-wrap items-start gap-2">
             <FeaturedToggle eventId={id} featured={!!event.featured} />
             <ButtonLink to={`/events/${id}`} variant="ghost" size="sm">
-              <ExternalLink size={15} aria-hidden /> Página pública
+              <ExternalLink size={15} aria-hidden /> {m.publicPage}
             </ButtonLink>
             {!event.cancelledAt && (
               <ButtonLink to={`/organizer/events/${id}/edit`} variant="secondary" size="sm">
-                <Pencil size={15} aria-hidden /> Editar
+                <Pencil size={15} aria-hidden /> {m.edit}
               </ButtonLink>
             )}
           </div>
         </div>
 
         <Tabs
-          label="Gerenciar evento"
+          label={m.tabsLabel}
           idPrefix="gerenciar"
           value={tab}
           onChange={setTab}
           items={[
-            { key: "visao", label: "Visão geral", icon: <ChartColumn size={16} /> },
-            { key: "lotes", label: "Lotes", icon: <Layers size={16} /> },
-            { key: "cupons", label: "Cupons", icon: <TicketPercent size={16} /> },
-            { key: "pedidos", label: "Pedidos", icon: <Receipt size={16} /> },
-            { key: "participantes", label: "Participantes", icon: <Users size={16} /> },
-            { key: "configuracoes", label: "Configurações", icon: <Settings size={16} /> },
+            { key: "visao", label: m.tabs.overview, icon: <ChartColumn size={16} /> },
+            { key: "lotes", label: m.tabs.lots, icon: <Layers size={16} /> },
+            { key: "cupons", label: m.tabs.coupons, icon: <TicketPercent size={16} /> },
+            { key: "pedidos", label: m.tabs.orders, icon: <Receipt size={16} /> },
+            { key: "participantes", label: m.tabs.participants, icon: <Users size={16} /> },
+            { key: "configuracoes", label: m.tabs.settings, icon: <Settings size={16} /> },
           ]}
         />
         <TabPanel idPrefix="gerenciar" activeKey={tab}>
@@ -105,6 +108,8 @@ export default function OrganizerEventManagePage() {
 }
 
 function TicketTypesTab({ eventId }: { eventId: string }) {
+  const { t, locale } = useI18n();
+  const l = t.organizer.lots;
   const queryClient = useQueryClient();
   const typesQuery = useQuery({ queryKey: ["ticket-types-manage", eventId], queryFn: () => listManagedTicketTypes(eventId) });
   const empty = { name: "", description: "", price: "", quantityTotal: "", maxPerOrder: "", maxPerBuyer: "" };
@@ -155,13 +160,13 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
     const max = form.maxPerOrder ? Number(form.maxPerOrder) : null;
     const perBuyer = form.maxPerBuyer ? Number(form.maxPerBuyer) : null;
     if (perBuyer !== null && (!Number.isInteger(perBuyer) || perBuyer < 1)) {
-      return setLocalError("O limite por comprador precisa ser um número inteiro maior que zero.");
+      return setLocalError(l.errors.perBuyer);
     }
     // Regras que o HTML sozinho não garante.
     if (!Number.isInteger(quantity) || (max !== null && !Number.isInteger(max))) {
-      return setLocalError("Quantidades precisam ser números inteiros.");
+      return setLocalError(l.errors.integers);
     }
-    if (max !== null && max > quantity) return setLocalError("O máximo por pedido não pode passar da quantidade total.");
+    if (max !== null && max > quantity) return setLocalError(l.errors.maxOverTotal);
     mutation.mutate();
   }
 
@@ -171,29 +176,29 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
     <div className="space-y-6">
       <section className="elevated overflow-hidden rounded-2xl border border-line bg-surface">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
-          <h2 className="text-lg font-semibold text-ink">Lotes</h2>
+          <h2 className="text-lg font-semibold text-ink">{l.title}</h2>
           <Button size="sm" variant={creating ? "ghost" : "primary"} onClick={() => setCreating((c) => !c)}>
-            {creating ? "Fechar" : <><Plus size={16} aria-hidden /> Novo lote</>}
+            {creating ? l.close : <><Plus size={16} aria-hidden /> {l.newLot}</>}
           </Button>
         </div>
         {typesQuery.isLoading && <div className="p-5"><Loading /></div>}
-        {typesQuery.error && <div className="p-5"><ErrorMessage message={typesQuery.error.message} /></div>}
+        {typesQuery.error && <div className="p-5"><ErrorMessage message={errorMessage(typesQuery.error) ?? ""} /></div>}
         {typesQuery.data && lots.length === 0 && (
-          <p className="p-5 text-sm text-muted">Nenhum lote cadastrado ainda. Sem lote, ninguém consegue comprar.</p>
+          <p className="p-5 text-sm text-muted">{l.empty}</p>
         )}
         {lots.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[880px] text-sm">
               <thead>
                 <tr className="border-b border-line text-left text-xs text-muted">
-                  <th className="px-5 py-3 font-medium">Lote</th>
-                  <th className="px-3 py-3 text-right font-medium">Preço</th>
-                  <th className="px-3 py-3 font-medium">Vendidos + reservados</th>
-                  <th className="px-3 py-3 text-right font-medium">Máx. por pedido</th>
-                  <th className="px-3 py-3 text-right font-medium">Máx. por comprador</th>
-                  <th className="px-3 py-3 font-medium">Situação</th>
+                  <th className="px-5 py-3 font-medium">{l.lot}</th>
+                  <th className="px-3 py-3 text-right font-medium">{l.price}</th>
+                  <th className="px-3 py-3 font-medium">{l.soldReserved}</th>
+                  <th className="px-3 py-3 text-right font-medium">{l.maxPerOrder}</th>
+                  <th className="px-3 py-3 text-right font-medium">{l.maxPerBuyer}</th>
+                  <th className="px-3 py-3 font-medium">{l.status}</th>
                   <th className="px-5 py-3">
-                    <span className="sr-only">Ações</span>
+                    <span className="sr-only">{l.actions}</span>
                   </th>
                 </tr>
               </thead>
@@ -204,16 +209,16 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
                       <p className="font-semibold text-ink">{lot.name}</p>
                       {lot.description && <p className="line-clamp-1 text-xs text-muted">{lot.description}</p>}
                     </td>
-                    <td className="tabular px-3 py-3.5 text-right font-semibold text-ink">{formatPrice(lot.price)}</td>
+                    <td className="tabular px-3 py-3.5 text-right font-semibold text-ink">{formatPrice(lot.price, locale)}</td>
                     <td className="px-3 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="h-1.5 w-24 overflow-hidden rounded-full bg-raised" aria-hidden>
                           <div className="h-full bg-accent" style={{ width: `${lot.quantityTotal ? (lot.quantitySold / lot.quantityTotal) * 100 : 0}%` }} />
                         </div>
                         <span className="tabular text-muted">
-                          {formatInt(lot.quantitySold)} / {formatInt(lot.quantityTotal)}
+                          {formatInt(lot.quantitySold, locale)} / {formatInt(lot.quantityTotal, locale)}
                         </span>
-                        {lot.available === 0 && <span className="rounded bg-raised px-1.5 py-0.5 text-[10px] font-bold text-muted">ESGOTADO</span>}
+                        {lot.available === 0 && <span className="rounded bg-raised px-1.5 py-0.5 text-[10px] font-bold text-muted">{l.soldOut}</span>}
                       </div>
                     </td>
                     <td className="tabular px-3 py-3.5 text-right text-muted">{lot.maxPerOrder ?? "—"}</td>
@@ -224,13 +229,13 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
                           lot.active ? "bg-success/12 text-success" : "bg-raised text-muted"
                         }`}
                       >
-                        {lot.active ? "À venda" : "Desativado"}
+                        {lot.active ? l.onSale : l.inactive}
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-start justify-end gap-2">
                         <Button size="sm" variant="ghost" onClick={() => setEditing(lot)}>
-                          <Pencil size={15} aria-hidden /> Editar
+                          <Pencil size={15} aria-hidden /> {l.edit}
                         </Button>
                         <LotToggle eventId={eventId} lot={lot} lots={lots} />
                       </div>
@@ -247,34 +252,34 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
 
       {creating && (
       <Card>
-        <h2 className="mb-4 text-lg font-semibold text-ink">Novo lote</h2>
+        <h2 className="mb-4 text-lg font-semibold text-ink">{l.newLot}</h2>
         <form onSubmit={submit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Nome">
-              <Input required maxLength={100} value={form.name} onChange={set("name")} placeholder="Pista, VIP..." />
+            <Field label={l.name}>
+              <Input required maxLength={100} value={form.name} onChange={set("name")} placeholder={l.namePlaceholder} />
             </Field>
-            <Field label="Preço (R$)" hint="Use 0 para lote gratuito.">
+            <Field label={l.priceLabel} hint={l.priceHint}>
               <Input required type="number" inputMode="decimal" min="0" max="100000" step="0.01" value={form.price} onChange={set("price")} />
             </Field>
           </div>
-          <Field label="Descrição" hint="Opcional. O que esse lote inclui.">
+          <Field label={l.description} hint={l.descriptionHint}>
             <Input maxLength={500} value={form.description} onChange={set("description")} />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Quantidade total">
+            <Field label={l.quantityTotal}>
               <Input required type="number" inputMode="numeric" min="1" max="1000000" step="1" value={form.quantityTotal} onChange={set("quantityTotal")} />
             </Field>
-            <Field label="Máximo por pedido" hint="Opcional">
+            <Field label={l.maxPerOrderLabel} hint={l.optional}>
               <Input type="number" inputMode="numeric" min="1" max="100" step="1" value={form.maxPerOrder} onChange={set("maxPerOrder")} />
             </Field>
           </div>
-          <Field label="Limite por comprador" hint="Opcional. Soma todos os pedidos da mesma conta neste lote. Em lote gratuito, sugerimos 2.">
+          <Field label={l.maxPerBuyerLabel} hint={l.maxPerBuyerHint}>
             <Input type="number" inputMode="numeric" min="1" max="1000" step="1" value={form.maxPerBuyer} onChange={set("maxPerBuyer")} />
           </Field>
-          {(localError || mutation.error) && <Alert>{localError ?? mutation.error?.message}</Alert>}
-          {created && <Alert type="success">Lote criado.</Alert>}
+          {(localError || mutation.error) && <Alert>{localError ?? errorMessage(mutation.error)}</Alert>}
+          {created && <Alert type="success">{l.created}</Alert>}
           <Button type="submit" loading={mutation.isPending}>
-            Criar lote
+            {l.create}
           </Button>
         </form>
       </Card>
@@ -285,7 +290,8 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
 
 function LotToggle({ eventId, lot, lots }: { eventId: string; lot: TicketTypeDetails; lots: TicketTypeDetails[] }) {
   const queryClient = useQueryClient();
-  const copy = lotToggleCopy(lot, lots);
+  const { locale } = useI18n();
+  const copy = lotToggleCopy(lot, lots, locale);
   const mutation = useMutation({
     mutationFn: () => (lot.active ? deactivateTicketType(eventId, lot.id) : reactivateTicketType(eventId, lot.id)),
     onSettled: () => {
@@ -307,7 +313,7 @@ function LotToggle({ eventId, lot, lots }: { eventId: string; lot: TicketTypeDet
       >
         {copy.confirmLabel}
       </ConfirmButton>
-      {mutation.error && <p className="max-w-[16rem] text-right text-xs text-danger">{mutation.error.message}</p>}
+      {mutation.error && <p className="max-w-[16rem] text-right text-xs text-danger">{errorMessage(mutation.error)}</p>}
     </div>
   );
 }
@@ -322,6 +328,8 @@ function SettingsTab({ event }: { event: EventDetails }) {
 }
 
 function CancelEventSection({ event }: { event: EventDetails }) {
+  const { t, locale } = useI18n();
+  const s = t.organizer.settings;
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const [result, setResult] = useState<EventCancellationResult | null>(null);
@@ -351,9 +359,9 @@ function CancelEventSection({ event }: { event: EventDetails }) {
   if (event.cancelledAt) {
     return (
       <div className="rounded-2xl border border-line p-6">
-        <h2 className="text-lg font-extrabold text-ink">Evento cancelado</h2>
-        <p className="mt-1 text-sm text-muted">Cancelado em {formatShortDate(event.cancelledAt)}.</p>
-        {event.cancellationReason && <p className="mt-2 text-sm text-ink">Motivo: {event.cancellationReason}</p>}
+        <h2 className="text-lg font-extrabold text-ink">{s.cancelledTitle}</h2>
+        <p className="mt-1 text-sm text-muted">{s.cancelledAt(formatShortDate(event.cancelledAt, locale))}</p>
+        {event.cancellationReason && <p className="mt-2 text-sm text-ink">{s.reason(event.cancellationReason)}</p>}
         {result && (
           <div className="mt-4">
             <CancellationSummary result={result} />
@@ -367,42 +375,40 @@ function CancelEventSection({ event }: { event: EventDetails }) {
 
   return (
     <div className="rounded-2xl border border-danger/35 p-6">
-      <h2 className="text-lg font-extrabold text-ink">Cancelar evento</h2>
-      <p className="mt-1 max-w-xl text-sm text-muted">
-        Os pedidos pagos são reembolsados e os ingressos cancelados. Pedidos aguardando pagamento são cancelados. O evento sai da vitrine e para de vender.
-      </p>
+      <h2 className="text-lg font-extrabold text-ink">{s.cancelTitle}</h2>
+      <p className="mt-1 max-w-xl text-sm text-muted">{s.cancelText}</p>
       {mutation.error && (
         <div className="mt-4">
-          <Alert>{mutation.error.message}</Alert>
+          <Alert>{errorMessage(mutation.error)}</Alert>
         </div>
       )}
       <div className="mt-5">
         <ConfirmButton
-          title="Cancelar este evento?"
+          title={s.cancelConfirmTitle}
           description={
             <div className="space-y-4">
               {dashboardQuery.isLoading ? (
-                <p>Calculando pedidos afetados...</p>
+                <p>{s.counting}</p>
               ) : dashboardQuery.error ? (
-                <p>Não foi possível contar os pedidos afetados. Todos os pedidos pagos serão reembolsados.</p>
+                <p>{s.countFailed}</p>
               ) : (
                 <p>
-                  <strong className="text-ink">{plural(paidOrders, "pedido pago será reembolsado", "pedidos pagos serão reembolsados")}</strong>
-                  {pendingOrders > 0 && ` e ${plural(pendingOrders, "pedido aguardando pagamento será cancelado", "pedidos aguardando pagamento serão cancelados")}`}.
-                  {" "}Essa ação não pode ser desfeita.
+                  <strong className="text-ink">{s.paidAffected(paidOrders)}</strong>
+                  {pendingOrders > 0 && s.pendingAffected(pendingOrders)}.
+                  {s.irreversible}
                 </p>
               )}
-              <Field label="Motivo" hint="Opcional. Aparece na página do evento.">
+              <Field label={s.reasonLabel} hint={s.reasonHint}>
                 <Textarea rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
               </Field>
             </div>
           }
-          confirmLabel="Cancelar evento"
+          confirmLabel={s.cancelEvent}
           danger
           loading={mutation.isPending}
           onConfirm={() => mutation.mutate()}
         >
-          Cancelar evento
+          {s.cancelEvent}
         </ConfirmButton>
       </div>
     </div>
@@ -410,26 +416,20 @@ function CancelEventSection({ event }: { event: EventDetails }) {
 }
 
 function CancellationSummary({ result }: { result: EventCancellationResult }) {
+  const { t } = useI18n();
+  const s = t.organizer.settings;
   return (
     <div className="space-y-3">
-      <Alert type="success">
-        {plural(result.refundedOrders, "pedido reembolsado", "pedidos reembolsados")} e {plural(result.cancelledOrders, "pedido cancelado", "pedidos cancelados")}.
-      </Alert>
-      {result.pendingOrders > 0 && (
-        <Alert type="info">
-          {plural(result.pendingOrders, "reembolso ficou", "reembolsos ficaram")} pendente{result.pendingOrders === 1 ? "" : "s"} e será{result.pendingOrders === 1 ? "" : "ão"} refeito{result.pendingOrders === 1 ? "" : "s"} automaticamente.
-        </Alert>
-      )}
-      {result.requiresManualAction > 0 && (
-        <Alert type="warning">
-          {plural(result.requiresManualAction, "pedido tem", "pedidos têm")} ingresso já utilizado e precisa{result.requiresManualAction === 1 ? "" : "m"} de reembolso manual.
-        </Alert>
-      )}
+      <Alert type="success">{s.summary(result.refundedOrders, result.cancelledOrders)}</Alert>
+      {result.pendingOrders > 0 && <Alert type="info">{s.pendingRefunds(result.pendingOrders)}</Alert>}
+      {result.requiresManualAction > 0 && <Alert type="warning">{s.manualRefunds(result.requiresManualAction)}</Alert>}
     </div>
   );
 }
 
 function DeleteEventSection({ eventId }: { eventId: string }) {
+  const { t } = useI18n();
+  const s = t.organizer.settings;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const mutation = useMutation({
@@ -437,31 +437,29 @@ function DeleteEventSection({ eventId }: { eventId: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["my-events"] });
-      navigate("/organizer/events", { replace: true, state: { message: "Evento excluído." } });
+      navigate("/organizer/events", { replace: true, state: { message: t.organizer.events.deleted } });
     },
   });
 
   return (
     <div className="rounded-2xl border border-danger/35 p-6">
-      <h2 className="text-lg font-extrabold text-ink">Excluir evento</h2>
-      <p className="mt-1 max-w-xl text-sm text-muted">
-        O evento sai da listagem pública e para de vender. Pedidos e ingressos já emitidos continuam no histórico.
-      </p>
+      <h2 className="text-lg font-extrabold text-ink">{s.deleteTitle}</h2>
+      <p className="mt-1 max-w-xl text-sm text-muted">{s.deleteText}</p>
       {mutation.error && (
         <div className="mt-4">
-          <Alert>{mutation.error.message}</Alert>
+          <Alert>{errorMessage(mutation.error)}</Alert>
         </div>
       )}
       <div className="mt-5">
         <ConfirmButton
-          title="Excluir este evento?"
-          description="Ele deixa de aparecer na listagem e não vende mais ingressos. Essa ação não pode ser desfeita pela tela."
-          confirmLabel="Excluir evento"
+          title={s.deleteConfirmTitle}
+          description={s.deleteConfirmText}
+          confirmLabel={s.deleteEvent}
           danger
           loading={mutation.isPending}
           onConfirm={() => mutation.mutate()}
         >
-          Excluir evento
+          {s.deleteEvent}
         </ConfirmButton>
       </div>
     </div>
@@ -474,6 +472,9 @@ const LOT_FIELDS = ["name", "quantityTotal", "maxPerBuyer"] as const;
 function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketTypeDetails; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const queryClient = useQueryClient();
+  const { t, locale } = useI18n();
+  const l = t.organizer.lots;
+  const ed = l.editor;
   const [form, setForm] = useState({
     name: lot.name,
     description: lot.description ?? "",
@@ -510,17 +511,17 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
     const description = form.description.trim();
     const price = Math.round(Number(form.price) * 100) / 100;
     const quantityTotal = Number(form.quantityTotal);
-    if (form.price.trim() === "" || !Number.isFinite(price) || price < 0) return setLocalError("O preço precisa ser zero ou maior. Use zero para lote gratuito.");
-    if (!Number.isInteger(quantityTotal) || quantityTotal < 1) return setLocalError("A quantidade total precisa ser um número inteiro maior que zero.");
+    if (form.price.trim() === "" || !Number.isFinite(price) || price < 0) return setLocalError(l.errors.price);
+    if (!Number.isInteger(quantityTotal) || quantityTotal < 1) return setLocalError(l.errors.quantity);
     if (form.maxPerOrder !== "" && (!Number.isInteger(Number(form.maxPerOrder)) || Number(form.maxPerOrder) < 1)) {
-      return setLocalError("O máximo por pedido precisa ser um número inteiro maior que zero.");
+      return setLocalError(l.errors.maxPerOrder);
     }
-    if (lot.maxPerOrder !== null && form.maxPerOrder === "") return setLocalError("O limite por pedido não pode ser removido, só alterado.");
+    if (lot.maxPerOrder !== null && form.maxPerOrder === "") return setLocalError(l.errors.maxPerOrderRemoval);
     if (form.maxPerBuyer !== "" && (!Number.isInteger(Number(form.maxPerBuyer)) || Number(form.maxPerBuyer) < 1)) {
-      return setLocalError("O limite por comprador precisa ser um número inteiro maior que zero.");
+      return setLocalError(l.errors.perBuyer);
     }
     if (quantityTotal < lot.quantitySold) {
-      return setLocalError(`A quantidade total não pode ficar abaixo dos ${lot.quantitySold} ingressos já vendidos ou reservados.`);
+      return setLocalError(l.errors.belowSold(lot.quantitySold));
     }
     if (name !== lot.name) changes.name = name;
     if (description !== (lot.description ?? "")) changes.description = description; // "" remove
@@ -548,48 +549,47 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
       aria-labelledby="editar-lote"
       className="m-0 ml-auto h-full max-h-none w-full max-w-md border-l border-line bg-surface p-0 text-ink"
     >
-      {/* noValidate: as mensagens de erro são as nossas, em português, e não as do navegador. */}
       <form onSubmit={submit} noValidate className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b border-line px-6 py-4">
           <h2 id="editar-lote" className="text-lg font-semibold">
-            Editar lote
+            {ed.title}
           </h2>
-          <button type="button" onClick={() => ref.current?.close()} aria-label="Fechar" className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-raised hover:text-ink">
+          <button type="button" onClick={() => ref.current?.close()} aria-label={ed.close} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-raised hover:text-ink">
             <X size={18} />
           </button>
         </div>
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
-          <Field label="Nome" error={nameError}>
+          <Field label={l.name} error={nameError}>
             <Input required maxLength={100} value={form.name} onChange={set("name")} />
           </Field>
-          <Field label="Descrição" hint="Deixe em branco para remover.">
+          <Field label={l.description} hint={ed.descriptionHint}>
             <Input maxLength={500} value={form.description} onChange={set("description")} />
           </Field>
-          <Field label="Preço (R$)" hint="Pedidos já feitos continuam com o preço da compra.">
+          <Field label={l.priceLabel} hint={ed.priceHint}>
             <Input required type="number" inputMode="decimal" min="0" max="100000" step="0.01" value={form.price} onChange={set("price")} />
           </Field>
-          <Field label="Quantidade total" hint={`${formatInt(lot.quantitySold)} já vendidos ou reservados.`} error={quantityError}>
+          <Field label={l.quantityTotal} hint={ed.soldHint(formatInt(lot.quantitySold, locale))} error={quantityError}>
             <Input required type="number" inputMode="numeric" min={Math.max(1, lot.quantitySold)} max="1000000" step="1" value={form.quantityTotal} onChange={set("quantityTotal")} />
           </Field>
-          <Field label="Máximo por pedido" hint={lot.maxPerOrder === null ? "Opcional." : "Pode ser alterado, mas não removido."}>
+          <Field label={l.maxPerOrderLabel} hint={lot.maxPerOrder === null ? ed.maxPerOrderOptional : ed.maxPerOrderLocked}>
             <Input type="number" inputMode="numeric" min="1" max="100" step="1" value={form.maxPerOrder} onChange={set("maxPerOrder")} />
           </Field>
           <Field
-            label="Limite por comprador"
-            hint="Opcional. Deixe em branco para remover. Diminuir o limite não cancela compras já feitas."
+            label={l.maxPerBuyerLabel}
+            hint={ed.maxPerBuyerHint}
             error={buyerLimitError}
           >
             <Input type="number" inputMode="numeric" min="1" max="1000" step="1" value={form.maxPerBuyer} onChange={set("maxPerBuyer")} />
           </Field>
           {localError && <Alert>{localError}</Alert>}
-          {mutation.error && showApiAlert && <Alert>{mutation.error.message}</Alert>}
+          {mutation.error && showApiAlert && <Alert>{errorMessage(mutation.error)}</Alert>}
         </div>
         <div className="flex justify-end gap-2 border-t border-line px-6 py-4">
           <Button variant="ghost" onClick={() => ref.current?.close()}>
-            Cancelar
+            {ed.cancel}
           </Button>
           <Button type="submit" loading={mutation.isPending}>
-            Salvar alterações
+            {ed.save}
           </Button>
         </div>
       </form>

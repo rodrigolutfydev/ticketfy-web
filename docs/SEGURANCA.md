@@ -12,7 +12,7 @@ Regra de ouro: **quem protege é a API.** O frontend roda no computador do usuá
 | Access token só em memória (some ao recarregar) e refresh token em cookie `HttpOnly` que o JavaScript não lê | `src/api/client.ts`, API | Roubo de credencial de longa duração por XSS |
 | Logout por inatividade (30 min, compartilhado entre abas) com revogação no servidor | `src/auth/AuthContext.tsx` | Computador compartilhado |
 | Cache das consultas limpo no login/logout e `cache: "no-store"` em requisições logadas | `AuthContext.tsx`, `api/client.ts` | Dados de um usuário aparecendo para o próximo |
-| `credentials: "omit"` nas chamadas à API; o cookie só vai para `/api/auth/*` e `/api/users/me/password`, na mesma origem | `src/api/client.ts` | CSRF nas rotas comuns (não recebem cookie) |
+| `credentials: "omit"` nas chamadas à API; o cookie só vai para `/api/auth/*`, `/api/users/me/password` e `/api/users/me/deletion`, na mesma origem | `src/api/client.ts` | CSRF nas rotas comuns (não recebem cookie) |
 | Chamadas de autenticação com `X-Ticketfy-Auth: 1`, `Origin` conferido na Function e na API, cookie `SameSite=Strict` | `functions/`, API | CSRF e login CSRF nas rotas que leem o cookie |
 | Tempo limite de 15 s nas requisições | `src/api/client.ts` | Tela travada em "carregando" |
 | IDs da URL validados e codificados antes de virar rota da API | `utils/security.ts` (`isValidId`), `api/endpoints.ts` (`seg`) | Path traversal: `/events/..%2Fusers%2Fme` |
@@ -43,8 +43,8 @@ Regra de ouro: **quem protege é a API.** O frontend roda no computador do usuá
 
 `pages.dev` e `onrender.com` estão na Public Suffix List, então um cookie da API seria cookie de terceiro (o Safari bloqueia). Por isso as rotas que usam o cookie passam por Pages Functions na mesma origem do site:
 
-- `functions/api/auth/[[path]].ts` e `functions/api/users/me/password.ts`, com a lógica em `functions/_lib/authProxy.ts`. O `public/_routes.json` faz a Function rodar só nesses caminhos. O resto do site continua estático, e as demais chamadas vão direto ao Render com Bearer.
-- A Function aceita só `POST` em `login`, `refresh`, `logout` e `logout-all` e `PATCH` em `users/me/password`. Ela recusa `Origin` diferente do próprio site e corpo acima de 8 KB, e não repassa a query string.
+- `functions/api/auth/[[path]].ts`, `functions/api/users/me/password.ts` e `functions/api/users/me/deletion.ts`, com a lógica em `functions/_lib/authProxy.ts`. O `public/_routes.json` faz a Function rodar só nesses caminhos. O resto do site continua estático, e as demais chamadas vão direto ao Render com Bearer.
+- A Function aceita só `POST` em `login`, `refresh`, `logout` e `logout-all` `PATCH` em `users/me/password` e `POST` em `users/me/deletion` (a exclusão de conta passa pelo proxy para a API apagar o cookie de sessão nesta origem). Ela recusa `Origin` diferente do próprio site e corpo acima de 8 KB, e não repassa a query string.
 - Repassa à API só `Cookie` (apenas o `__Host-ticketfy_rt`), `Content-Type`, `Authorization`, `Origin`, `X-Ticketfy-Auth` e `X-Request-Id`. Acrescenta `X-Proxy-Secret` e `X-Client-IP` (de `CF-Connecting-IP`), para o limite de tentativas de login contar por usuário e não pelo IP da Cloudflare.
 - Devolve só `Content-Type`, `Set-Cookie`, `Retry-After` e `X-Request-Id`, sempre com `Cache-Control: no-store`.
 - `API_ORIGIN` e `PROXY_SHARED_SECRET` vêm das variáveis de ambiente da Pages. Sem elas, ou com `API_ORIGIN` sem https, a Function responde 500 e não repassa nada. Configure o segredo só no ambiente Production: assim os deploys de preview não fazem login na API de produção.
@@ -78,7 +78,7 @@ Em outras hospedagens, copie os valores de `dist/_headers` para a configuração
 
 Também é preciso configurar o redirecionamento de todas as rotas para `/index.html` (rewrite), senão recarregar uma página como `/tickets` dá 404.
 
-As Functions de `functions/` e o `public/_routes.json` só funcionam na **Cloudflare Pages**. Em outra hospedagem, as rotas `/api/auth/*` e `/api/users/me/password` precisam de um proxy equivalente na mesma origem.
+As Functions de `functions/` e o `public/_routes.json` só funcionam na **Cloudflare Pages**. Em outra hospedagem, as rotas `/api/auth/*`, `/api/users/me/password` e `/api/users/me/deletion` precisam de um proxy equivalente na mesma origem.
 
 Para conferir, abra o site publicado, aperte F12, vá na aba Network, clique na primeira requisição e veja os Response Headers.
 

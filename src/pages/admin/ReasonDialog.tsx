@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Alert, Button, Field, Textarea } from "../../components/ui";
+import { useI18n } from "../../i18n/LocaleContext";
 
 interface Props {
   open: boolean;
@@ -15,6 +16,7 @@ interface Props {
 export default function ReasonDialog({ open, title, description, confirmLabel, loading, error, onConfirm, onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [reason, setReason] = useState("");
+  const { t } = useI18n();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -43,13 +45,13 @@ export default function ReasonDialog({ open, title, description, confirmLabel, l
           </h2>
           <div className="mt-1 text-sm text-muted">{description}</div>
         </div>
-        <Field label="Motivo" hint="Obrigatório, até 500 caracteres.">
+        <Field label={t.admin.reason.label} hint={t.admin.reason.hint}>
           <Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={3} required autoFocus />
         </Field>
         {error && <Alert>{error}</Alert>}
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={loading}>
-            Voltar
+            {t.admin.reason.back}
           </Button>
           <Button type="submit" variant="danger" loading={loading} disabled={!reason.trim()}>
             {confirmLabel}

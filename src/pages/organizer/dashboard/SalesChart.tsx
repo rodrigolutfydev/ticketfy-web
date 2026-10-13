@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { EventDashboard } from "../../../api/types";
 import { formatInt, formatPrice } from "../../../utils/format";
+import { useI18n } from "../../../i18n/LocaleContext";
 
 type Day = EventDashboard["dailySales"][number];
 
@@ -12,6 +13,8 @@ const PAD = { top: 16, right: 12, bottom: 28, left: 12 };
 // Cada série tem a própria escala; os valores exatos aparecem ao passar o mouse
 // ou focar uma barra com o teclado.
 export default function SalesChart({ data }: { data: Day[] }) {
+  const { t, locale } = useI18n();
+  const c = t.organizer.chart;
   const [active, setActive] = useState<number | null>(null);
   const maxTickets = Math.max(1, ...data.map((d) => d.tickets));
   const maxRevenue = Math.max(1, ...data.map((d) => d.revenue));
@@ -24,10 +27,8 @@ export default function SalesChart({ data }: { data: Day[] }) {
   const yR = (v: number) => PAD.top + innerH - (v / maxRevenue) * innerH;
   const line = data.map((d, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${yR(d.revenue).toFixed(1)}`).join(" ");
   const labelEvery = Math.ceil(data.length / 8);
-  const dayLabel = (iso: string) => {
-    const [, m, d] = iso.split("-");
-    return `${d}/${m}`;
-  };
+  const dayFormat = new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", timeZone: "UTC" });
+  const dayLabel = (iso: string) => dayFormat.format(new Date(`${iso}T00:00:00Z`));
   const current = active !== null ? data[active] : null;
 
   return (
@@ -35,14 +36,14 @@ export default function SalesChart({ data }: { data: Day[] }) {
       <div className="mb-2 h-5 text-sm" aria-live="polite">
         {current ? (
           <span className="tabular text-ink">
-            <span className="font-semibold">{dayLabel(current.date)}</span> · {formatInt(current.tickets)} ingressos · {formatPrice(current.revenue)}
+            <span className="font-semibold">{dayLabel(current.date)}</span> · {c.day(formatInt(current.tickets, locale), formatPrice(current.revenue, locale))}
           </span>
         ) : (
-          <span className="text-subtle">Passe o mouse sobre um dia para ver os números.</span>
+          <span className="text-subtle">{c.hint}</span>
         )}
       </div>
       <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full min-w-[480px]" role="img" aria-label="Ingressos e receita por dia">
+        <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full min-w-[480px]" role="img" aria-label={c.label}>
           {[0.25, 0.5, 0.75, 1].map((f) => (
             <line key={f} x1={PAD.left} x2={W - PAD.right} y1={PAD.top + innerH * (1 - f)} y2={PAD.top + innerH * (1 - f)} className="stroke-line" strokeDasharray="3 4" />
           ))}
@@ -65,7 +66,7 @@ export default function SalesChart({ data }: { data: Day[] }) {
                 height={innerH}
                 fill="transparent"
                 tabIndex={0}
-                aria-label={`${dayLabel(d.date)}: ${d.tickets} ingressos, ${formatPrice(d.revenue)}`}
+                aria-label={c.bar(dayLabel(d.date), d.tickets, formatPrice(d.revenue, locale))}
                 onMouseEnter={() => setActive(i)}
                 onMouseLeave={() => setActive(null)}
                 onFocus={() => setActive(i)}

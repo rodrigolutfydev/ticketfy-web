@@ -61,4 +61,11 @@ describe("lotToggleCopy", () => {
     expect(copy.confirmLabel).toBe("Reativar");
     expect(copy.title).toMatch(/Reativar/);
   });
+
+  it("writes the copy in English", () => {
+    const only = lot("1", true);
+    const copy = lotToggleCopy(only, [only], "en");
+    expect(copy.confirmLabel).toBe("Deactivate");
+    expect(copy.description).toMatch(/last batch on sale/);
+  });
 });

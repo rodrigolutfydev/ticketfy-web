@@ -1,5 +1,9 @@
 {
   "version": 1,
-  "include": ["/api/auth/*", "/api/users/me/password"],
+  "include": [
+    "/api/auth/*",
+    "/api/users/me/password",
+    "/api/users/me/deletion"
+  ],
   "exclude": []
 }

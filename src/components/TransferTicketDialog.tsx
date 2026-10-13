@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiError, errorMessage, fieldError } from "../api/client";
 import { transferTicket } from "../api/endpoints";
 import type { TicketDetails } from "../api/types";
+import { useI18n } from "../i18n/LocaleContext";
 import { Alert, Button, Field, Input, PasswordInput } from "./ui";
 
 interface Props {
@@ -42,6 +43,8 @@ function describe(error: unknown): TransferErrors {
 export default function TransferTicketDialog({ ticket, onClose, onTransferred }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const queryClient = useQueryClient();
+  const { t } = useI18n();
+  const x = t.buyer.transfer;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [understood, setUnderstood] = useState(false);
@@ -83,13 +86,11 @@ export default function TransferTicketDialog({ ticket, onClose, onTransferred }:
       <form onSubmit={submit} className="space-y-4 p-6">
         <div>
           <h2 id="transfer-title" className="text-lg font-bold">
-            Transferir ingresso
+            {x.title}
           </h2>
-          <p className="mt-1 text-sm text-muted">
-            {ticket.ticketTypeName} · {ticket.eventName}. O ingresso vai para a conta da pessoa e sai da sua.
-          </p>
+          <p className="mt-1 text-sm text-muted">{x.subtitle(ticket.ticketTypeName, ticket.eventName)}</p>
         </div>
-        <Field label="E-mail do destinatário" hint="A pessoa precisa ter conta no Ticketfy." error={errors.email ?? undefined}>
+        <Field label={x.email} hint={x.emailHint} error={errors.email ?? undefined}>
           <Input
             type="email"
             value={email}
@@ -100,7 +101,7 @@ export default function TransferTicketDialog({ ticket, onClose, onTransferred }:
             autoFocus
           />
         </Field>
-        <Field label="Confirme sua senha" error={errors.password ?? undefined}>
+        <Field label={x.password} error={errors.password ?? undefined}>
           <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" maxLength={100} required />
         </Field>
         <label className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-ink">
@@ -111,18 +112,15 @@ export default function TransferTicketDialog({ ticket, onClose, onTransferred }:
             onChange={(e) => setUnderstood(e.target.checked)}
             required
           />
-          <span>
-            Entendo que o código atual deixará de valer na hora e que o destinatário receberá um código novo. Se eu comprei este ingresso,
-            o pedido não poderá mais ser reembolsado.
-          </span>
+          <span>{x.understand}</span>
         </label>
         {errors.general && <Alert>{errors.general}</Alert>}
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={() => ref.current?.close()} disabled={mutation.isPending}>
-            Voltar
+            {x.back}
           </Button>
           <Button type="submit" variant="danger" loading={mutation.isPending} disabled={!understood}>
-            Transferir
+            {x.submit}
           </Button>
         </div>
       </form>

@@ -1,10 +1,6 @@
-import type { ParticipantFilters, TicketStatus, TicketTypeDetails } from "../api/types";
-
-export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
-  VALID: "Válido",
-  USED: "Usado",
-  CANCELLED: "Cancelado",
-};
+import type { ParticipantFilters, TicketTypeDetails } from "../api/types";
+import { getLocale, type Locale } from "../i18n/locale";
+import { MESSAGES } from "../i18n/messages";
 
 export function participantsQuery(filters: ParticipantFilters): string {
   const params = new URLSearchParams();
@@ -26,20 +22,15 @@ export interface LotToggleCopy {
   confirmLabel: string;
 }
 
-export function lotToggleCopy(lot: TicketTypeDetails, lots: TicketTypeDetails[]): LotToggleCopy {
+export function lotToggleCopy(lot: TicketTypeDetails, lots: TicketTypeDetails[], locale: Locale = getLocale()): LotToggleCopy {
+  const copy = MESSAGES[locale].organizer.lots.toggle;
   if (!lot.active) {
-    return {
-      title: `Reativar o lote "${lot.name}"?`,
-      description: "O lote volta para a página do evento e aceita novas compras.",
-      confirmLabel: "Reativar",
-    };
+    return { title: copy.reactivateTitle(lot.name), description: copy.reactivateText, confirmLabel: copy.reactivate };
   }
   const lastActive = lots.filter((candidate) => candidate.active).length === 1;
-  const base =
-    "O lote sai da página do evento e não aceita novas compras. Pedidos pendentes ainda podem ser pagos dentro do prazo da reserva, e ingressos já pagos continuam válidos.";
   return {
-    title: `Desativar o lote "${lot.name}"?`,
-    description: lastActive ? `${base} Este é o último lote à venda: o evento ficará sem ingressos disponíveis.` : base,
-    confirmLabel: "Desativar",
+    title: copy.deactivateTitle(lot.name),
+    description: lastActive ? `${copy.deactivateText} ${copy.lastActive}` : copy.deactivateText,
+    confirmLabel: copy.deactivate,
   };
 }

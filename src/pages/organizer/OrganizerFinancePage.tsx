@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDownToLine, Download, ReceiptText } from "lucide-react";
 import { downloadLedgerCsv, getBalance, getPayoutAccount, listLedger, listMyEvents } from "../../api/endpoints";
-import type { Balance, LedgerEntry, LedgerEntryType } from "../../api/types";
+import type { Balance, LedgerEntry } from "../../api/types";
 import { useMe } from "../../auth/useMe";
 import Pagination from "../../components/Pagination";
 import { Empty, ErrorMessage } from "../../components/StateMessage";
@@ -12,27 +12,23 @@ import PayoutAccountSection from "./finance/PayoutAccountSection";
 import PayoutDialog from "./finance/PayoutDialog";
 import PayoutHistory from "./finance/PayoutHistory";
 import { payoutBlockedReason } from "./finance/payoutMeta";
-import { formatDate, formatPrice, formatTime, plural, shortId } from "../../utils/format";
+import { formatDate, formatPrice, formatTime, shortId } from "../../utils/format";
+import { errorMessage } from "../../api/client";
+import { useI18n } from "../../i18n/LocaleContext";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { saveBlob } from "../../utils/download";
 
-const ENTRY_LABELS: Record<LedgerEntryType, string> = {
-  SALE_CREDIT: "Venda",
-  REFUND_DEBIT: "Reembolso",
-  PAYOUT_DEBIT: "Saque",
-  PAYOUT_REVERSAL: "Estorno de saque",
-};
-
 export default function OrganizerFinancePage() {
-  usePageTitle("Financeiro");
+  const { t } = useI18n();
+  usePageTitle(t.organizer.finance.pageTitle);
   const { isAdmin } = useMe();
 
   if (isAdmin) {
     return (
       <div>
-        <PageTitle title="Financeiro" />
+        <PageTitle title={t.organizer.finance.title} />
         <Card>
-          <p className="text-muted">O financeiro mostra o saldo de contas organizadoras. Contas de administrador não têm saldo próprio.</p>
+          <p className="text-muted">{t.organizer.finance.adminNote}</p>
         </Card>
       </div>
     );
@@ -42,19 +38,21 @@ export default function OrganizerFinancePage() {
 }
 
 function Finance() {
+  const { t, locale } = useI18n();
+  const f = t.organizer.finance;
   const balance = useQuery({ queryKey: ["organizer-balance"], queryFn: getBalance });
   const account = useQuery({ queryKey: ["payout-account"], queryFn: getPayoutAccount });
   const [dialogSession, setDialogSession] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const ready = balance.data !== undefined && account.data !== undefined;
-  const blockedReason = ready ? payoutBlockedReason(balance.data!, account.data!) : null;
+  const blockedReason = ready ? payoutBlockedReason(balance.data!, account.data!, locale) : null;
 
   return (
     <div>
       <PageTitle
-        title="Financeiro"
-        subtitle="Saldo das suas vendas, já descontada a taxa da plataforma."
+        title={f.title}
+        subtitle={f.subtitle}
         actions={
           <div className="flex flex-col items-end gap-1">
             <span title={blockedReason ?? undefined}>
@@ -66,7 +64,7 @@ function Finance() {
                 }}
                 aria-describedby={blockedReason ? "payout-blocked-reason" : undefined}
               >
-                <ArrowDownToLine size={17} aria-hidden /> Sacar
+                <ArrowDownToLine size={17} aria-hidden /> {f.withdraw}
               </Button>
             </span>
             {blockedReason && (
@@ -79,16 +77,13 @@ function Finance() {
       />
       {balance.data?.payoutsBlocked && (
         <div className="mb-6">
-          <Alert type="warning">
-            Os saques desta conta estão bloqueados pela equipe do Ticketfy. Vendas, eventos e extrato continuam funcionando
-            normalmente. Fale com o suporte para saber mais.
-          </Alert>
+          <Alert type="warning">{f.blockedNotice}</Alert>
         </div>
       )}
       <BalanceCards balance={balance.data} isLoading={balance.isLoading} error={balance.error} />
       <div className="mt-8">
         {account.isLoading && <Skeleton className="h-40 rounded-2xl" />}
-        {account.error && <ErrorMessage message={account.error.message} />}
+        {account.error && <ErrorMessage message={errorMessage(account.error) ?? ""} />}
         {account.data !== undefined && <PayoutAccountSection account={account.data} />}
       </div>
       <PayoutHistory />
@@ -107,6 +102,8 @@ function Finance() {
 }
 
 function BalanceCards({ balance, isLoading, error }: { balance: Balance | undefined; isLoading: boolean; error: Error | null }) {
+  const { t } = useI18n();
+  const f = t.organizer.finance;
   if (isLoading) {
     return (
       <div className="grid gap-4 sm:grid-cols-3">
@@ -116,27 +113,24 @@ function BalanceCards({ balance, isLoading, error }: { balance: Balance | undefi
       </div>
     );
   }
-  if (error) return <ErrorMessage message={error.message} />;
+  if (error) return <ErrorMessage message={errorMessage(error) ?? ""} />;
   if (!balance) return null;
   const b = balance;
   const showHeld = b.held !== 0;
 
   return (
     <div className={`grid gap-4 sm:grid-cols-2 ${showHeld ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
-      <BalanceCard
-        label="A liberar"
-        value={b.pending}
-        hint={`Liberado ${b.releaseDelayDays} ${plural(b.releaseDelayDays, "dia")} após o término do evento`}
-      />
-      <BalanceCard label="Disponível" value={b.available} hint="Pronto para saque, já descontado o saque em andamento" accent />
-      <BalanceCard label="Em saque" value={b.inPayout} hint="Saque solicitado ou em processamento" />
-      {showHeld && <BalanceCard label="Retido" value={b.held} hint="Valores de eventos cancelados" />}
-      <BalanceCard label="Total" value={b.total} hint="Soma de todos os lançamentos do extrato" />
+      <BalanceCard label={f.pending} value={b.pending} hint={f.pendingHint(b.releaseDelayDays)} />
+      <BalanceCard label={f.available} value={b.available} hint={f.availableHint} accent />
+      <BalanceCard label={f.inPayout} value={b.inPayout} hint={f.inPayoutHint} />
+      {showHeld && <BalanceCard label={f.held} value={b.held} hint={f.heldHint} />}
+      <BalanceCard label={f.total} value={b.total} hint={f.totalHint} />
     </div>
   );
 }
 
 function BalanceCard({ label, value, hint, accent }: { label: string; value: number; hint: string; accent?: boolean }) {
+  const { locale } = useI18n();
   const negative = value < 0;
   return (
     <div className="elevated rounded-2xl border border-line bg-surface p-5">
@@ -146,7 +140,7 @@ function BalanceCard({ label, value, hint, accent }: { label: string; value: num
           negative ? "text-danger" : accent ? "text-accent-text" : "text-ink"
         }`}
       >
-        {formatPrice(value)}
+        {formatPrice(value, locale)}
       </p>
       <p className="mt-2 text-xs text-subtle">{hint}</p>
     </div>
@@ -154,6 +148,8 @@ function BalanceCard({ label, value, hint, accent }: { label: string; value: num
 }
 
 function Ledger() {
+  const { t, locale } = useI18n();
+  const f = t.organizer.finance;
   const [eventId, setEventId] = useState("");
   const [page, setPage] = useState(0);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -167,11 +163,11 @@ function Ledger() {
   return (
     <section className="mt-10">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <h2 className="text-xl font-semibold tracking-tight text-ink">Extrato</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-ink">{f.ledger}</h2>
         <div className="flex flex-wrap items-center gap-3">
           <ExportButton eventId={eventId || undefined} onError={setExportError} />
           <label className="flex items-center gap-2 text-sm text-muted">
-            Evento
+            {f.event}
             <Select
               value={eventId}
               onChange={(e) => {
@@ -180,7 +176,7 @@ function Ledger() {
               }}
               className="w-64"
             >
-              <option value="">Todos os eventos</option>
+              <option value="">{f.allEvents}</option>
               {events.data?.content.map((event) => (
                 <option key={event.id} value={event.id}>
                   {event.name}
@@ -197,26 +193,26 @@ function Ledger() {
       )}
 
       {isLoading && <Skeleton className="h-64 rounded-2xl" />}
-      {error && <ErrorMessage message={error.message} />}
+      {error && <ErrorMessage message={errorMessage(error) ?? ""} />}
 
       {data &&
         (data.content.length === 0 ? (
-          <Empty icon={<ReceiptText size={22} />} title="Nenhum lançamento" hint="As vendas pagas aparecem aqui com o valor líquido." />
+          <Empty icon={<ReceiptText size={22} />} title={f.emptyLedger} hint={f.emptyLedgerHint} />
         ) : (
           <>
             <ul className="elevated overflow-hidden rounded-2xl border border-line bg-surface">
               {data.content.map((entry) => (
                 <li key={entry.id} className="flex flex-wrap items-center gap-4 border-b border-line px-4 py-4 last:border-0 sm:flex-nowrap sm:px-5">
                   <div className="w-28 shrink-0">
-                    <p className="tabular text-sm text-ink">{formatDate(entry.createdAt)}</p>
-                    <p className="tabular text-xs text-subtle">{formatTime(entry.createdAt)}</p>
+                    <p className="tabular text-sm text-ink">{formatDate(entry.createdAt, locale)}</p>
+                    <p className="tabular text-xs text-subtle">{formatTime(entry.createdAt, locale)}</p>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-ink">{ENTRY_LABELS[entry.type]}</p>
+                    <p className="font-semibold text-ink">{t.labels.ledgerEntries[entry.type]}</p>
                     <EntryReference entry={entry} />
                   </div>
                   <p className={`tabular w-32 text-right font-semibold ${entry.amount < 0 ? "text-danger" : "text-ink"}`}>
-                    {formatPrice(entry.amount)}
+                    {formatPrice(entry.amount, locale)}
                   </p>
                 </li>
               ))}
@@ -229,8 +225,10 @@ function Ledger() {
 }
 
 function EntryReference({ entry }: { entry: LedgerEntry }) {
+  const { t } = useI18n();
+  const f = t.organizer.finance;
   if (entry.payoutId) {
-    return <p className="truncate text-sm text-muted">Saque {shortId(entry.payoutId)}</p>;
+    return <p className="truncate text-sm text-muted">{f.payoutRef(shortId(entry.payoutId))}</p>;
   }
   return (
     <p className="truncate text-sm text-muted">
@@ -239,12 +237,14 @@ function EntryReference({ entry }: { entry: LedgerEntry }) {
           {entry.eventName}
         </Link>
       )}
-      {entry.orderId && <> · pedido {shortId(entry.orderId)}</>}
+      {entry.orderId && f.orderRef(shortId(entry.orderId))}
     </p>
   );
 }
 
 function ExportButton({ eventId, onError }: { eventId?: string; onError: (message: string | null) => void }) {
+  const { t } = useI18n();
+  const f = t.organizer.finance;
   const [loading, setLoading] = useState(false);
 
   const exportCsv = async () => {
@@ -252,9 +252,9 @@ function ExportButton({ eventId, onError }: { eventId?: string; onError: (messag
     onError(null);
     try {
       const { blob, filename } = await downloadLedgerCsv({ eventId });
-      saveBlob(blob, filename ?? "extrato-ticketfy.csv");
+      saveBlob(blob, filename ?? f.csvName);
     } catch (error) {
-      onError(error instanceof Error ? error.message : "Não foi possível exportar o extrato.");
+      onError(error instanceof Error ? errorMessage(error) : f.exportFailed);
     } finally {
       setLoading(false);
     }
@@ -262,7 +262,7 @@ function ExportButton({ eventId, onError }: { eventId?: string; onError: (messag
 
   return (
     <Button variant="secondary" size="sm" loading={loading} onClick={exportCsv}>
-      <Download size={15} aria-hidden /> Exportar CSV
+      <Download size={15} aria-hidden /> {f.exportCsv}
     </Button>
   );
 }

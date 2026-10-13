@@ -10,12 +10,16 @@ import { formatPrice, formatShortDate, shortId } from "../utils/format";
 import { isValidId } from "../utils/security";
 import NotFoundPage from "./NotFoundPage";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { errorMessage } from "../api/client";
+import { useI18n } from "../i18n/LocaleContext";
 
 // Detalhe de um pedido em qualquer status, com as ações que fazem sentido em cada um.
 // Os botões aparecem conforme o status, mas quem decide se a ação é
 // permitida é a API (ex.: reembolso fora do prazo devolve erro).
 export default function OrderDetailPage() {
-  usePageTitle("Pedido");
+  const { t, locale } = useI18n();
+  const d = t.buyer.orderDetail;
+  usePageTitle(d.pageTitle);
   const { id = "" } = useParams();
   const validId = isValidId(id);
   const queryClient = useQueryClient();
@@ -32,8 +36,8 @@ export default function OrderDetailPage() {
   const refund = useMutation({ mutationFn: () => refundOrder(id), onSuccess: afterChange });
 
   if (!validId) return <NotFoundPage />;
-  if (isLoading) return <Loading text="Carregando pedido..." />;
-  if (error) return <ErrorMessage message={error.message} />;
+  if (isLoading) return <Loading text={d.loading} />;
+  if (error) return <ErrorMessage message={errorMessage(error) ?? ""} />;
   const o = order!;
   const actionError = cancel.error ?? refund.error;
   const free = o.totalAmount === 0;
@@ -41,13 +45,13 @@ export default function OrderDetailPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <BackLink to="/orders">Meus pedidos</BackLink>
+      <BackLink to="/orders">{d.myOrders}</BackLink>
 
       <div className="mt-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="eyebrow">Recibo</p>
-          <h1 className="tabular mt-2 text-4xl font-semibold tracking-tight text-ink">Pedido #{shortId(o.id)}</h1>
-          {o.createdAt && <p className="mt-1 text-muted">Criado em {formatShortDate(o.createdAt)}</p>}
+          <p className="eyebrow">{d.receipt}</p>
+          <h1 className="tabular mt-2 text-4xl font-semibold tracking-tight text-ink">{d.title(shortId(o.id))}</h1>
+          {o.createdAt && <p className="mt-1 text-muted">{d.createdAt(formatShortDate(o.createdAt, locale))}</p>}
         </div>
         <StatusBadge status={o.status} />
       </div>
@@ -55,10 +59,10 @@ export default function OrderDetailPage() {
       {o.eventCancelled && (
         <div className="mt-6">
           <Alert type="info">
-            O evento deste pedido foi cancelado pelo organizador.
-            {o.status === "REFUNDED" && " O valor foi reembolsado e os ingressos foram cancelados."}
-            {o.status === "PAID" && " O reembolso está sendo processado."}
-            {o.status === "CANCELLED" && " O pedido foi cancelado sem cobrança."}
+            {d.eventCancelled}
+            {o.status === "REFUNDED" && d.eventCancelledRefunded}
+            {o.status === "PAID" && d.eventCancelledPaid}
+            {o.status === "CANCELLED" && d.eventCancelledCancelled}
           </Alert>
         </div>
       )}
@@ -70,19 +74,19 @@ export default function OrderDetailPage() {
           <table className="w-full min-w-[420px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-muted">
-                <th className="py-2 font-medium">Lote</th>
-                <th className="py-2 text-right font-medium">Preço</th>
-                <th className="py-2 text-right font-medium">Qtd.</th>
-                <th className="py-2 text-right font-medium">Subtotal</th>
+                <th className="py-2 font-medium">{d.lot}</th>
+                <th className="py-2 text-right font-medium">{d.price}</th>
+                <th className="py-2 text-right font-medium">{d.quantity}</th>
+                <th className="py-2 text-right font-medium">{d.subtotal}</th>
               </tr>
             </thead>
             <tbody className="text-ink">
               {o.items.map((item) => (
                 <tr key={item.ticketTypeId} className="border-b border-line">
                   <td className="py-3 font-medium">{item.ticketTypeName}</td>
-                  <td className="py-3 text-right">{formatPrice(item.unitPrice)}</td>
+                  <td className="py-3 text-right">{formatPrice(item.unitPrice, locale)}</td>
                   <td className="py-3 text-right">{item.quantity}</td>
-                  <td className="py-3 text-right">{formatPrice(item.subtotal)}</td>
+                  <td className="py-3 text-right">{formatPrice(item.subtotal, locale)}</td>
                 </tr>
               ))}
             </tbody>
@@ -91,45 +95,45 @@ export default function OrderDetailPage() {
                 <>
                   <tr>
                     <td colSpan={3} className="pt-4 text-right text-muted">
-                      Subtotal
+                      {d.subtotal}
                     </td>
-                    <td className="pt-4 text-right text-ink">{formatPrice(o.subtotalAmount)}</td>
+                    <td className="pt-4 text-right text-ink">{formatPrice(o.subtotalAmount, locale)}</td>
                   </tr>
                   <tr>
                     <td colSpan={3} className="pt-2 text-right text-muted">
-                      Desconto <span className="font-semibold text-success">{o.couponCode}</span>
+                      {d.discount} <span className="font-semibold text-success">{o.couponCode}</span>
                     </td>
-                    <td className="pt-2 text-right text-success">−{formatPrice(o.discountAmount)}</td>
+                    <td className="pt-2 text-right text-success">−{formatPrice(o.discountAmount, locale)}</td>
                   </tr>
                 </>
               )}
               <tr>
                 <td colSpan={3} className="pt-4 text-right font-semibold text-muted">
-                  Total
+                  {d.total}
                 </td>
-                <td className="pt-4 text-right text-xl font-extrabold text-ink">{formatPrice(o.totalAmount)}</td>
+                <td className="pt-4 text-right text-xl font-extrabold text-ink">{formatPrice(o.totalAmount, locale)}</td>
               </tr>
             </tfoot>
           </table>
         </div>
-        <p className="mt-4 text-xs text-subtle">O preço de cada lote fica registrado no momento da compra e não muda depois.</p>
+        <p className="mt-4 text-xs text-subtle">{d.frozenPrice}</p>
 
         {(o.tickets ?? []).length > 0 && (
           <div className="mt-6">
-            <h2 className="text-sm font-semibold text-ink">Ingressos</h2>
+            <h2 className="text-sm font-semibold text-ink">{d.tickets}</h2>
             <ul className="mt-2 divide-y divide-line rounded-xl border border-line">
               {o.tickets.map((ticket) => (
                 <li key={ticket.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
                   <div className="min-w-0">
                     <p className="font-medium text-ink">{ticket.ticketTypeName}</p>
                     {ticket.transferred ? (
-                      <p className="text-xs text-muted">Transferido para outra pessoa. O código fica só com quem recebeu.</p>
+                      <p className="text-xs text-muted">{d.transferredHint}</p>
                     ) : (
                       <p className="tabular font-mono text-xs tracking-[0.12em] text-muted">{ticket.code}</p>
                     )}
                   </div>
                   {ticket.transferred ? (
-                    <span className="rounded-full border border-line px-2.5 py-0.5 text-xs font-semibold text-muted">Transferido</span>
+                    <span className="rounded-full border border-line px-2.5 py-0.5 text-xs font-semibold text-muted">{d.transferred}</span>
                   ) : (
                     <StatusBadge status={ticket.status} />
                   )}
@@ -140,43 +144,43 @@ export default function OrderDetailPage() {
         )}
 
         <div className="mt-6 space-y-3">
-          {actionError && <Alert>{actionError.message}</Alert>}
-          {refund.isSuccess && <Alert type="success">{free ? "Ingressos cancelados." : "Reembolso feito. Os ingressos foram cancelados."}</Alert>}
-          {o.status === "EXPIRED" && <Alert type="info">A reserva expirou e os ingressos voltaram à venda.</Alert>}
+          {actionError && <Alert>{errorMessage(actionError)}</Alert>}
+          {refund.isSuccess && <Alert type="success">{free ? d.ticketsCancelled : d.refunded}</Alert>}
+          {o.status === "EXPIRED" && <Alert type="info">{d.expired}</Alert>}
           {o.status === "PAID" && !o.eventCancelled && hasTransferred && (
-            <Alert type="info">Este pedido tem ingresso transferido e não pode mais ser reembolsado.</Alert>
+            <Alert type="info">{d.hasTransferred}</Alert>
           )}
 
           <div className="flex flex-wrap gap-3">
             {o.status === "PENDING" && (
               <>
-                {!o.eventCancelled && <ButtonLink to={`/orders/${o.id}/payment`}>Ir para o pagamento</ButtonLink>}
+                {!o.eventCancelled && <ButtonLink to={`/orders/${o.id}/payment`}>{d.goToPayment}</ButtonLink>}
                 <ConfirmButton
-                  title="Cancelar este pedido?"
-                  description="Os ingressos reservados voltam à venda."
-                  confirmLabel="Cancelar pedido"
-                  cancelLabel="Manter pedido"
+                  title={d.cancelTitle}
+                  description={d.cancelText}
+                  confirmLabel={d.cancelOrder}
+                  cancelLabel={d.keepOrder}
                   danger
                   loading={cancel.isPending}
                   onConfirm={() => cancel.mutate()}
                 >
-                  Cancelar pedido
+                  {d.cancelOrder}
                 </ConfirmButton>
               </>
             )}
             {o.status === "PAID" && (
               <>
-                <ButtonLink to="/tickets">Ver meus ingressos</ButtonLink>
+                <ButtonLink to="/tickets">{d.seeTickets}</ButtonLink>
                 {!o.eventCancelled && !hasTransferred && (
                   <ConfirmButton
-                    title={free ? "Cancelar os ingressos?" : "Pedir reembolso?"}
-                    description={`Os ${o.items.reduce((s, i) => s + i.quantity, 0)} ingresso(s) deste pedido serão cancelados e não poderão mais ser usados na entrada.`}
-                    confirmLabel={free ? "Cancelar ingressos" : "Pedir reembolso"}
+                    title={free ? d.cancelTicketsTitle : d.refundTitle}
+                    description={d.refundText(o.items.reduce((s, i) => s + i.quantity, 0))}
+                    confirmLabel={free ? d.cancelTickets : d.refund}
                     danger
                     loading={refund.isPending}
                     onConfirm={() => refund.mutate()}
                   >
-                    {free ? "Cancelar ingressos" : "Pedir reembolso"}
+                    {free ? d.cancelTickets : d.refund}
                   </ConfirmButton>
                 )}
               </>
@@ -185,7 +189,7 @@ export default function OrderDetailPage() {
         </div>
       </Card>
       <aside className="elevated self-start rounded-2xl border border-line bg-surface p-6">
-        <h2 className="text-lg font-semibold text-ink">Andamento</h2>
+        <h2 className="text-lg font-semibold text-ink">{d.progress}</h2>
         <StatusTrack order={o} />
       </aside>
       </div>
@@ -196,19 +200,21 @@ export default function OrderDetailPage() {
 // Linha do tempo do pedido: criado -> pago -> (reembolsado), ou o final alternativo.
 // Linha do tempo vertical do pedido: cada etapa com bolinha e traço até a próxima.
 function StatusTrack({ order }: { order: OrderDetails }) {
+  const { t, locale } = useI18n();
+  const s = t.buyer.orderDetail.steps;
   type Step = { label: string; done: boolean; tone?: "danger" | "muted" };
-  const created: Step = { label: "Pedido criado", done: true };
+  const created: Step = { label: s.created, done: true };
   const free = order.totalAmount === 0;
   const steps: Step[] =
     order.status === "PENDING"
-      ? [created, { label: "Aguardando pagamento", done: false }, { label: "Ingressos emitidos", done: false }]
+      ? [created, { label: s.awaitingPayment, done: false }, { label: s.issued, done: false }]
       : order.status === "PAID"
-        ? [created, { label: free ? "Pedido confirmado" : "Pagamento aprovado", done: true }, { label: "Ingressos emitidos", done: true }]
+        ? [created, { label: free ? s.confirmed : s.approved, done: true }, { label: s.issued, done: true }]
         : order.status === "REFUNDED"
-          ? [created, { label: free ? "Pedido confirmado" : "Pagamento aprovado", done: true }, { label: free ? "Ingressos cancelados" : "Reembolsado, ingressos cancelados", done: true, tone: "muted" }]
-          : [created, { label: order.status === "EXPIRED" ? "Reserva expirada" : "Pedido cancelado", done: true, tone: "danger" }];
+          ? [created, { label: free ? s.confirmed : s.approved, done: true }, { label: free ? s.ticketsCancelled : s.refunded, done: true, tone: "muted" }]
+          : [created, { label: order.status === "EXPIRED" ? s.expired : s.cancelled, done: true, tone: "danger" }];
   return (
-    <ol className="mt-5" aria-label="Andamento do pedido">
+    <ol className="mt-5" aria-label={t.buyer.orderDetail.progressLabel}>
       {steps.map((step, index) => {
         const dot = !step.done ? "border-2 border-line-strong bg-surface" : step.tone === "danger" ? "bg-danger" : step.tone === "muted" ? "bg-subtle" : "bg-accent";
         return (
@@ -217,7 +223,7 @@ function StatusTrack({ order }: { order: OrderDetails }) {
             <span className={`relative mt-1 h-[11px] w-[11px] shrink-0 rounded-full ${dot}`} aria-hidden />
             <div>
               <p className={`text-sm font-semibold ${step.done ? "text-ink" : "text-subtle"}`}>{step.label}</p>
-              {index === 0 && order.createdAt && <p className="text-xs text-muted">{formatShortDate(order.createdAt)}</p>}
+              {index === 0 && order.createdAt && <p className="text-xs text-muted">{formatShortDate(order.createdAt, locale)}</p>}
             </div>
           </li>
         );

@@ -10,6 +10,8 @@ import { TabPanel, Tabs, useTabParam } from "../components/Tabs";
 import { ButtonLink, PageTitle, Skeleton } from "../components/ui";
 import { formatPrice, formatShortDate, shortId } from "../utils/format";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { errorMessage } from "../api/client";
+import { useI18n } from "../i18n/LocaleContext";
 
 // Abas de pedidos. Cada aba é um grupo de status.
 const TABS = ["todos", "pendentes", "pagos", "encerrados"] as const;
@@ -22,7 +24,9 @@ const tabStatuses: Record<TabKey, OrderStatus[] | null> = {
 };
 
 export default function OrdersPage() {
-  usePageTitle("Pedidos");
+  const { t, locale } = useI18n();
+  const o = t.buyer.orders;
+  usePageTitle(o.pageTitle);
   const [tab, setTab] = useTabParam(TABS, "todos");
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Math.max(0, Number.parseInt(searchParams.get("page") ?? "0", 10) || 0);
@@ -45,17 +49,17 @@ export default function OrdersPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageTitle title="Meus pedidos" subtitle="Acompanhe reservas, pagamentos e reembolsos." />
+      <PageTitle title={o.title} subtitle={o.subtitle} />
       <Tabs
-        label="Filtrar pedidos"
+        label={o.tabsLabel}
         idPrefix="pedidos"
         value={tab}
         onChange={setTab}
         items={[
-          { key: "todos", label: "Todos" },
-          { key: "pendentes", label: "Aguardando pagamento" },
-          { key: "pagos", label: "Pagos" },
-          { key: "encerrados", label: "Encerrados" },
+          { key: "todos", label: o.tabs.all },
+          { key: "pendentes", label: o.tabs.pending },
+          { key: "pagos", label: o.tabs.paid },
+          { key: "encerrados", label: o.tabs.closed },
         ]}
       />
       <TabPanel idPrefix="pedidos" activeKey={tab}>
@@ -66,14 +70,14 @@ export default function OrdersPage() {
             ))}
           </div>
         )}
-        {error && <ErrorMessage message={error.message} />}
+        {error && <ErrorMessage message={errorMessage(error) ?? ""} />}
         {data && orders.length === 0 && (
           <Empty
             icon={<Receipt size={22} />}
-            title={tab === "todos" ? "Você ainda não fez nenhum pedido" : "Nenhum pedido nesta aba"}
-            hint={tab === "todos" ? "Quando você reservar ingressos, o pedido aparece aqui." : undefined}
+            title={tab === "todos" ? o.emptyTitle : o.emptyTabTitle}
+            hint={tab === "todos" ? o.emptyHint : undefined}
           >
-            {tab === "todos" && <ButtonLink to="/">Ver eventos</ButtonLink>}
+            {tab === "todos" && <ButtonLink to="/">{t.common.seeEvents}</ButtonLink>}
           </Empty>
         )}
         {orders.length > 0 && (
@@ -86,13 +90,13 @@ export default function OrdersPage() {
                       <Receipt size={18} aria-hidden />
                     </span>
                     <div>
-                      <p className="font-bold text-ink">Pedido #{shortId(order.id)}</p>
-                      {order.createdAt && <p className="text-sm text-muted">{formatShortDate(order.createdAt)}</p>}
+                      <p className="font-bold text-ink">{o.order(shortId(order.id))}</p>
+                      {order.createdAt && <p className="text-sm text-muted">{formatShortDate(order.createdAt, locale)}</p>}
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <StatusBadge status={order.status} />
-                    <span className="tabular w-28 text-right font-bold text-ink">{formatPrice(order.totalAmount)}</span>
+                    <span className="tabular w-28 text-right font-bold text-ink">{formatPrice(order.totalAmount, locale)}</span>
                     <ChevronRight size={18} className="text-subtle" aria-hidden />
                   </div>
                 </Link>

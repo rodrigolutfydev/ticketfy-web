@@ -304,6 +304,12 @@ function Footer() {
           <Link to="/help?tab=seguranca" className="hover:text-ink">
             {t.layout.footer.security}
           </Link>
+          <Link to="/terms" className="hover:text-ink">
+            {t.legal.footerTerms}
+          </Link>
+          <Link to="/privacy" className="hover:text-ink">
+            {t.legal.footerPrivacy}
+          </Link>
           <span className="text-subtle">{t.layout.footer.credits(new Date().getFullYear())}</span>
         </nav>
       </div>

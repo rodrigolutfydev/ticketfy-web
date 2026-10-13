@@ -2,11 +2,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiError, errorMessage, fieldError, hasUnmappedError } from "../api/client";
-import { changePassword, logoutAll, updateAvatar } from "../api/endpoints";
+import { changePassword, deleteAccount, exportMyData, logoutAll, updateAvatar } from "../api/endpoints";
+import { saveBlob } from "../utils/download";
 import type { UserProfile } from "../api/types";
 import Avatar from "../components/Avatar";
 import { passwordStrength, safeImageUrl } from "../utils/security";
-import { BadgeCheck, Check, Clock, KeyRound, Languages, LogOut, Mail, MonitorSmartphone, ShieldCheck, Timer, Trash2, UserRound } from "lucide-react";
+import { BadgeCheck, Check, Clock, Download, KeyRound, Languages, Lock, LogOut, Mail, MonitorSmartphone, ShieldCheck, Timer, Trash2, UserRound } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
 import BackendNotice from "../components/BackendNotice";
@@ -20,7 +21,7 @@ import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n/LocaleContext";
 import { LOCALES } from "../i18n/locale";
 
-const TABS = ["perfil", "seguranca", "organizador"] as const;
+const TABS = ["perfil", "seguranca", "organizador", "privacidade"] as const;
 
 export default function AccountPage() {
   const { t } = useI18n();
@@ -40,16 +41,19 @@ export default function AccountPage() {
           { key: "perfil", label: t.account.tabs.profile, icon: <UserRound size={16} /> },
           { key: "seguranca", label: t.account.tabs.security, icon: <ShieldCheck size={16} /> },
           { key: "organizador", label: t.account.tabs.organizer, icon: <BadgeCheck size={16} /> },
+          { key: "privacidade", label: t.buyer.privacy.tab, icon: <Lock size={16} /> },
         ]}
       />
       <TabPanel idPrefix="conta" activeKey={tab}>
-        {tab !== "seguranca" && isLoading && <Loading />}
-        {tab !== "seguranca" && endpointMissing && (
+        {tab !== "seguranca" && tab !== "privacidade" && isLoading && <Loading />}
+        {tab !== "seguranca" && tab !== "privacidade" && endpointMissing && (
           <BackendNotice title={t.account.profileUnavailable}>
             <p>{t.account.profileUnavailableText}</p>
           </BackendNotice>
         )}
-        {tab !== "seguranca" && error && !endpointMissing && <ErrorMessage message={errorMessage(error) ?? ""} />}
+        {tab !== "seguranca" && tab !== "privacidade" && error && !endpointMissing && <ErrorMessage message={errorMessage(error) ?? ""} />}
+
+        {tab === "privacidade" && <PrivacyTab />}
 
         {tab === "perfil" && me && (
           <div className="space-y-5">
@@ -155,7 +159,7 @@ function ProfileTab({ me }: { me: UserProfile }) {
         <Avatar name={me.name} url={preview ?? (trimmed ? null : me.avatarUrl)} size={112} />
         <div className="text-center sm:text-left">
           <p className="font-display text-3xl font-semibold tracking-tight text-ink">{me.name}</p>
-          <p className="mt-1 text-muted">{t.account.roles[me.role] ?? me.role}</p>
+          <p className="mt-1 text-muted">{t.labels.roles[me.role] ?? me.role}</p>
         </div>
       </div>
 
@@ -186,7 +190,7 @@ function ProfileTab({ me }: { me: UserProfile }) {
           <span className="break-all">{me.email}</span>
         </InfoRow>
         <InfoRow icon={<BadgeCheck size={18} />} label={t.account.role}>
-          {t.account.roles[me.role] ?? me.role}
+          {t.labels.roles[me.role] ?? me.role}
         </InfoRow>
       </dl>
     </Card>
@@ -359,6 +363,156 @@ function PasswordCard() {
         {mutation.isSuccess && <Alert type="success">{p.success}</Alert>}
         <Button type="submit" loading={mutation.isPending} disabled={locked}>
           {locked ? t.common.wait(lockSeconds) : p.submit}
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
+function useLockCountdown() {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    if (seconds <= 0) return;
+    const timer = setTimeout(() => setSeconds((current) => current - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [seconds]);
+  return [seconds, setSeconds] as const;
+}
+
+function PrivacyTab() {
+  return (
+    <div className="space-y-5">
+      <ExportCard />
+      <DeleteAccountCard />
+    </div>
+  );
+}
+
+function ExportCard() {
+  const { t } = useI18n();
+  const p = t.buyer.privacy;
+  const [password, setPassword] = useState("");
+  const [lockSeconds, setLockSeconds] = useLockCountdown();
+  const mutation = useMutation({
+    mutationFn: () => exportMyData(password),
+    onSuccess: ({ blob, filename }) => {
+      saveBlob(blob, filename ?? "ticketfy-data.json");
+      setPassword("");
+    },
+    onError: (error) => {
+      setPassword("");
+      if (error instanceof ApiError && error.problemType === "too-many-password-attempts") setLockSeconds(error.retryAfter ?? 60);
+    },
+  });
+  const error = mutation.error;
+  const problemType = error instanceof ApiError ? error.problemType : null;
+  const locked = lockSeconds > 0;
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!locked && password) mutation.mutate();
+  }
+
+  return (
+    <Card>
+      <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
+        <Download size={18} className="text-accent-text" aria-hidden /> {p.exportTitle}
+      </h2>
+      <p className="mt-1 text-sm text-muted">{p.exportText}</p>
+      <p className="mt-1 text-xs text-subtle">{p.exportLimit(3, 24)}</p>
+      <form onSubmit={submit} className="mt-5 space-y-4">
+        <Field label={p.password} error={problemType === "invalid-password" ? errorMessage(error) ?? undefined : fieldError(error, "password")}>
+          <PasswordInput required maxLength={100} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </Field>
+        {error && problemType !== "invalid-password" && problemType !== "too-many-password-attempts" && hasUnmappedError(error, ["password"]) && (
+          <Alert>{errorMessage(error)}</Alert>
+        )}
+        {locked && (
+          <Alert type="warning">
+            {p.lockedBefore} <span className="tabular font-bold">{t.common.seconds(lockSeconds)}</span>.
+          </Alert>
+        )}
+        {mutation.isSuccess && <Alert type="success">{p.exported}</Alert>}
+        <Button type="submit" variant="secondary" loading={mutation.isPending} disabled={locked}>
+          <Download size={16} aria-hidden /> {locked ? t.common.wait(lockSeconds) : p.exportSubmit}
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
+function DeleteAccountCard() {
+  const { t } = useI18n();
+  const p = t.buyer.privacy;
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [lockSeconds, setLockSeconds] = useLockCountdown();
+  const word = p.confirmationWord;
+
+  const mutation = useMutation({
+    mutationFn: () => deleteAccount(password, confirmation),
+    onSuccess: () => {
+      navigate("/account-deleted", { replace: true });
+      signOut("manual", { notifyServer: false });
+    },
+    onError: (error) => {
+      setPassword("");
+      if (error instanceof ApiError && error.problemType === "too-many-password-attempts") setLockSeconds(error.retryAfter ?? 60);
+    },
+  });
+  const error = mutation.error;
+  const problemType = error instanceof ApiError ? error.problemType : null;
+  const locked = lockSeconds > 0;
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    if (locked) return;
+    if (confirmation !== word) return setLocalError(p.confirmationMismatch(word));
+    setLocalError(null);
+    mutation.mutate();
+  }
+
+  const confirmationError = localError ?? (fieldError(error, "confirmation") ? p.confirmationMismatch(word) : undefined);
+
+  return (
+    <Card className="border-danger/35">
+      <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
+        <Trash2 size={18} className="text-danger" aria-hidden /> {p.deleteTitle}
+      </h2>
+      <p className="mt-1 text-sm text-muted">{p.deleteText}</p>
+      <p className="mt-2 text-sm text-muted">{p.deleteBlockers}</p>
+      <form onSubmit={submit} className="mt-5 space-y-4">
+        <Field label={p.password} error={problemType === "invalid-password" ? errorMessage(error) ?? undefined : fieldError(error, "password")}>
+          <PasswordInput required maxLength={100} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </Field>
+        <Field label={p.confirmation(word)} error={confirmationError}>
+          <Input
+            required
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            maxLength={20}
+            value={confirmation}
+            onChange={(e) => {
+              setLocalError(null);
+              setConfirmation(e.target.value);
+            }}
+          />
+        </Field>
+        {error && problemType !== "invalid-password" && problemType !== "too-many-password-attempts" && hasUnmappedError(error, ["password", "confirmation"]) && (
+          <Alert>{errorMessage(error)}</Alert>
+        )}
+        {locked && (
+          <Alert type="warning">
+            {p.lockedBefore} <span className="tabular font-bold">{t.common.seconds(lockSeconds)}</span>.
+          </Alert>
+        )}
+        <p className="text-xs text-subtle">{p.irreversible}</p>
+        <Button type="submit" variant="danger" loading={mutation.isPending} disabled={locked}>
+          <Trash2 size={16} aria-hidden /> {locked ? t.common.wait(lockSeconds) : p.deleteSubmit}
         </Button>
       </form>
     </Card>

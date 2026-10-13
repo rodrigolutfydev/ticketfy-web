@@ -65,6 +65,16 @@ describe("proxy de autenticação", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("aceita só POST na exclusão de conta, repassando o cookie que a API apaga", async () => {
+    const fetchMock = upstream(new Response(null, { status: 204, headers: { "Set-Cookie": "__Host-ticketfy_rt=; Max-Age=0; Path=/" } }));
+
+    expect((await proxyAuth({ request: request("/api/users/me/deletion", { method: "DELETE" }), env })).status).toBe(405);
+    const response = await proxyAuth({ request: request("/api/users/me/deletion", { method: "POST", body: "{}" }), env });
+    expect(response.status).toBe(204);
+    expect(response.headers.getSetCookie()).toEqual(["__Host-ticketfy_rt=; Max-Age=0; Path=/"]);
+    expect(String(fetchMock.mock.calls[0][0])).toBe("https://api.example.com/users/me/deletion");
+  });
+
   it("recusa Origin diferente, configuração ausente e corpo grande sem chamar a API", async () => {
     const fetchMock = upstream(new Response(null, { status: 204 }));
 

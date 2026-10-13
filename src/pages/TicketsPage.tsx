@@ -13,6 +13,8 @@ import { TabPanel, Tabs, useTabParam } from "../components/Tabs";
 import { Alert, Button, ButtonLink, PageTitle, Skeleton } from "../components/ui";
 import { eventStamp, formatShortDate, isPast } from "../utils/format";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { errorMessage } from "../api/client";
+import { useI18n } from "../i18n/LocaleContext";
 
 const TABS = ["proximos", "usados", "outros"] as const;
 type TabKey = (typeof TABS)[number];
@@ -25,7 +27,9 @@ function tabOf(ticket: TicketDetails): TabKey {
 }
 
 export default function TicketsPage() {
-  usePageTitle("Meus ingressos");
+  const { t } = useI18n();
+  const k = t.buyer.tickets;
+  usePageTitle(k.pageTitle);
   const [tab, setTab] = useTabParam(TABS, "proximos");
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Math.max(0, Number.parseInt(searchParams.get("page") ?? "0", 10) || 0);
@@ -44,31 +48,28 @@ export default function TicketsPage() {
 
   return (
     <div>
-      <PageTitle title="Meus ingressos" subtitle="Apresente o QR code ou o código na entrada do evento." />
+      <PageTitle title={k.title} subtitle={k.subtitle} />
 
       <div className="mb-8 flex gap-3 rounded-2xl border border-warning/30 bg-warning/10 p-4 text-sm text-ink">
         <ShieldAlert size={20} className="shrink-0 text-warning" aria-hidden />
-        <p>
-          O código é o seu ingresso: quem tiver ele entra no seu lugar. Não publique foto do QR code nem envie para
-          desconhecidos.
-        </p>
+        <p>{k.warning}</p>
       </div>
 
       {transferredTo && (
         <div className="mb-6">
-          <Alert type="success">Ingresso transferido para {transferredTo}. O código antigo não vale mais.</Alert>
+          <Alert type="success">{k.transferred(transferredTo)}</Alert>
         </div>
       )}
 
       <Tabs
-        label="Filtrar ingressos"
+        label={k.tabsLabel}
         idPrefix="ingressos"
         value={tab}
         onChange={setTab}
         items={[
-          { key: "proximos", label: "Próximos", count: data ? count("proximos") : undefined },
-          { key: "usados", label: "Utilizados", count: data ? count("usados") : undefined },
-          { key: "outros", label: "Cancelados e passados", count: data ? count("outros") : undefined },
+          { key: "proximos", label: k.tabs.upcoming, count: data ? count("proximos") : undefined },
+          { key: "usados", label: k.tabs.used, count: data ? count("usados") : undefined },
+          { key: "outros", label: k.tabs.other, count: data ? count("outros") : undefined },
         ]}
       />
       <TabPanel idPrefix="ingressos" activeKey={tab}>
@@ -79,14 +80,14 @@ export default function TicketsPage() {
             ))}
           </div>
         )}
-        {error && <ErrorMessage message={error.message} />}
+        {error && <ErrorMessage message={errorMessage(error) ?? ""} />}
         {data && tickets.length === 0 && (
           <Empty
             icon={<Ticket size={22} />}
-            title={tab === "proximos" ? "Nenhum ingresso para eventos futuros" : "Nada por aqui"}
-            hint={tab === "proximos" ? "Os ingressos aparecem aqui assim que o pagamento é aprovado." : undefined}
+            title={tab === "proximos" ? k.emptyUpcomingTitle : k.emptyTitle}
+            hint={tab === "proximos" ? k.emptyUpcomingHint : undefined}
           >
-            {tab === "proximos" && <ButtonLink to="/">Ver eventos</ButtonLink>}
+            {tab === "proximos" && <ButtonLink to="/">{t.common.seeEvents}</ButtonLink>}
           </Empty>
         )}
         {tickets.length > 0 && (
@@ -139,27 +140,29 @@ export default function TicketsPage() {
 // do evento; no meio o picote; à direita o canhoto com o QR code.
 // No celular, o canhoto vai para baixo.
 function TicketCard({ ticket, onEnlarge, onTransfer }: { ticket: TicketDetails; onEnlarge: () => void; onTransfer: () => void }) {
+  const { t, locale } = useI18n();
+  const k = t.buyer.tickets;
   const valid = ticket.status === "VALID";
-  const stamp = ticket.status === "USED" ? "UTILIZADO" : ticket.status === "CANCELLED" ? "CANCELADO" : null;
+  const stamp = ticket.status === "USED" ? k.stampUsed : ticket.status === "CANCELLED" ? k.stampCancelled : null;
   return (
     <article
       className="elevated relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface sm:flex-row"
-      aria-label={`Ingresso ${ticket.ticketTypeName} para ${ticket.eventName}`}
+      aria-label={k.cardLabel(ticket.ticketTypeName, ticket.eventName)}
     >
       <div className={`flex min-w-0 flex-1 flex-col p-5 sm:p-6 ${valid ? "" : "opacity-55"}`}>
         <div className="flex items-start justify-between gap-3">
-          <p className="tabular text-[11px] font-bold tracking-wide text-accent-text">{eventStamp(ticket.eventStartsAt)}</p>
+          <p className="tabular text-[11px] font-bold tracking-wide text-accent-text">{eventStamp(ticket.eventStartsAt, locale)}</p>
           <StatusBadge status={ticket.status} />
         </div>
         <p className="font-display mt-3 line-clamp-2 text-2xl font-semibold leading-tight tracking-tight text-ink">{ticket.eventName}</p>
         <div className="mt-auto grid grid-cols-2 gap-4 pt-6 text-sm">
           <div>
-            <p className="text-[11px] font-semibold tracking-[0.12em] text-subtle">LOTE</p>
+            <p className="text-[11px] font-semibold tracking-[0.12em] text-subtle">{k.lot}</p>
             <p className="mt-0.5 font-semibold text-ink">{ticket.ticketTypeName}</p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold tracking-[0.12em] text-subtle">{ticket.usedAt ? "ENTRADA" : "CÓDIGO"}</p>
-            <p className="tabular mt-0.5 font-semibold text-ink">{ticket.usedAt ? formatShortDate(ticket.usedAt) : ticket.code}</p>
+            <p className="text-[11px] font-semibold tracking-[0.12em] text-subtle">{ticket.usedAt ? k.entry : k.code}</p>
+            <p className="tabular mt-0.5 font-semibold text-ink">{ticket.usedAt ? formatShortDate(ticket.usedAt, locale) : ticket.code}</p>
           </div>
         </div>
       </div>
@@ -178,12 +181,12 @@ function TicketCard({ ticket, onEnlarge, onTransfer }: { ticket: TicketDetails; 
         <p className="select-all font-mono text-sm font-bold tracking-[0.18em] text-ink">{ticket.code}</p>
         {valid && (
           <Button variant="secondary" size="sm" onClick={onEnlarge}>
-            <Expand size={15} aria-hidden /> Ampliar para a entrada
+            <Expand size={15} aria-hidden /> {k.enlarge}
           </Button>
         )}
         {ticket.transferable && (
           <Button variant="ghost" size="sm" onClick={onTransfer}>
-            <Send size={15} aria-hidden /> Transferir
+            <Send size={15} aria-hidden /> {k.transfer}
           </Button>
         )}
       </div>
@@ -201,6 +204,7 @@ function TicketCard({ ticket, onEnlarge, onTransfer }: { ticket: TicketDetails; 
 }
 
 function EnlargedQr({ ticket, onClose }: { ticket: TicketDetails; onClose: () => void }) {
+  const { t } = useI18n();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     ref.current?.showModal();
@@ -210,7 +214,7 @@ function EnlargedQr({ ticket, onClose }: { ticket: TicketDetails; onClose: () =>
       ref={ref}
       onClose={onClose}
       onClick={() => ref.current?.close()}
-      aria-label="QR code ampliado"
+      aria-label={t.buyer.tickets.enlargedLabel}
       className="m-0 h-full max-h-none w-full max-w-none bg-white p-0 text-black"
     >
       <div className="flex h-full flex-col items-center justify-center gap-5 p-6 text-center">
@@ -218,7 +222,7 @@ function EnlargedQr({ ticket, onClose }: { ticket: TicketDetails; onClose: () =>
         <p className="-mt-3 text-sm font-semibold text-neutral-600">{ticket.ticketTypeName}</p>
         <QRCodeSVG value={ticket.code} size={Math.min(320, window.innerWidth - 64)} level="M" />
         <p className="font-mono text-2xl font-bold tracking-[0.2em]">{ticket.code}</p>
-        <p className="text-sm text-neutral-600">Toque em qualquer lugar ou aperte Esc para fechar</p>
+        <p className="text-sm text-neutral-600">{t.buyer.tickets.closeHint}</p>
       </div>
     </dialog>
   );

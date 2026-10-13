@@ -6,12 +6,14 @@ import { Navigate, Route, Routes } from "react-router";
 import RequireAuth from "./auth/RequireAuth";
 import Layout from "./components/Layout";
 import OrganizerLayout from "./components/OrganizerLayout";
+import AccountDeletedPage from "./pages/AccountDeletedPage";
 import AccountPage from "./pages/AccountPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import EventsPage from "./pages/EventsPage";
 import HelpPage from "./pages/HelpPage";
 import HowItWorksPage from "./pages/HowItWorksPage";
+import LegalPage from "./pages/LegalPage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
@@ -43,6 +45,9 @@ export default function App() {
         <Route path="events/:id" element={<EventDetailPage />} />
         <Route path="how-it-works" element={<HowItWorksPage />} />
         <Route path="help" element={<HelpPage />} />
+        <Route path="terms" element={<LegalPage document="terms" />} />
+        <Route path="privacy" element={<LegalPage document="privacy" />} />
+        <Route path="account-deleted" element={<AccountDeletedPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
 

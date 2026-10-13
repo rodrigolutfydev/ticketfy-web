@@ -5,11 +5,15 @@ import { ErrorMessage } from "../../../components/StateMessage";
 import { Skeleton } from "../../../components/ui";
 import { formatInt, formatMaybePrice, formatPercent, formatPrice, formatShortDate } from "../../../utils/format";
 import SalesChart from "./SalesChart";
-import { ORDER_STATUS_META } from "./statusMeta";
+import { ORDER_STATUS_DOTS } from "./statusMeta";
+import { errorMessage } from "../../../api/client";
+import { useI18n } from "../../../i18n/LocaleContext";
 
 // Aba "Visão geral" da gestão do evento: tudo vem de GET /events/{id}/dashboard,
 // já calculado pela API (receita só de pedidos pagos, com o preço congelado).
 export default function EventOverview({ eventId }: { eventId: string }) {
+  const { t: m, locale } = useI18n();
+  const v = m.organizer.overview;
   const { data, isLoading, error } = useQuery({
     queryKey: ["event-dashboard", eventId],
     queryFn: () => getEventDashboard(eventId),
@@ -17,37 +21,37 @@ export default function EventOverview({ eventId }: { eventId: string }) {
   });
 
   if (isLoading) return <OverviewSkeleton />;
-  if (error) return <ErrorMessage message={error.message} />;
+  if (error) return <ErrorMessage message={errorMessage(error) ?? ""} />;
   const d = data!;
   const t = d.totals;
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi label="Receita bruta" value={formatPrice(t.revenue)} hint="Só pedidos pagos, no preço da compra" />
-        <Kpi label="Descontos" value={formatPrice(t.discounts)} hint="Cupons usados em pedidos pagos" />
-        <Kpi label="Taxa da plataforma" value={formatPrice(t.platformFee)} hint="Calculada sobre o valor pago" />
-        <Kpi label="Receita líquida" value={formatPrice(t.netRevenue)} hint="Bruto menos descontos e taxa" accent />
+        <Kpi label={v.grossRevenue} value={formatPrice(t.revenue, locale)} hint={v.grossRevenueHint} />
+        <Kpi label={v.discounts} value={formatPrice(t.discounts, locale)} hint={v.discountsHint} />
+        <Kpi label={v.platformFee} value={formatPrice(t.platformFee, locale)} hint={v.platformFeeHint} />
+        <Kpi label={v.netRevenue} value={formatPrice(t.netRevenue, locale)} hint={v.netRevenueHint} accent />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <Kpi label="Ingressos vendidos" value={formatInt(t.ticketsSold)} hint={`${formatPercent(t.percentSold)} de ${formatInt(t.capacity)}`} progress={t.percentSold} />
-        <Kpi label="Reservados agora" value={formatInt(t.ticketsReserved)} hint={`${formatInt(t.remaining)} livres para venda`} />
-        <Kpi label="Ticket médio por pedido" value={formatMaybePrice(t.averageOrderValue)} />
-        <Kpi label="Preço médio por ingresso" value={formatMaybePrice(t.averageTicketPrice)} />
-        <Kpi label="Pedidos pagos" value={formatInt(t.paidOrders)} hint={`${formatInt(d.ordersByStatus.find((r) => r.status === "PENDING")?.orders ?? 0)} aguardando pagamento`} />
+        <Kpi label={v.ticketsSold} value={formatInt(t.ticketsSold, locale)} hint={v.soldOf(formatPercent(t.percentSold, locale), formatInt(t.capacity, locale))} progress={t.percentSold} />
+        <Kpi label={v.reserved} value={formatInt(t.ticketsReserved, locale)} hint={v.free(formatInt(t.remaining, locale))} />
+        <Kpi label={v.averageOrder} value={formatMaybePrice(t.averageOrderValue, locale)} />
+        <Kpi label={v.averageTicket} value={formatMaybePrice(t.averageTicketPrice, locale)} />
+        <Kpi label={v.paidOrders} value={formatInt(t.paidOrders, locale)} hint={v.awaiting(formatInt(d.ordersByStatus.find((r) => r.status === "PENDING")?.orders ?? 0, locale))} />
       </div>
 
       <section className="elevated rounded-2xl border border-line bg-surface p-5 sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-ink">Vendas líquidas por dia</h2>
-            <p className="text-sm text-muted">Pedidos pagos no dia do pagamento, sem os reembolsados.</p>
+            <h2 className="text-lg font-semibold text-ink">{v.dailyTitle}</h2>
+            <p className="text-sm text-muted">{v.dailyText}</p>
           </div>
           <Legend />
         </div>
         <div className="mt-5">
           {d.dailySales.length === 0 ? (
-            <p className="rounded-xl bg-raised p-8 text-center text-sm text-muted">Nenhuma venda paga ainda.</p>
+            <p className="rounded-xl bg-raised p-8 text-center text-sm text-muted">{v.noSales}</p>
           ) : (
             <SalesChart data={d.dailySales} />
           )}
@@ -64,7 +68,7 @@ export default function EventOverview({ eventId }: { eventId: string }) {
       </div>
 
       <p className="text-xs text-subtle">
-        Atualizado em {formatShortDate(d.generatedAt)} · datas no fuso {d.timeZone}
+        {v.updated(formatShortDate(d.generatedAt, locale), d.timeZone)}
       </p>
     </div>
   );
@@ -86,23 +90,26 @@ function Kpi({ label, value, hint, accent, progress }: { label: string; value: s
 }
 
 function Legend() {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-4 text-xs text-muted">
       <span className="flex items-center gap-1.5">
-        <span className="h-2.5 w-2.5 rounded-sm bg-accent/70" aria-hidden /> Ingressos
+        <span className="h-2.5 w-2.5 rounded-sm bg-accent/70" aria-hidden /> {t.organizer.overview.legendTickets}
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="h-0.5 w-4 rounded-full bg-ink" aria-hidden /> Receita
+        <span className="h-0.5 w-4 rounded-full bg-ink" aria-hidden /> {t.organizer.overview.legendRevenue}
       </span>
     </div>
   );
 }
 
 function LotPerformance({ lots }: { lots: EventDashboard["ticketTypes"] }) {
+  const { t, locale } = useI18n();
+  const v = t.organizer.overview;
   return (
     <section className="elevated rounded-2xl border border-line bg-surface p-5 sm:p-6">
-      <h2 className="text-lg font-semibold text-ink">Desempenho por lote</h2>
-      {lots.length === 0 && <p className="mt-4 text-sm text-muted">Nenhum lote cadastrado.</p>}
+      <h2 className="text-lg font-semibold text-ink">{v.lotsTitle}</h2>
+      {lots.length === 0 && <p className="mt-4 text-sm text-muted">{v.noLots}</p>}
       <ul className="mt-5 space-y-5">
         {lots.map((lot) => {
           const pct = (n: number) => (lot.quantityTotal > 0 ? (n / lot.quantityTotal) * 100 : 0);
@@ -110,17 +117,23 @@ function LotPerformance({ lots }: { lots: EventDashboard["ticketTypes"] }) {
             <li key={lot.id}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="font-semibold text-ink">
-                  {lot.name} <span className="tabular text-sm font-normal text-muted">· {formatPrice(lot.price)}</span>
+                  {lot.name} <span className="tabular text-sm font-normal text-muted">· {formatPrice(lot.price, locale)}</span>
                 </p>
-                <p className="tabular text-sm font-semibold text-ink">{formatPrice(lot.revenue)}</p>
+                <p className="tabular text-sm font-semibold text-ink">{formatPrice(lot.revenue, locale)}</p>
               </div>
               {/* Barra empilhada: vendido, reservado e livre, proporcionais ao total do lote. */}
-              <div className="mt-2 flex h-2.5 overflow-hidden rounded-full bg-raised" role="img" aria-label={`${lot.sold} vendidos, ${lot.reserved} reservados, ${lot.remaining} livres de ${lot.quantityTotal}`}>
+              <div className="mt-2 flex h-2.5 overflow-hidden rounded-full bg-raised" role="img" aria-label={v.lotBar(lot.sold, lot.reserved, lot.remaining, lot.quantityTotal)}>
                 <div className="bg-accent" style={{ width: `${pct(lot.sold)}%` }} />
                 <div className="bg-warning/80" style={{ width: `${pct(lot.reserved)}%` }} />
               </div>
               <p className="tabular mt-1.5 text-xs text-muted">
-                {formatInt(lot.sold)} vendidos · {formatInt(lot.reserved)} reservados · {formatInt(lot.remaining)} livres de {formatInt(lot.quantityTotal)} ({formatPercent(lot.percentSold)})
+                {v.lotLine(
+                  formatInt(lot.sold, locale),
+                  formatInt(lot.reserved, locale),
+                  formatInt(lot.remaining, locale),
+                  formatInt(lot.quantityTotal, locale),
+                  formatPercent(lot.percentSold, locale),
+                )}
               </p>
             </li>
           );
@@ -131,16 +144,18 @@ function LotPerformance({ lots }: { lots: EventDashboard["ticketTypes"] }) {
 }
 
 function CouponUsage({ coupons }: { coupons: EventDashboard["coupons"] }) {
+  const { t, locale } = useI18n();
+  const v = t.organizer.overview;
   return (
     <section className="elevated rounded-2xl border border-line bg-surface p-5 sm:p-6">
-      <h2 className="text-lg font-semibold text-ink">Cupons</h2>
+      <h2 className="text-lg font-semibold text-ink">{v.couponsTitle}</h2>
       <table className="mt-4 w-full text-sm">
         <thead>
           <tr className="text-left text-xs text-muted">
-            <th className="pb-2 font-medium">Código</th>
-            <th className="pb-2 text-right font-medium">Usos</th>
-            <th className="pb-2 text-right font-medium">Pagos</th>
-            <th className="pb-2 text-right font-medium">Desconto</th>
+            <th className="pb-2 font-medium">{v.code}</th>
+            <th className="pb-2 text-right font-medium">{v.uses}</th>
+            <th className="pb-2 text-right font-medium">{v.paid}</th>
+            <th className="pb-2 text-right font-medium">{v.discount}</th>
           </tr>
         </thead>
         <tbody>
@@ -148,11 +163,11 @@ function CouponUsage({ coupons }: { coupons: EventDashboard["coupons"] }) {
             <tr key={coupon.id} className={`border-t border-line ${coupon.active ? "" : "opacity-60"}`}>
               <td className="py-2.5 font-mono font-semibold text-ink">{coupon.code}</td>
               <td className="tabular py-2.5 text-right text-muted">
-                {formatInt(coupon.uses)}
-                {coupon.maxUses !== null && ` / ${formatInt(coupon.maxUses)}`}
+                {formatInt(coupon.uses, locale)}
+                {coupon.maxUses !== null && ` / ${formatInt(coupon.maxUses, locale)}`}
               </td>
-              <td className="tabular py-2.5 text-right text-muted">{formatInt(coupon.paidOrders)}</td>
-              <td className="tabular py-2.5 text-right font-semibold text-ink">{formatPrice(coupon.discountTotal)}</td>
+              <td className="tabular py-2.5 text-right text-muted">{formatInt(coupon.paidOrders, locale)}</td>
+              <td className="tabular py-2.5 text-right font-semibold text-ink">{formatPrice(coupon.discountTotal, locale)}</td>
             </tr>
           ))}
         </tbody>
@@ -162,15 +177,17 @@ function CouponUsage({ coupons }: { coupons: EventDashboard["coupons"] }) {
 }
 
 function OrdersByStatus({ rows }: { rows: EventDashboard["ordersByStatus"] }) {
+  const { t, locale } = useI18n();
+  const v = t.organizer.overview;
   return (
     <section className="elevated rounded-2xl border border-line bg-surface p-5 sm:p-6">
-      <h2 className="text-lg font-semibold text-ink">Pedidos por status</h2>
+      <h2 className="text-lg font-semibold text-ink">{v.ordersTitle}</h2>
       <table className="mt-4 w-full text-sm">
         <thead className="sr-only">
           <tr>
-            <th>Status</th>
-            <th>Pedidos</th>
-            <th>Ingressos</th>
+            <th>{v.status}</th>
+            <th>{v.orders}</th>
+            <th>{v.tickets}</th>
           </tr>
         </thead>
         <tbody>
@@ -178,12 +195,12 @@ function OrdersByStatus({ rows }: { rows: EventDashboard["ordersByStatus"] }) {
             <tr key={row.status} className="border-b border-line last:border-0">
               <td className="py-2.5">
                 <span className="flex items-center gap-2 text-ink">
-                  <span className={`h-2 w-2 rounded-full ${ORDER_STATUS_META[row.status].dot}`} aria-hidden />
-                  {ORDER_STATUS_META[row.status].label}
+                  <span className={`h-2 w-2 rounded-full ${ORDER_STATUS_DOTS[row.status]}`} aria-hidden />
+                  {t.labels.orderStatusPlural[row.status]}
                 </span>
               </td>
-              <td className="tabular py-2.5 text-right font-semibold text-ink">{formatInt(row.orders)}</td>
-              <td className="tabular w-28 py-2.5 text-right text-muted">{formatInt(row.tickets)} ingr.</td>
+              <td className="tabular py-2.5 text-right font-semibold text-ink">{formatInt(row.orders, locale)}</td>
+              <td className="tabular w-28 py-2.5 text-right text-muted">{v.ticketsShort(formatInt(row.tickets, locale))}</td>
             </tr>
           ))}
         </tbody>
@@ -194,6 +211,8 @@ function OrdersByStatus({ rows }: { rows: EventDashboard["ordersByStatus"] }) {
 
 // Anel de comparecimento: check-ins feitos sobre ingressos emitidos.
 function Attendance({ checkIn }: { checkIn: EventDashboard["checkIn"] }) {
+  const { t, locale } = useI18n();
+  const v = t.organizer.overview;
   const r = 34;
   const circumference = 2 * Math.PI * r;
   const rate = checkIn.attendanceRate ?? 0;
@@ -214,11 +233,9 @@ function Attendance({ checkIn }: { checkIn: EventDashboard["checkIn"] }) {
         />
       </svg>
       <div>
-        <h2 className="text-lg font-semibold text-ink">Comparecimento</h2>
-        <p className="font-display tabular text-2xl font-semibold text-ink">{formatPercent(checkIn.attendanceRate)}</p>
-        <p className="text-xs text-muted">
-          {formatInt(checkIn.checkedIn)} check-ins de {formatInt(checkIn.issued)} ingressos emitidos
-        </p>
+        <h2 className="text-lg font-semibold text-ink">{v.attendance}</h2>
+        <p className="font-display tabular text-2xl font-semibold text-ink">{formatPercent(checkIn.attendanceRate, locale)}</p>
+        <p className="text-xs text-muted">{v.attendanceText(formatInt(checkIn.checkedIn, locale), formatInt(checkIn.issued, locale))}</p>
       </div>
     </section>
   );

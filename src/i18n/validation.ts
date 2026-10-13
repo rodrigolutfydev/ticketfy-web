@@ -76,8 +76,10 @@ const PT_BR: Record<ValidationCode, ValidationMessage> = {
     const max = num(params.max) ?? 30;
     return `Use de ${min} a ${max} letras, números, - ou _.`;
   },
-  confirmation: (params) => {
+  confirmation: (params, locale) => {
+    const allowed = list(params.allowed);
     const expected = text(params.expected);
+    if (allowed.length > 0) return `Digite ${joinList(allowed, locale)} para confirmar.`;
     return expected ? `Digite ${expected} para confirmar.` : "Confirmação incorreta.";
   },
   "invalid-document": (params) => {
@@ -134,8 +136,10 @@ const EN: Record<ValidationCode, ValidationMessage> = {
     const max = num(params.max) ?? 30;
     return `Use ${min} to ${max} letters, numbers, - or _.`;
   },
-  confirmation: (params) => {
+  confirmation: (params, locale) => {
+    const allowed = list(params.allowed);
     const expected = text(params.expected);
+    if (allowed.length > 0) return `Type ${joinList(allowed, locale)} to confirm.`;
     return expected ? `Type ${expected} to confirm.` : "Incorrect confirmation.";
   },
   "invalid-document": (params) => {

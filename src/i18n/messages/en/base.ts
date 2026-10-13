@@ -1,8 +1,8 @@
-import type { Messages } from "./index";
+import type { base as reference } from "../pt-BR/base";
 
 const tickets = (n: number) => `${n} ${n === 1 ? "ticket" : "tickets"}`;
 
-export const en: Messages = {
+export const base: typeof reference = {
   common: {
     loading: "Loading...",
     loadErrorTitle: "Couldn't load",
@@ -73,6 +73,7 @@ export const en: Messages = {
       credits: (year: number) => `© ${year} Ticketfy · a project by Rodrigo Lutfy`,
     },
     logoLabel: "Ticketfy, home page",
+    metaDescription: "Find events, choose your ticket batch and get a ticket with a unique code.",
   },
   pagination: {
     label: "Pagination",
@@ -312,7 +313,6 @@ export const en: Messages = {
     title: "My account",
     tabsLabel: "Account sections",
     tabs: { profile: "Profile", security: "Security", organizer: "Organizer" },
-    roles: { USER: "Buyer", ORGANIZER: "Organizer", ADMIN: "Administrator" },
     profileUnavailable: "Profile unavailable",
     profileUnavailableText: "The API doesn't have the GET /users/me route yet, so your details can't be shown here.",
     wantToSell: "Want to sell tickets?",

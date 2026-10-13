@@ -1,6 +1,6 @@
 const tickets = (n: number) => `${n} ${n === 1 ? "ingresso" : "ingressos"}`;
 
-export const ptBR = {
+export const base = {
   common: {
     loading: "Carregando...",
     loadErrorTitle: "Não deu para carregar",
@@ -71,6 +71,7 @@ export const ptBR = {
       credits: (year: number) => `© ${year} Ticketfy · projeto de Rodrigo Lutfy`,
     },
     logoLabel: "Ticketfy, página inicial",
+    metaDescription: "Encontre eventos, escolha seu lote e receba o ingresso com código único.",
   },
   pagination: {
     label: "Paginação",
@@ -310,7 +311,6 @@ export const ptBR = {
     title: "Minha conta",
     tabsLabel: "Seções da conta",
     tabs: { profile: "Perfil", security: "Segurança", organizer: "Organizador" },
-    roles: { USER: "Comprador", ORGANIZER: "Organizador", ADMIN: "Administrador" },
     profileUnavailable: "Perfil indisponível",
     profileUnavailableText: "A API ainda não tem a rota GET /users/me, então não dá para mostrar seus dados aqui.",
     wantToSell: "Quer vender ingressos?",

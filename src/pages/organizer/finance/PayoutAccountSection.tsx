@@ -1,42 +1,45 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Landmark, Pencil } from "lucide-react";
-import { ApiError, fieldError, hasUnmappedError } from "../../../api/client";
+import { ApiError, errorMessage, fieldError, hasUnmappedError } from "../../../api/client";
+import { useI18n } from "../../../i18n/LocaleContext";
 import { savePayoutAccount } from "../../../api/endpoints";
 import type { DocumentType, PayoutAccount, PixKeyType } from "../../../api/types";
 import { Alert, Button, Card, Field, Input, PasswordInput, Select } from "../../../components/ui";
-import { DOCUMENT_LABELS, PIX_KEY_LABELS, PIX_KEY_PLACEHOLDERS, formatDateTime } from "./payoutMeta";
+import { PIX_KEY_TYPES, formatDateTime, pixKeyPlaceholder } from "./payoutMeta";
 
 const FIELDS = ["documentType", "document", "holderName", "pixKeyType", "pixKey", "password"] as const;
 
 export default function PayoutAccountSection({ account }: { account: PayoutAccount | null }) {
   const [editing, setEditing] = useState(false);
+  const { t, locale } = useI18n();
+  const a = t.organizer.payoutAccount;
 
   return (
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
-            <Landmark size={18} aria-hidden /> Dados de recebimento
+            <Landmark size={18} aria-hidden /> {a.title}
           </h2>
-          <p className="mt-1 text-sm text-muted">Os saques são enviados por Pix para a chave cadastrada aqui.</p>
+          <p className="mt-1 text-sm text-muted">{a.text}</p>
         </div>
         {account && !editing && (
           <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-            <Pencil size={15} aria-hidden /> Editar
+            <Pencil size={15} aria-hidden /> {a.edit}
           </Button>
         )}
       </div>
 
       {account && !editing && (
         <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
-          <Item label="Titular" value={account.holderName} />
-          <Item label={DOCUMENT_LABELS[account.documentType]} value={account.document} />
-          <Item label="Tipo de chave" value={PIX_KEY_LABELS[account.pixKeyType]} />
-          <Item label="Chave Pix" value={account.pixKey} />
+          <Item label={a.holder} value={account.holderName} />
+          <Item label={t.labels.documentTypes[account.documentType]} value={account.document} />
+          <Item label={a.keyType} value={t.labels.pixKeyTypes[account.pixKeyType]} />
+          <Item label={a.pixKey} value={account.pixKey} />
           {account.payoutsBlockedUntil && (
             <div className="sm:col-span-2">
-              <Alert type="warning">Saques bloqueados até {formatDateTime(account.payoutsBlockedUntil)} por causa da troca da chave Pix.</Alert>
+              <Alert type="warning">{a.cooldown(formatDateTime(account.payoutsBlockedUntil, locale))}</Alert>
             </div>
           )}
         </dl>
@@ -60,6 +63,8 @@ function Item({ label, value }: { label: string; value: string }) {
 
 function AccountForm({ account, onDone, onCancel }: { account: PayoutAccount | null; onDone: () => void; onCancel?: () => void }) {
   const queryClient = useQueryClient();
+  const { t, locale } = useI18n();
+  const a = t.organizer.payoutAccount;
   const [documentType, setDocumentType] = useState<DocumentType>(account?.documentType ?? "CPF");
   const [document, setDocument] = useState("");
   const [holderName, setHolderName] = useState(account?.holderName ?? "");
@@ -87,41 +92,41 @@ function AccountForm({ account, onDone, onCancel }: { account: PayoutAccount | n
 
   return (
     <form onSubmit={submit} className="mt-5 grid gap-4 sm:grid-cols-2">
-      <Field label="Tipo de documento" error={fieldError(error, "documentType")}>
+      <Field label={a.documentType} error={fieldError(error, "documentType")}>
         <Select value={documentType} onChange={(e) => setDocumentType(e.target.value as DocumentType)}>
-          <option value="CPF">CPF</option>
-          <option value="CNPJ">CNPJ</option>
+          <option value="CPF">{t.labels.documentTypes.CPF}</option>
+          <option value="CNPJ">{t.labels.documentTypes.CNPJ}</option>
         </Select>
       </Field>
-      <Field label={`${DOCUMENT_LABELS[documentType]} do titular`} error={fieldError(error, "document")}>
+      <Field label={a.holderDocument(t.labels.documentTypes[documentType])} error={fieldError(error, "document")}>
         <Input
           value={document}
           onChange={(e) => setDocument(e.target.value)}
-          placeholder={PIX_KEY_PLACEHOLDERS[documentType]}
+          placeholder={pixKeyPlaceholder(documentType, locale)}
           autoComplete="off"
           maxLength={25}
           required
         />
       </Field>
       <div className="sm:col-span-2">
-        <Field label="Nome do titular" error={fieldError(error, "holderName")}>
+        <Field label={a.holderName} error={fieldError(error, "holderName")}>
           <Input value={holderName} onChange={(e) => setHolderName(e.target.value)} maxLength={150} required />
         </Field>
       </div>
-      <Field label="Tipo de chave Pix" error={fieldError(error, "pixKeyType")}>
+      <Field label={a.pixKeyType} error={fieldError(error, "pixKeyType")}>
         <Select value={pixKeyType} onChange={(e) => setPixKeyType(e.target.value as PixKeyType)}>
-          {(Object.keys(PIX_KEY_LABELS) as PixKeyType[]).map((type) => (
+          {PIX_KEY_TYPES.map((type) => (
             <option key={type} value={type}>
-              {PIX_KEY_LABELS[type]}
+              {t.labels.pixKeyTypes[type]}
             </option>
           ))}
         </Select>
       </Field>
-      <Field label="Chave Pix" error={fieldError(error, "pixKey")}>
+      <Field label={a.pixKey} error={fieldError(error, "pixKey")}>
         <Input
           value={pixKey}
           onChange={(e) => setPixKey(e.target.value)}
-          placeholder={PIX_KEY_PLACEHOLDERS[pixKeyType]}
+          placeholder={pixKeyPlaceholder(pixKeyType, locale)}
           autoComplete="off"
           maxLength={100}
           required
@@ -129,26 +134,26 @@ function AccountForm({ account, onDone, onCancel }: { account: PayoutAccount | n
       </Field>
       <div className="sm:col-span-2">
         <Field
-          label="Confirme sua senha"
-          error={wrongPassword ? "Senha incorreta." : fieldError(error, "password")}
-          hint={account ? "Trocar a chave Pix bloqueia os saques por 48 horas." : undefined}
+          label={a.password}
+          error={wrongPassword ? a.wrongPassword : fieldError(error, "password")}
+          hint={account ? a.keyChangeHint : undefined}
         >
           <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" maxLength={100} required />
         </Field>
       </div>
       {error && !wrongPassword && hasUnmappedError(error, FIELDS) && (
         <div className="sm:col-span-2">
-          <Alert>{error.message}</Alert>
+          <Alert>{errorMessage(error)}</Alert>
         </div>
       )}
       <div className="flex flex-wrap justify-end gap-2 sm:col-span-2">
         {onCancel && (
           <Button variant="ghost" onClick={onCancel} disabled={mutation.isPending}>
-            Cancelar
+            {a.cancel}
           </Button>
         )}
         <Button type="submit" loading={mutation.isPending}>
-          Salvar dados
+          {a.save}
         </Button>
       </div>
     </form>

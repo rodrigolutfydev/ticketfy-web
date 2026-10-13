@@ -10,11 +10,15 @@ import { Empty, ErrorMessage } from "../../components/StateMessage";
 import { ButtonLink, PageTitle, Skeleton } from "../../components/ui";
 import { eventStamp, formatInt, formatPercent, formatPrice, isPast } from "../../utils/format";
 import { usePageTitle } from "../../hooks/usePageTitle";
+import { errorMessage } from "../../api/client";
+import { useI18n } from "../../i18n/LocaleContext";
 
 // Painel geral ("bastidores"): totais de todos os eventos ativos e a lista
 // de eventos com a barra de vendas. Dados de GET /organizer/dashboard.
 export default function OrganizerDashboardPage() {
-  usePageTitle("Área do organizador");
+  const { t, locale } = useI18n();
+  const d = t.organizer.dashboard;
+  usePageTitle(d.pageTitle);
   const { me } = useMe();
   const [page, setPage] = useState(0);
   const { data, isLoading, error } = useQuery({
@@ -26,15 +30,15 @@ export default function OrganizerDashboardPage() {
   return (
     <div>
       <PageTitle
-        title={`Olá${me?.name ? `, ${me.name.split(" ")[0]}` : ""}`}
-        subtitle="Como estão as vendas dos seus eventos."
+        title={d.greeting(me?.name ? me.name.split(" ")[0] : null)}
+        subtitle={d.subtitle}
         actions={
           <>
             <ButtonLink to="/organizer/check-in" variant="secondary">
-              <ScanLine size={17} aria-hidden /> Check-in
+              <ScanLine size={17} aria-hidden /> {d.checkIn}
             </ButtonLink>
             <ButtonLink to="/organizer/events/new">
-              <CalendarPlus size={17} aria-hidden /> Criar evento
+              <CalendarPlus size={17} aria-hidden /> {d.newEvent}
             </ButtonLink>
           </>
         }
@@ -47,21 +51,21 @@ export default function OrganizerDashboardPage() {
           ))}
         </div>
       )}
-      {error && <ErrorMessage message={error.message} />}
+      {error && <ErrorMessage message={errorMessage(error) ?? ""} />}
 
       {data && (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="Eventos ativos" value={formatInt(data.totals.events)} />
-            <Stat label="Ingressos vendidos" value={formatInt(data.totals.ticketsSold)} />
-            <Stat label="Descontos em cupons" value={formatPrice(data.totals.discounts)} />
-            <Stat label="Receita total" value={formatPrice(data.totals.revenue)} accent />
+            <Stat label={d.activeEvents} value={formatInt(data.totals.events, locale)} />
+            <Stat label={d.ticketsSold} value={formatInt(data.totals.ticketsSold, locale)} />
+            <Stat label={d.discounts} value={formatPrice(data.totals.discounts, locale)} />
+            <Stat label={d.revenue} value={formatPrice(data.totals.revenue, locale)} accent />
           </div>
 
-          <h2 className="mb-4 mt-10 text-xl font-semibold tracking-tight text-ink">Seus eventos</h2>
+          <h2 className="mb-4 mt-10 text-xl font-semibold tracking-tight text-ink">{d.yourEvents}</h2>
           {data.events.content.length === 0 ? (
-            <Empty icon={<CalendarPlus size={22} />} title="Você ainda não tem eventos" hint="Crie o primeiro e cadastre os lotes para começar a vender.">
-              <ButtonLink to="/organizer/events/new">Criar evento</ButtonLink>
+            <Empty icon={<CalendarPlus size={22} />} title={d.emptyTitle} hint={d.emptyHint}>
+              <ButtonLink to="/organizer/events/new">{d.newEvent}</ButtonLink>
             </Empty>
           ) : (
             <ul className="elevated overflow-hidden rounded-2xl border border-line bg-surface">
@@ -72,21 +76,21 @@ export default function OrganizerDashboardPage() {
                       <EventCover name={event.name} startsAt={event.startsAt} imageUrl={event.imageUrl} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className={`tabular text-[11px] font-bold tracking-wide ${isPast(event.startsAt) ? "text-subtle" : "text-accent-text"}`}>{eventStamp(event.startsAt)}</p>
+                      <p className={`tabular text-[11px] font-bold tracking-wide ${isPast(event.startsAt) ? "text-subtle" : "text-accent-text"}`}>{eventStamp(event.startsAt, locale)}</p>
                       <p className="truncate font-semibold text-ink">{event.name}</p>
                     </div>
                     <div className="w-full sm:w-56">
                       <div className="flex justify-between text-xs text-muted">
                         <span className="tabular">
-                          {formatInt(event.ticketsSold)} de {formatInt(event.capacity)}
+                          {d.soldOf(formatInt(event.ticketsSold, locale), formatInt(event.capacity, locale))}
                         </span>
-                        <span className="tabular">{formatPercent(event.percentSold)}</span>
+                        <span className="tabular">{formatPercent(event.percentSold, locale)}</span>
                       </div>
                       <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden>
                         <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, event.percentSold ?? 0)}%` }} />
                       </div>
                     </div>
-                    <p className="tabular w-28 text-right font-semibold text-ink">{formatPrice(event.revenue)}</p>
+                    <p className="tabular w-28 text-right font-semibold text-ink">{formatPrice(event.revenue, locale)}</p>
                     <ChevronRight size={18} className="hidden shrink-0 text-subtle sm:block" aria-hidden />
                   </Link>
                 </li>

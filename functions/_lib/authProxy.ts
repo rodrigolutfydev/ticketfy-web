@@ -14,6 +14,7 @@ export const AUTH_PROXY_ROUTES: Readonly<Record<string, string>> = {
   "/api/auth/logout": "POST",
   "/api/auth/logout-all": "POST",
   "/api/users/me/password": "PATCH",
+  "/api/users/me/deletion": "POST",
 };
 
 const FORWARDED_REQUEST_HEADERS = ["Content-Type", "Authorization", "Origin", "X-Ticketfy-Auth", "X-Request-Id"];

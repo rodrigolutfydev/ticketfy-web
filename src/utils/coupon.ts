@@ -1,5 +1,7 @@
 import { ApiError, errorMessage } from "../api/client";
 import type { DiscountType } from "../api/types";
+import { getLocale, type Locale } from "../i18n/locale";
+import { MESSAGES } from "../i18n/messages";
 import { formatNumber, formatPrice } from "./format";
 
 export const normalizeCouponCode = (code: string) => code.trim().toUpperCase();
@@ -30,10 +32,4 @@ export function couponStatus(
   return "active";
 }
 
-export const COUPON_STATUS_LABELS: Record<CouponStatus, string> = {
-  active: "Ativo",
-  inactive: "Inativo",
-  scheduled: "Agendado",
-  expired: "Expirado",
-  exhausted: "Esgotado",
-};
+export const couponStatusLabel = (status: CouponStatus, locale: Locale = getLocale()) => MESSAGES[locale].labels.couponStatus[status];

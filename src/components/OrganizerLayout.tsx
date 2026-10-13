@@ -2,11 +2,14 @@ import { NavLink, Outlet, useLocation } from "react-router";
 import { CalendarDays, CalendarPlus, LayoutDashboard, ScanLine, Wallet } from "lucide-react";
 import RequireOrganizer from "../auth/RequireOrganizer";
 import { useMe } from "../auth/useMe";
+import { useI18n } from "../i18n/LocaleContext";
 
 // Moldura da área do organizador: menu lateral (vira abas no celular) + conteúdo.
 export default function OrganizerLayout() {
   const { pathname } = useLocation();
   const { isAdmin } = useMe();
+  const { t } = useI18n();
+  const l = t.organizer.layout;
   // "Meus eventos" fica ativo também dentro de um evento (/organizer/events/:id),
   // mas não em "Criar evento" (/organizer/events/new), que tem item próprio.
   const inEvent = pathname.startsWith("/organizer/events/") && pathname !== "/organizer/events/new";
@@ -16,11 +19,11 @@ export default function OrganizerLayout() {
     }`;
 
   const links = [
-    { to: "/organizer", label: "Painel", icon: <LayoutDashboard size={18} />, end: true },
-    { to: "/organizer/events", label: "Meus eventos", icon: <CalendarDays size={18} />, end: true },
-    { to: "/organizer/events/new", label: "Criar evento", icon: <CalendarPlus size={18} /> },
-    { to: "/organizer/check-in", label: "Check-in", icon: <ScanLine size={18} /> },
-    ...(isAdmin ? [] : [{ to: "/organizer/finance", label: "Financeiro", icon: <Wallet size={18} /> }]),
+    { to: "/organizer", label: l.dashboard, icon: <LayoutDashboard size={18} />, end: true },
+    { to: "/organizer/events", label: l.events, icon: <CalendarDays size={18} />, end: true },
+    { to: "/organizer/events/new", label: l.newEvent, icon: <CalendarPlus size={18} /> },
+    { to: "/organizer/check-in", label: l.checkIn, icon: <ScanLine size={18} /> },
+    ...(isAdmin ? [] : [{ to: "/organizer/finance", label: l.finance, icon: <Wallet size={18} /> }]),
   ];
 
   return (
@@ -28,8 +31,8 @@ export default function OrganizerLayout() {
       {/* minmax(0,1fr): impede que o menu rolável do celular alargue a coluna e a página inteira. */}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="min-w-0">
-          <p className="eyebrow mb-3 hidden px-3 md:block">Bastidores</p>
-          <nav aria-label="Área do organizador" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 md:flex-col md:overflow-visible">
+          <p className="eyebrow mb-3 hidden px-3 md:block">{l.eyebrow}</p>
+          <nav aria-label={l.nav} className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 md:flex-col md:overflow-visible">
             {links.map((link) => (
               <NavLink
                 key={link.to}
