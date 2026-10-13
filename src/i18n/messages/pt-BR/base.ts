@@ -33,6 +33,15 @@ export const base = {
     accountHint: "O idioma fica salvo na sua conta e vale em qualquer aparelho em que você entrar.",
     saved: "Idioma salvo.",
   },
+  calendar: {
+    add: "Adicionar à agenda",
+    menuLabel: "Opções para adicionar à agenda",
+    download: "Baixar arquivo .ics",
+    downloadHint: "Apple, Outlook e outros aplicativos",
+    google: "Google Agenda",
+    googleLoading: "Carregando...",
+    googleUnavailable: "Não foi possível carregar o evento.",
+  },
   ui: {
     showPassword: "Mostrar senha",
     hidePassword: "Ocultar senha",

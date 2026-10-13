@@ -2,6 +2,8 @@ import { clientMessage, genericMessage, problemMessage, withErrorCode, type Clie
 import { validationMessage } from "../i18n/validation";
 
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
+
+export const apiUrl = (path: string) => `${API_URL}${path}`;
 const AUTH_BASE = "/api";
 const AUTH_HEADER = "X-Ticketfy-Auth";
 const REFRESH_LOCK = "ticketfy-refresh";

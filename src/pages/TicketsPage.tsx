@@ -7,6 +7,7 @@ import { listMyTickets } from "../api/endpoints";
 import type { TicketDetails } from "../api/types";
 import Pagination from "../components/Pagination";
 import TransferTicketDialog from "../components/TransferTicketDialog";
+import AddToCalendar from "../components/AddToCalendar";
 import StatusBadge from "../components/StatusBadge";
 import { Empty, ErrorMessage } from "../components/StateMessage";
 import { TabPanel, Tabs, useTabParam } from "../components/Tabs";
@@ -184,6 +185,7 @@ function TicketCard({ ticket, onEnlarge, onTransfer }: { ticket: TicketDetails; 
             <Expand size={15} aria-hidden /> {k.enlarge}
           </Button>
         )}
+        {valid && !isPast(ticket.eventStartsAt) && ticket.eventId && <AddToCalendar eventId={ticket.eventId} />}
         {ticket.transferable && (
           <Button variant="ghost" size="sm" onClick={onTransfer}>
             <Send size={15} aria-hidden /> {k.transfer}

@@ -14,8 +14,9 @@ import { TabPanel, Tabs, useTabParam } from "../components/Tabs";
 import { Alert, BackLink, Button, ButtonLink, InfoRow, Skeleton } from "../components/ui";
 import Avatar from "../components/Avatar";
 import FeaturedToggle from "../components/FeaturedToggle";
+import AddToCalendar from "../components/AddToCalendar";
 import { encodeItems } from "../utils/cart";
-import { formatDate, formatFullDay, formatPrice, formatTime, relativeDay } from "../utils/format";
+import { formatDate, formatFullDay, formatPrice, formatTime, isPast, relativeDay } from "../utils/format";
 import { useI18n } from "../i18n/LocaleContext";
 import { salesPanel } from "../utils/sales";
 import { categoryLabel } from "../i18n/categories";
@@ -56,6 +57,7 @@ export default function EventDetailPage() {
         <BackLink to="/">{t.eventDetail.back}</BackLink>
         <div className="flex flex-wrap gap-2">
           <FeaturedToggle eventId={id} featured={!!event.featured} />
+          {!cancelled && !isPast(event.endsAt ?? event.startsAt) && <AddToCalendar eventId={id} event={event} />}
           <ShareButton title={event.name} />
           {canManage(event, me) && (
             <ButtonLink to={`/organizer/events/${id}`} variant="secondary" size="sm">

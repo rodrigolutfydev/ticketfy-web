@@ -265,6 +265,7 @@ export interface TicketDetails {
   id: string;
   code: string;
   status: TicketStatus;
+  eventId: string;
   eventName: string;
   eventStartsAt: string;
   ticketTypeName: string;

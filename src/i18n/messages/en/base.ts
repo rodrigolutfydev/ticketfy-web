@@ -35,6 +35,15 @@ export const base: typeof reference = {
     accountHint: "Your language is saved to your account and applies on any device you sign in to.",
     saved: "Language saved.",
   },
+  calendar: {
+    add: "Add to calendar",
+    menuLabel: "Options to add to calendar",
+    download: "Download .ics file",
+    downloadHint: "Apple, Outlook and other apps",
+    google: "Google Calendar",
+    googleLoading: "Loading...",
+    googleUnavailable: "We couldn't load the event.",
+  },
   ui: {
     showPassword: "Show password",
     hidePassword: "Hide password",
