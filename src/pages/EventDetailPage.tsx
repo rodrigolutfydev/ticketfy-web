@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CalendarDays, Check, Clock, ExternalLink, Info, Maximize2, MapPin, Minus, Plus, Share2, ShieldCheck, Timer, X } from "lucide-react";
+import { errorMessage } from "../api/client";
 import { getEvent, listTicketTypes } from "../api/endpoints";
 import type { EventDetails, TicketTypeSummary } from "../api/types";
 import { canManage, useMe } from "../auth/useMe";
@@ -14,7 +15,8 @@ import { Alert, BackLink, Button, ButtonLink, InfoRow, Skeleton } from "../compo
 import Avatar from "../components/Avatar";
 import FeaturedToggle from "../components/FeaturedToggle";
 import { encodeItems } from "../utils/cart";
-import { formatDate, formatPrice, formatTime, relativeDay } from "../utils/format";
+import { formatDate, formatFullDay, formatPrice, formatTime, relativeDay } from "../utils/format";
+import { useI18n } from "../i18n/LocaleContext";
 import { salesPanel } from "../utils/sales";
 import { categoryLabel } from "../i18n/categories";
 import { isValidId, mapsUrl, safeImageUrl } from "../utils/security";
@@ -27,6 +29,7 @@ export default function EventDetailPage() {
   const { id = "" } = useParams();
   const validId = isValidId(id);
   const { me } = useMe();
+  const { t, locale } = useI18n();
   const [tab, setTab] = useTabParam(TABS, "sobre");
 
   // enabled: validId -> com um ID inválido na URL, nem chama a API.
@@ -37,7 +40,7 @@ export default function EventDetailPage() {
 
   if (!validId) return <NotFoundPage />;
   if (eventQuery.isLoading) return <EventDetailSkeleton />;
-  if (eventQuery.error) return <ErrorMessage message={eventQuery.error.message} />;
+  if (eventQuery.error) return <ErrorMessage message={errorMessage(eventQuery.error) ?? ""} />;
 
   const event = eventQuery.data!;
   const panel = salesPanel(event);
@@ -45,18 +48,18 @@ export default function EventDetailPage() {
   const photo = safeImageUrl(event.imageUrl);
   const onSale = (ticketTypesQuery.data ?? []).filter((t) => !t.soldOut);
   const minPrice = onSale.length > 0 ? Math.min(...onSale.map((t) => t.price)) : null;
-  const longDate = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(event.startsAt));
+  const longDate = formatFullDay(event.startsAt, locale);
 
   return (
     <div className="pb-28 lg:pb-0">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <BackLink to="/">Voltar</BackLink>
+        <BackLink to="/">{t.eventDetail.back}</BackLink>
         <div className="flex flex-wrap gap-2">
           <FeaturedToggle eventId={id} featured={!!event.featured} />
           <ShareButton title={event.name} />
           {canManage(event, me) && (
             <ButtonLink to={`/organizer/events/${id}`} variant="secondary" size="sm">
-              Gerenciar este evento
+              {t.eventDetail.manage}
             </ButtonLink>
           )}
         </div>
@@ -65,10 +68,10 @@ export default function EventDetailPage() {
       {cancelled && (
         <div className="mb-6">
           <Alert>
-            <p className="font-semibold">Evento cancelado</p>
+            <p className="font-semibold">{t.eventDetail.cancelledTitle}</p>
             <p className="mt-1">
-              {event.cancellationReason ? `Motivo: ${event.cancellationReason}. ` : ""}
-              Os pedidos pagos foram reembolsados e os ingressos cancelados.
+              {event.cancellationReason ? t.eventDetail.cancelledReason(event.cancellationReason) : ""}
+              {t.eventDetail.cancelledText}
             </p>
           </Alert>
         </div>
@@ -89,34 +92,35 @@ export default function EventDetailPage() {
                 onClick={() => setPhotoOpen(true)}
                 className="absolute bottom-4 right-4 inline-flex items-center gap-2 rounded-xl bg-black/65 px-3.5 py-2 text-sm font-semibold text-white backdrop-blur hover:bg-black/80"
               >
-                <Maximize2 size={16} aria-hidden /> Ver foto inteira
+                <Maximize2 size={16} aria-hidden /> {t.eventDetail.seeFullPhoto}
               </button>
             )}
           </div>
           {photoOpen && photo && <PhotoViewer src={photo} name={event.name} onClose={() => setPhotoOpen(false)} />}
 
           <div className="mt-10 flex flex-wrap items-center gap-3">
-            <p className="eyebrow">{relativeDay(event.startsAt)}</p>
+            <p className="eyebrow">{relativeDay(event.startsAt, locale)}</p>
             {event.category && (
               <Link
                 to={`/?category=${event.category}#eventos`}
                 className="rounded-md bg-raised px-2 py-1 text-xs font-semibold text-muted hover:text-ink"
               >
-                {categoryLabel(event.category)}
+                {categoryLabel(event.category, locale)}
               </Link>
             )}
           </div>
           <h1 className="mt-3 break-words text-5xl font-semibold leading-[0.98] tracking-[-0.035em] text-ink sm:text-6xl lg:text-7xl">{event.name}</h1>
 
           <dl className="mt-10 grid gap-6 border-y border-line py-7 sm:grid-cols-3">
-            <Fact icon={<CalendarDays size={18} />} label="Data">
+            <Fact icon={<CalendarDays size={18} />} label={t.eventDetail.date}>
               <span className="first-letter:uppercase">{longDate}</span>
             </Fact>
-            <Fact icon={<Clock size={18} />} label="Horário">
-              {formatTime(event.startsAt)}
-              {event.endsAt && ` às ${formatTime(event.endsAt)}`}
+            <Fact icon={<Clock size={18} />} label={t.eventDetail.time}>
+              {event.endsAt
+                ? t.eventDetail.timeRange(formatTime(event.startsAt, locale), formatTime(event.endsAt, locale))
+                : formatTime(event.startsAt, locale)}
             </Fact>
-            <Fact icon={<MapPin size={18} />} label="Local">
+            <Fact icon={<MapPin size={18} />} label={t.eventDetail.venue}>
               {event.venueName}, {event.city}
               {event.state && ` — ${event.state}`}
             </Fact>
@@ -126,7 +130,7 @@ export default function EventDetailPage() {
             <div className="flex items-center gap-3 border-b border-line py-6">
               <Avatar name={event.organizerName} size={40} />
               <div>
-                <p className="text-[11px] font-semibold tracking-[0.12em] text-subtle">REALIZAÇÃO</p>
+                <p className="text-[11px] font-semibold tracking-[0.12em] text-subtle">{t.eventDetail.organizer}</p>
                 <p className="font-semibold text-ink">{event.organizerName}</p>
               </div>
             </div>
@@ -134,14 +138,14 @@ export default function EventDetailPage() {
 
           <div className="mt-10">
             <Tabs
-              label="Detalhes do evento"
+              label={t.eventDetail.tabsLabel}
               idPrefix="evento"
               value={tab}
               onChange={setTab}
               items={[
-                { key: "sobre", label: "Sobre" },
-                { key: "local", label: "Local" },
-                { key: "informacoes", label: "Informações" },
+                { key: "sobre", label: t.eventDetail.tabs.about },
+                { key: "local", label: t.eventDetail.tabs.location },
+                { key: "informacoes", label: t.eventDetail.tabs.info },
               ]}
             />
             <TabPanel idPrefix="evento" activeKey={tab}>
@@ -155,20 +159,20 @@ export default function EventDetailPage() {
         {/* Painel de compra: acompanha a rolagem no computador (sticky). */}
         <aside id="ingressos" className="scroll-mt-24 lg:sticky lg:top-24 lg:self-start">
           <div className="elevated rounded-2xl border border-line bg-surface p-5 sm:p-6">
-            <p className="eyebrow">Ingressos</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">Escolha seu ingresso</h2>
+            <p className="eyebrow">{t.eventDetail.ticketsEyebrow}</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">{t.eventDetail.ticketsTitle}</h2>
             <div className="mt-5">
               {cancelled ? (
-                <p className="rounded-xl bg-raised p-4 text-center text-sm text-muted">Este evento foi cancelado. As vendas estão encerradas.</p>
+                <p className="rounded-xl bg-raised p-4 text-center text-sm text-muted">{t.eventDetail.cancelledSales}</p>
               ) : panel === "closed" ? (
                 <div className="rounded-xl bg-raised p-4 text-center">
-                  <p className="font-semibold text-ink">Vendas encerradas</p>
-                  <p className="mt-1 text-sm text-muted">As vendas terminam no início do evento.</p>
+                  <p className="font-semibold text-ink">{t.eventDetail.closedTitle}</p>
+                  <p className="mt-1 text-sm text-muted">{t.eventDetail.closedText}</p>
                 </div>
               ) : (
                 <>
-                  {ticketTypesQuery.isLoading && <Loading text="Carregando ingressos..." />}
-                  {ticketTypesQuery.error && <ErrorMessage message={ticketTypesQuery.error.message} />}
+                  {ticketTypesQuery.isLoading && <Loading text={t.eventDetail.loadingTickets} />}
+                  {ticketTypesQuery.error && <ErrorMessage message={errorMessage(ticketTypesQuery.error) ?? ""} />}
                   {ticketTypesQuery.data && <TicketSelector eventId={id} ticketTypes={ticketTypesQuery.data} />}
                 </>
               )}
@@ -182,11 +186,11 @@ export default function EventDetailPage() {
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-xs text-muted">A partir de</p>
-              <p className="tabular text-lg font-bold text-accent-text">{formatPrice(minPrice)}</p>
+              <p className="text-xs text-muted">{t.eventDetail.from}</p>
+              <p className="tabular text-lg font-bold text-accent-text">{formatPrice(minPrice, locale)}</p>
             </div>
             <Button size="lg" onClick={() => document.getElementById("ingressos")?.scrollIntoView({ behavior: "smooth" })}>
-              Escolher ingressos
+              {t.eventDetail.chooseTickets}
             </Button>
           </div>
         </div>
@@ -209,6 +213,7 @@ function Fact({ icon, label, children }: { icon: ReactNode; label: string; child
 }
 
 function ShareButton({ title }: { title: string }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   async function share() {
     const url = window.location.href;
@@ -227,13 +232,14 @@ function ShareButton({ title }: { title: string }) {
   return (
     <Button variant="ghost" size="sm" onClick={share}>
       {copied ? <Check size={16} aria-hidden /> : <Share2 size={16} aria-hidden />}
-      {copied ? "Link copiado" : "Compartilhar"}
+      {copied ? t.eventDetail.linkCopied : t.eventDetail.share}
     </Button>
   );
 }
 
 // Foto em tela cheia, inteira (object-contain), sobre fundo preto.
 function PhotoViewer({ src, name, onClose }: { src: string; name: string; onClose: () => void }) {
+  const { t } = useI18n();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     ref.current?.showModal();
@@ -243,12 +249,12 @@ function PhotoViewer({ src, name, onClose }: { src: string; name: string; onClos
       ref={ref}
       onClose={onClose}
       onClick={(e) => e.target === ref.current && ref.current?.close()}
-      aria-label={`Foto do evento ${name}`}
+      aria-label={t.cover.photoAlt(name)}
       className="m-0 h-full max-h-none w-full max-w-none bg-black p-0"
     >
       <img
         src={src}
-        alt={`Foto do evento ${name}`}
+        alt={t.cover.photoAlt(name)}
         referrerPolicy="no-referrer"
         className="h-full w-full object-contain"
         onClick={() => ref.current?.close()}
@@ -256,7 +262,7 @@ function PhotoViewer({ src, name, onClose }: { src: string; name: string; onClos
       <button
         type="button"
         onClick={() => ref.current?.close()}
-        aria-label="Fechar foto"
+        aria-label={t.eventDetail.closePhoto}
         className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur hover:bg-white/25"
       >
         <X size={22} />
@@ -266,7 +272,8 @@ function PhotoViewer({ src, name, onClose }: { src: string; name: string; onClos
 }
 
 function AboutTab({ event }: { event: EventDetails }) {
-  if (!event.description) return <p className="text-muted">O organizador ainda não escreveu uma descrição.</p>;
+  const { t } = useI18n();
+  if (!event.description) return <p className="text-muted">{t.eventDetail.noDescription}</p>;
   // whitespace-pre-line respeita as quebras de linha digitadas pelo organizador.
   // O texto é exibido como TEXTO: se alguém escrever <script> na descrição,
   // aparece literalmente "<script>" na tela, sem executar nada.
@@ -274,6 +281,7 @@ function AboutTab({ event }: { event: EventDetails }) {
 }
 
 function LocationTab({ event }: { event: EventDetails }) {
+  const { t } = useI18n();
   const fullAddress = [event.venueName, event.address, event.city, event.state].filter(Boolean).join(", ");
   return (
     <div className="space-y-5">
@@ -291,18 +299,24 @@ function LocationTab({ event }: { event: EventDetails }) {
         rel="noopener noreferrer"
         className="inline-flex items-center gap-2 text-sm font-semibold text-accent-text hover:underline"
       >
-        Abrir no mapa <ExternalLink size={14} aria-hidden />
+        {t.eventDetail.openMap} <ExternalLink size={14} aria-hidden />
       </a>
     </div>
   );
 }
 
 function InfoTab({ event }: { event: EventDetails }) {
+  const { t, locale } = useI18n();
+  const info = t.eventDetail.info;
   const items = [
-    { icon: <Clock size={18} />, title: "Data e horário", text: `${formatDate(event.startsAt)}${event.endsAt ? ` até ${formatDate(event.endsAt)}` : ""}` },
-    { icon: <Timer size={18} />, title: "Reserva temporária", text: "Ao confirmar o pedido, os ingressos ficam guardados por alguns minutos enquanto você paga. Se o tempo acabar, voltam à venda." },
-    { icon: <ShieldCheck size={18} />, title: "Reembolso", text: "Pedidos pagos podem pedir reembolso na tela do pedido. Os ingressos são cancelados na hora." },
-    { icon: <Info size={18} />, title: "Na entrada", text: "Cada ingresso tem um código único e só vale uma vez. Não compartilhe o QR code com ninguém." },
+    {
+      icon: <Clock size={18} />,
+      title: info.dateTitle,
+      text: event.endsAt ? info.dateRange(formatDate(event.startsAt, locale), formatDate(event.endsAt, locale)) : formatDate(event.startsAt, locale),
+    },
+    { icon: <Timer size={18} />, title: info.holdTitle, text: info.holdText },
+    { icon: <ShieldCheck size={18} />, title: info.refundTitle, text: info.refundText },
+    { icon: <Info size={18} />, title: info.entryTitle, text: info.entryText },
   ];
   return (
     <ul className="grid gap-4 sm:grid-cols-2">
@@ -326,6 +340,7 @@ function maxFor(ticketType: TicketTypeSummary) {
 
 function TicketSelector({ eventId, ticketTypes }: { eventId: string; ticketTypes: TicketTypeSummary[] }) {
   const navigate = useNavigate();
+  const { t, locale } = useI18n();
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   const items = Object.entries(quantities)
@@ -351,7 +366,7 @@ function TicketSelector({ eventId, ticketTypes }: { eventId: string; ticketTypes
   }
 
   if (ticketTypes.length === 0) {
-    return <p className="rounded-xl bg-raised p-4 text-center text-sm text-muted">Nenhum lote à venda ainda.</p>;
+    return <p className="rounded-xl bg-raised p-4 text-center text-sm text-muted">{t.eventDetail.noLots}</p>;
   }
 
   // Esgotados vão para o fim da lista.
@@ -377,29 +392,29 @@ function TicketSelector({ eventId, ticketTypes }: { eventId: string; ticketTypes
               <div className="min-w-0 flex-1 p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-semibold text-ink">{ticketType.name}</p>
-                  {ticketType.soldOut && <span className="rounded bg-raised px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-muted">ESGOTADO</span>}
+                  {ticketType.soldOut && <span className="rounded bg-raised px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-muted">{t.eventDetail.soldOut}</span>}
                   {!ticketType.soldOut && ticketType.remaining !== null && (
-                    <span className="rounded bg-warning/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-warning">ÚLTIMOS {ticketType.remaining}</span>
+                    <span className="rounded bg-warning/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-warning">{t.eventDetail.lastOnes(ticketType.remaining)}</span>
                   )}
                 </div>
                 {ticketType.description && <p className="mt-1 text-sm leading-snug text-muted">{ticketType.description}</p>}
-                <p className="tabular mt-2 font-bold text-accent-text">{formatPrice(ticketType.price)}</p>
-                {ticketType.maxPerBuyer !== null && <p className="mt-1 text-xs text-muted">Até {ticketType.maxPerBuyer} por pessoa</p>}
+                <p className="tabular mt-2 font-bold text-accent-text">{formatPrice(ticketType.price, locale)}</p>
+                {ticketType.maxPerBuyer !== null && <p className="mt-1 text-xs text-muted">{t.eventDetail.perPerson(ticketType.maxPerBuyer)}</p>}
               </div>
 
               <div className="flex w-[7.5rem] shrink-0 flex-col items-center justify-center gap-1.5 border-l border-dashed border-line-strong px-2">
                 <div className="flex items-center rounded-lg border border-line-strong">
-                  <StepButton label={`Diminuir ${ticketType.name}`} disabled={ticketType.soldOut || quantity === 0} onClick={() => change(ticketType, -1)}>
+                  <StepButton label={t.eventDetail.decrease(ticketType.name)} disabled={ticketType.soldOut || quantity === 0} onClick={() => change(ticketType, -1)}>
                     <Minus size={15} />
                   </StepButton>
                   <span className="tabular w-6 text-center text-sm font-bold text-ink" aria-live="polite">
                     {quantity}
                   </span>
-                  <StepButton label={`Aumentar ${ticketType.name}`} disabled={ticketType.soldOut || quantity >= max} onClick={() => change(ticketType, 1)}>
+                  <StepButton label={t.eventDetail.increase(ticketType.name)} disabled={ticketType.soldOut || quantity >= max} onClick={() => change(ticketType, 1)}>
                     <Plus size={15} />
                   </StepButton>
                 </div>
-                {!ticketType.soldOut && <span className="text-[10px] text-subtle">máx. {max} por pedido</span>}
+                {!ticketType.soldOut && <span className="text-[10px] text-subtle">{t.eventDetail.maxPerOrder(max)}</span>}
               </div>
             </li>
           );
@@ -409,16 +424,16 @@ function TicketSelector({ eventId, ticketTypes }: { eventId: string; ticketTypes
       <div className="mt-5 border-t border-line pt-5">
         <div className="flex items-end justify-between">
           <div>
-            <p className="font-semibold text-ink">Total</p>
-            <p className="text-xs text-muted">{count === 0 ? "Nenhum ingresso" : `${count} ingresso${count === 1 ? "" : "s"}`}</p>
+            <p className="font-semibold text-ink">{t.common.total}</p>
+            <p className="text-xs text-muted">{count === 0 ? t.eventDetail.noTickets : t.common.tickets(count)}</p>
           </div>
-          <span className="tabular text-2xl font-bold text-accent-text">{formatPrice(total)}</span>
+          <span className="tabular text-2xl font-bold text-accent-text">{formatPrice(total, locale)}</span>
         </div>
         <Button className="mt-5 w-full" size="lg" disabled={items.length === 0} onClick={proceed}>
-          Continuar <ArrowRight size={17} aria-hidden />
+          {t.eventDetail.continue} <ArrowRight size={17} aria-hidden />
         </Button>
         <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted">
-          <ShieldCheck size={14} className="text-success" aria-hidden /> O ingresso só é emitido depois do pagamento confirmado.
+          <ShieldCheck size={14} className="text-success" aria-hidden /> {t.eventDetail.issuedAfterPayment}
         </p>
       </div>
     </div>

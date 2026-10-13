@@ -6,6 +6,7 @@
 // prende o foco dentro da janela, fecha com Esc e escurece o fundo.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useI18n } from "../i18n/LocaleContext";
 import { Button } from "./ui";
 
 interface ConfirmDialogProps {
@@ -21,9 +22,10 @@ interface ConfirmDialogProps {
 }
 
 export default function ConfirmDialog({
-  open, title, description, confirmLabel, cancelLabel = "Voltar", danger = false, loading = false, onConfirm, onClose,
+  open, title, description, confirmLabel, cancelLabel, danger = false, loading = false, onConfirm, onClose,
 }: ConfirmDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const { t } = useI18n();
 
   // Sincroniza a prop "open" com o estado real do <dialog>.
   useEffect(() => {
@@ -49,7 +51,7 @@ export default function ConfirmDialog({
         <div className="mt-2 text-sm text-muted">{description}</div>
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={loading} autoFocus>
-            {cancelLabel}
+            {cancelLabel ?? t.ui.confirmBack}
           </Button>
           <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} loading={loading}>
             {confirmLabel}

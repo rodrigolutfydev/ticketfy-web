@@ -12,7 +12,9 @@ import { listEventCategories, listEvents } from "../api/endpoints";
 import type { EventCategory, EventCategoryCount } from "../api/types";
 import { categoryLabel, parseCategoryParam } from "../i18n/categories";
 import { showcaseSearchParams, visibleCategoryFilters } from "../utils/categoryFilters";
+import { errorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { useI18n } from "../i18n/LocaleContext";
 import { useMe } from "../auth/useMe";
 import { safeImageUrl } from "../utils/security";
 import EventCard, { EventCardSkeleton } from "../components/EventCard";
@@ -21,11 +23,12 @@ import Pagination from "../components/Pagination";
 import { Empty, ErrorMessage } from "../components/StateMessage";
 import { Button, ButtonLink, Skeleton } from "../components/ui";
 import { Link } from "react-router";
-import { isPast, plural } from "../utils/format";
+import { isPast } from "../utils/format";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 export default function EventsPage() {
   usePageTitle(null);
+  const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const q = searchParams.get("q") ?? "";
   const city = searchParams.get("city") ?? "";
@@ -109,7 +112,7 @@ export default function EventsPage() {
       {(spotlightLoading || spotlight.length > 0) && (
         <section className="pt-2" aria-labelledby="vitrine">
           <h2 id="vitrine" className="sr-only">
-            Eventos em destaque
+            {t.storefront.featuredHeading}
           </h2>
           {spotlightLoading ? (
             <Skeleton className="aspect-[4/3] rounded-2xl sm:aspect-[21/9] lg:aspect-auto lg:h-[420px] 2xl:h-[480px]" />
@@ -123,7 +126,7 @@ export default function EventsPage() {
 
       {!filtering && featured.length > 0 && (
         <section className="pt-16" aria-labelledby="em-destaque">
-          <SectionHeading id="em-destaque" title="Em destaque" />
+          <SectionHeading id="em-destaque" title={t.storefront.featuredSection} />
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {featured.slice(0, 4).map((event) => (
               <EventCard key={event.id} event={event} />
@@ -134,16 +137,16 @@ export default function EventsPage() {
 
       <section id="eventos" className="scroll-mt-24 pt-16">
         <SectionHeading
-          title={filtering ? "Resultado da busca" : "Próximos eventos"}
+          title={filtering ? t.storefront.searchResults : t.storefront.upcoming}
           subtitle={
             data && events.length > 0
-              ? plural(data.page.totalElements, filtering ? "evento encontrado" : "evento à venda", filtering ? "eventos encontrados" : "eventos à venda")
+              ? (filtering ? t.storefront.found : t.storefront.onSale)(data.page.totalElements)
               : undefined
           }
           action={
             filtering ? (
               <Button variant="ghost" size="sm" onClick={() => setSearchParams({})}>
-                <X size={16} aria-hidden /> Limpar busca
+                <X size={16} aria-hidden /> {t.storefront.clearSearch}
               </Button>
             ) : undefined
           }
@@ -160,16 +163,16 @@ export default function EventsPage() {
             ))}
           </div>
         )}
-        {error && <ErrorMessage message={error.message} action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Tentar de novo</Button>} />}
+        {error && <ErrorMessage message={errorMessage(error) ?? ""} action={<Button variant="secondary" size="sm" onClick={() => refetch()}>{t.common.retry}</Button>} />}
         {data && events.length === 0 && (
           <Empty
             icon={<CalendarSearch size={22} />}
-            title={filtering ? "Nenhum evento com esses filtros" : "Nenhum evento à venda ainda"}
-            hint={filtering ? "Tente outro nome, outra cidade ou outra categoria." : "Quando um organizador publicar um evento, ele aparece aqui."}
+            title={filtering ? t.storefront.emptyFilteredTitle : t.storefront.emptyTitle}
+            hint={filtering ? t.storefront.emptyFilteredHint : t.storefront.emptyHint}
           >
             {!filtering && (
               <ButtonLink to="/organizer/events/new" variant="secondary">
-                Criar um evento
+                {t.storefront.createEvent}
               </ButtonLink>
             )}
           </Empty>
@@ -215,6 +218,7 @@ function CategoryFilter({
   selected: EventCategory | null;
   onSelect: (category: EventCategory | null) => void;
 }) {
+  const { t, locale } = useI18n();
   const visible = visibleCategoryFilters(counts, selected);
   if (visible.length === 0) return null;
   const chip = (active: boolean) =>
@@ -222,9 +226,9 @@ function CategoryFilter({
       active ? "border-accent bg-accent/12 text-accent-text" : "border-line text-muted hover:border-line-strong hover:text-ink"
     }`;
   return (
-    <div role="group" aria-label="Filtrar por categoria" className="-mx-1 mb-7 flex gap-2 overflow-x-auto px-1 pb-1">
+    <div role="group" aria-label={t.storefront.categoryFilter} className="-mx-1 mb-7 flex gap-2 overflow-x-auto px-1 pb-1">
       <button type="button" className={chip(selected === null)} aria-pressed={selected === null} onClick={() => onSelect(null)}>
-        Todas
+        {t.storefront.allCategories}
       </button>
       {visible.map((entry) => (
         <button
@@ -234,7 +238,7 @@ function CategoryFilter({
           aria-pressed={selected === entry.category}
           onClick={() => onSelect(selected === entry.category ? null : entry.category)}
         >
-          {categoryLabel(entry.category)} <span className="tabular font-normal opacity-75">{entry.events}</span>
+          {categoryLabel(entry.category, locale)} <span className="tabular font-normal opacity-75">{entry.events}</span>
         </button>
       ))}
     </div>
@@ -250,10 +254,11 @@ interface HeroProps {
 }
 
 function Hero({ qInput, cityInput, setQInput, setCityInput, onSubmit }: HeroProps) {
+  const { t } = useI18n();
   return (
     <section className="pt-14 text-center sm:pt-20">
-      <p className="eyebrow">Seu próximo momento</p>
-      <h1 className="mt-3 text-4xl font-semibold leading-[1.05] tracking-[-0.02em] text-ink sm:text-5xl">Encontre seu próximo evento</h1>
+      <p className="eyebrow">{t.storefront.heroEyebrow}</p>
+      <h1 className="mt-3 text-4xl font-semibold leading-[1.05] tracking-[-0.02em] text-ink sm:text-5xl">{t.storefront.heroTitle}</h1>
 
       {/* Painel de busca com os recortes de ingresso nas laterais. role="search" marca a região para leitores de tela. */}
       <form
@@ -265,31 +270,31 @@ function Hero({ qInput, cityInput, setQInput, setCityInput, onSubmit }: HeroProp
         <span className="absolute -right-2.5 top-1/2 hidden h-5 w-5 -translate-y-1/2 rounded-full border border-line bg-canvas sm:block" aria-hidden />
         <label className="flex flex-1 items-center gap-3 px-4 py-3">
           <Search size={18} className="shrink-0 text-muted" aria-hidden />
-          <span className="sr-only">Nome do evento</span>
+          <span className="sr-only">{t.storefront.eventName}</span>
           <input
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
             maxLength={100}
             enterKeyHint="search"
-            placeholder="Busque pelo nome do evento"
+            placeholder={t.storefront.eventNamePlaceholder}
             className="w-full bg-transparent text-ink outline-none placeholder:text-subtle"
           />
         </label>
         <span className="mx-4 h-px bg-line sm:mx-0 sm:h-8 sm:w-px" aria-hidden />
         <label className="flex items-center gap-3 px-4 py-3 sm:w-60">
           <MapPin size={18} className="shrink-0 text-muted" aria-hidden />
-          <span className="sr-only">Cidade</span>
+          <span className="sr-only">{t.storefront.city}</span>
           <input
             value={cityInput}
             onChange={(e) => setCityInput(e.target.value)}
             maxLength={100}
             enterKeyHint="search"
-            placeholder="Todo o Brasil"
+            placeholder={t.storefront.cityPlaceholder}
             className="w-full bg-transparent text-ink outline-none placeholder:text-subtle"
           />
         </label>
         <Button type="submit" size="lg" className="w-full sm:w-auto">
-          <Search size={17} aria-hidden /> Buscar
+          <Search size={17} aria-hidden /> {t.storefront.search}
         </Button>
       </form>
     </section>
@@ -299,6 +304,7 @@ function Hero({ qInput, cityInput, setQInput, setCityInput, onSubmit }: HeroProp
 function OrganizerBanner() {
   const { isAuthenticated } = useAuth();
   const { me, isLoading, isOrganizer } = useMe();
+  const { t } = useI18n();
 
   // Enquanto não sabemos o papel do usuário, não mostra nada (evita o
   // convite "piscar" na tela de quem já é organizador).
@@ -307,14 +313,14 @@ function OrganizerBanner() {
   return (
     <section className="relative mt-24 overflow-hidden rounded-2xl bg-accent px-6 py-12 sm:px-14 sm:py-16">
       <div className="relative z-10 max-w-lg">
-        <p className="text-[11px] font-bold tracking-[0.14em] text-accent-ink/75">PARA QUEM FAZ ACONTECER</p>
-        <h2 className="mt-3 text-3xl font-semibold leading-tight tracking-tight text-accent-ink sm:text-[2.6rem]">Venda ingressos no Ticketfy</h2>
-        <p className="mt-4 text-accent-ink/80">Crie seu evento, monte os lotes e acompanhe as vendas e o check-in em tempo real.</p>
+        <p className="text-[11px] font-bold tracking-[0.14em] text-accent-ink/75">{t.storefront.bannerEyebrow}</p>
+        <h2 className="mt-3 text-3xl font-semibold leading-tight tracking-tight text-accent-ink sm:text-[2.6rem]">{t.storefront.bannerTitle}</h2>
+        <p className="mt-4 text-accent-ink/80">{t.storefront.bannerText}</p>
         <Link
           to={isAuthenticated ? "/account?tab=organizador" : "/register"}
           className="mt-7 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-[#12161c] transition-colors hover:bg-white/90"
         >
-          {isAuthenticated ? "Ativar conta de organizador" : "Começar agora"} <ArrowRight size={17} aria-hidden />
+          {isAuthenticated ? t.storefront.bannerActivate : t.storefront.bannerStart} <ArrowRight size={17} aria-hidden />
         </Link>
       </div>
       <GiantTicket />

@@ -1,11 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Star } from "lucide-react";
 import { setEventFeatured } from "../api/endpoints";
+import { errorMessage } from "../api/client";
 import { useMe } from "../auth/useMe";
+import { useI18n } from "../i18n/LocaleContext";
 
 // Interruptor "Em destaque": só aparece para ADMIN. A API recusa (403) para os demais.
 export default function FeaturedToggle({ eventId, featured }: { eventId: string; featured: boolean }) {
   const { isAdmin } = useMe();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (value: boolean) => setEventFeatured(eventId, value),
@@ -31,9 +34,9 @@ export default function FeaturedToggle({ eventId, featured }: { eventId: string;
         }`}
       >
         <Star size={15} className={value ? "fill-current" : ""} aria-hidden />
-        Em destaque
+        {t.eventDetail.featured}
       </button>
-      {mutation.error && <span className="text-xs text-danger">{mutation.error.message}</span>}
+      {mutation.error && <span className="text-xs text-danger">{errorMessage(mutation.error)}</span>}
     </div>
   );
 }

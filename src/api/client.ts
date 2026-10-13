@@ -1,4 +1,5 @@
-import { clientMessage, genericMessage, problemMessage, withErrorCode, type ProblemScope } from "../i18n/problems";
+import { clientMessage, genericMessage, problemMessage, withErrorCode, type ClientMessageKey, type ProblemScope } from "../i18n/problems";
+import { validationMessage } from "../i18n/validation";
 
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
 const AUTH_BASE = "/api";
@@ -20,7 +21,7 @@ const AUTH_ROUTES: Record<string, string> = {
   "/users/me/password": "PATCH",
 };
 
-export type FieldError = { field: string; message: string };
+export type FieldError = { field: string; message: string; code: string | null; params: Record<string, unknown> };
 
 export class ApiError extends Error {
   status: number;
@@ -30,6 +31,7 @@ export class ApiError extends Error {
   requestId: string | null;
   detail: string | null;
   properties: Record<string, unknown>;
+  clientKey: ClientMessageKey | null;
 
   constructor(
     status: number,
@@ -39,7 +41,8 @@ export class ApiError extends Error {
     problemType: string | null = null,
     requestId: string | null = null,
     detail: string | null = null,
-    properties: Record<string, unknown> = {}
+    properties: Record<string, unknown> = {},
+    clientKey: ClientMessageKey | null = null
   ) {
     super(message);
     this.name = "ApiError";
@@ -50,8 +53,11 @@ export class ApiError extends Error {
     this.requestId = requestId;
     this.detail = detail;
     this.properties = properties;
+    this.clientKey = clientKey;
   }
 }
+
+const clientError = (key: ClientMessageKey) => new ApiError(0, clientMessage(key), [], null, null, null, null, {}, key);
 
 export interface Session {
   token: string;
@@ -168,7 +174,7 @@ export async function apiDownload(path: string): Promise<{ blob: Blob; filename:
 
 async function send(method: string, path: string, options: RequestOptions, accept: string): Promise<Response> {
   if (!path.startsWith("/") || path.startsWith("//") || path.includes("..")) {
-    throw new ApiError(0, clientMessage("invalidRoute"));
+    throw clientError("invalidRoute");
   }
 
   let response = await sendOnce(method, path, options, accept);
@@ -212,7 +218,7 @@ interface AuthOptions {
 }
 
 async function authFetch(method: string, path: string, options: AuthOptions): Promise<Response> {
-  if (AUTH_ROUTES[path] !== method) throw new ApiError(0, clientMessage("invalidRoute"));
+  if (AUTH_ROUTES[path] !== method) throw clientError("invalidRoute");
 
   const headers: Record<string, string> = { Accept: "application/json", [AUTH_HEADER]: "1" };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
@@ -255,7 +261,7 @@ async function timedFetch(url: string, init: RequestInit): Promise<Response> {
     return await fetch(url, { ...init, signal: controller.signal });
   } catch (error) {
     const timedOut = error instanceof DOMException && error.name === "AbortError";
-    throw new ApiError(0, clientMessage(timedOut ? "timeout" : "network"));
+    throw clientError(timedOut ? "timeout" : "network");
   } finally {
     clearTimeout(timer);
   }
@@ -265,20 +271,23 @@ const STANDARD_PROBLEM_FIELDS = new Set(["type", "title", "status", "detail", "i
 
 async function toApiError(response: Response): Promise<ApiError> {
   const body = await readJson(response);
-  const fieldErrors: FieldError[] = Array.isArray(body?.errors) ? body.errors.filter(isFieldError).slice(0, 10) : [];
+  const fieldErrors: FieldError[] = Array.isArray(body?.errors) ? body.errors.filter(isFieldError).slice(0, 10).map(toFieldError) : [];
   const detail = typeof body?.detail === "string" && body.detail.trim() ? truncate(body.detail.trim()) : null;
   const requestId = parseRequestId(response.headers.get("X-Request-Id")) ?? parseRequestId(body?.requestId);
   const retryAfter = parseRetryAfter(response.headers.get("Retry-After"));
   const problemType = problemSlug(body?.type);
   const properties = problemProperties(body);
-  const known = problemMessage(problemType, { status: response.status, retryAfter, detail, properties });
-  const message =
-    known === null
-      ? genericMessage(response.status, requestId)
-      : response.status >= 500
-        ? withErrorCode(known, requestId)
-        : known;
-  return new ApiError(response.status, message, fieldErrors, retryAfter, problemType, requestId, detail, properties);
+  const error = new ApiError(response.status, "", fieldErrors, retryAfter, problemType, requestId, detail, properties);
+  error.message = localizedMessage(error);
+  return error;
+}
+
+function localizedMessage(error: ApiError, scope?: ProblemScope): string {
+  if (error.clientKey) return clientMessage(error.clientKey);
+  const context = { status: error.status, retryAfter: error.retryAfter, detail: error.detail, properties: error.properties };
+  const known = problemMessage(error.problemType, context, scope);
+  if (known === null) return error.status > 0 ? genericMessage(error.status, error.requestId) : error.message;
+  return error.status >= 500 ? withErrorCode(known, error.requestId) : known;
 }
 
 function problemProperties(body: unknown): Record<string, unknown> {
@@ -288,16 +297,7 @@ function problemProperties(body: unknown): Record<string, unknown> {
 
 export function errorMessage(error: unknown, scope?: ProblemScope): string | null {
   if (!error) return null;
-  if (error instanceof ApiError) {
-    if (!scope) return error.message;
-    const scoped = problemMessage(error.problemType, {
-      status: error.status,
-      retryAfter: error.retryAfter,
-      detail: error.detail,
-      properties: error.properties,
-    }, scope);
-    return scoped ?? error.message;
-  }
+  if (error instanceof ApiError) return localizedMessage(error, scope);
   return error instanceof Error ? error.message : clientMessage("unexpected");
 }
 
@@ -319,15 +319,25 @@ function problemSlug(type: unknown): string | null {
   return slug ? slug : null;
 }
 
-function isFieldError(value: unknown): value is FieldError {
+function isFieldError(value: unknown): value is { field: string; message: string; code?: unknown; params?: unknown } {
   if (typeof value !== "object" || value === null) return false;
   const { field, message } = value as Record<string, unknown>;
   return typeof field === "string" && field.trim() !== "" && typeof message === "string" && message.trim() !== "";
 }
 
+function toFieldError(value: { field: string; message: string; code?: unknown; params?: unknown }): FieldError {
+  const code = typeof value.code === "string" && /^[a-z]+(-[a-z]+)*$/.test(value.code) ? value.code : null;
+  const params =
+    typeof value.params === "object" && value.params !== null && !Array.isArray(value.params)
+      ? (value.params as Record<string, unknown>)
+      : {};
+  return { field: value.field, message: value.message, code, params };
+}
+
 export function fieldError(error: unknown, field: string): string | undefined {
   if (!(error instanceof ApiError)) return undefined;
-  return error.fieldErrors.find((e) => e.field === field)?.message;
+  const found = error.fieldErrors.find((e) => e.field === field);
+  return found ? validationMessage(found.code, found.params) : undefined;
 }
 
 export function hasUnmappedError(error: unknown, fields: readonly string[]): boolean {

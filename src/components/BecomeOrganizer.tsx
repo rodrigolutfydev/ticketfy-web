@@ -1,11 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, ScanLine, Layers } from "lucide-react";
 import { becomeOrganizer } from "../api/endpoints";
-import { ApiError } from "../api/client";
+import { ApiError, errorMessage } from "../api/client";
+import { useI18n } from "../i18n/LocaleContext";
 import { Alert, Button } from "./ui";
 
 export default function BecomeOrganizer() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
 
   const mutation = useMutation({
     mutationFn: becomeOrganizer,
@@ -17,11 +19,8 @@ export default function BecomeOrganizer() {
     },
   });
 
-  const perks = [
-    { icon: <CalendarPlus size={18} />, text: "Crie eventos com foto, local e horário" },
-    { icon: <Layers size={18} />, text: "Cadastre lotes com preço e quantidade" },
-    { icon: <ScanLine size={18} />, text: "Valide ingressos na entrada" },
-  ];
+  const icons = [<CalendarPlus size={18} />, <Layers size={18} />, <ScanLine size={18} />];
+  const perks = t.becomeOrganizer.perks.map((text, index) => ({ icon: icons[index], text }));
 
   return (
     <div className="space-y-5">
@@ -33,11 +32,11 @@ export default function BecomeOrganizer() {
           </li>
         ))}
       </ul>
-      <p className="text-sm text-muted">Qualquer conta pode virar organizadora, sem aprovação.</p>
+      <p className="text-sm text-muted">{t.becomeOrganizer.noApproval}</p>
       <Button onClick={() => mutation.mutate()} loading={mutation.isPending}>
-        Tornar-me organizador
+        {t.becomeOrganizer.submit}
       </Button>
-      {mutation.error && <Alert>{mutation.error.message}</Alert>}
+      {mutation.error && <Alert>{errorMessage(mutation.error)}</Alert>}
     </div>
   );
 }

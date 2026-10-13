@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { LOCALES } from "./problems";
+import { LOCALES } from "./locale";
 import { CATEGORY_LABELS, EVENT_CATEGORIES, categoryLabel, isEventCategory, parseCategoryParam } from "./categories";
 
 const apiCategories = JSON.parse(readFileSync(new URL("./event-categories.json", import.meta.url), "utf8")) as string[];
@@ -11,7 +11,7 @@ describe("event-categories.json", () => {
   });
 });
 
-describe.each(LOCALES)("category names for %s", (locale) => {
+describe.each([...LOCALES])("category names for %s", (locale) => {
   it("has a non-empty name for every API category", () => {
     const missing = apiCategories.filter((category) => !CATEGORY_LABELS[locale][category as keyof (typeof CATEGORY_LABELS)[typeof locale]]?.trim());
     expect(missing).toEqual([]);
@@ -27,6 +27,7 @@ describe("helpers", () => {
   it("translates a category", () => {
     expect(categoryLabel("TALKS")).toBe("Palestras e congressos");
     expect(categoryLabel("OTHER")).toBe("Outros");
+    expect(categoryLabel("TALKS", "en")).toBe("Talks and conferences");
   });
 
   it("accepts only known categories from the URL", () => {

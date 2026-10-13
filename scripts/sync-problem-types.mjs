@@ -15,7 +15,11 @@ const CONTRACTS = [
         if (typeof entry?.slug !== "string" || !/^[a-z]+(-[a-z]+)*$/.test(entry.slug) || !Number.isInteger(entry?.status)) {
           throw new Error(`${label} tem um tipo de erro inválido: ${JSON.stringify(entry)}`);
         }
-        return { slug: entry.slug, status: entry.status, title: typeof entry.title === "string" ? entry.title : "" };
+        const reasons = entry.reasons ?? [];
+        if (!Array.isArray(reasons) || reasons.some((reason) => typeof reason !== "string" || !/^[a-z]+(-[a-z]+)*$/.test(reason))) {
+          throw new Error(`${label} tem motivos inválidos em ${entry.slug}: ${JSON.stringify(entry.reasons)}`);
+        }
+        return { slug: entry.slug, status: entry.status, title: typeof entry.title === "string" ? entry.title : "", reasons };
       });
     },
   },

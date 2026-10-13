@@ -3,24 +3,17 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { ApiError } from "../api/client";
 import { login } from "../api/endpoints";
-import { useAuth, type SignOutReason } from "../auth/AuthContext";
+import { useAuth } from "../auth/AuthContext";
+import { useI18n } from "../i18n/LocaleContext";
 import AuthShell from "../components/AuthShell";
 import { Alert, Button, Field, Input, PasswordInput } from "../components/ui";
 import { accountSuspendedMessage, loginErrorMessage } from "../utils/account";
 import { loginThrottle, safeRedirectPath } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
 
-// Explica por que a pessoa caiu na tela de login sem ter clicado em "Sair".
-const reasonMessages: Record<SignOutReason, string | null> = {
-  manual: null,
-  idle: "Sua sessão foi encerrada após 30 minutos sem atividade.",
-  expired: "Sua sessão expirou. Entre de novo para continuar.",
-  unauthorized: "Sua sessão não é mais válida. Entre de novo para continuar.",
-  suspended: null,
-};
-
 export default function LoginPage() {
-  usePageTitle("Entrar");
+  const { t } = useI18n();
+  usePageTitle(t.login.pageTitle);
   const { signIn, isAuthenticated, lastSignOutReason } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -77,35 +70,39 @@ export default function LoginPage() {
 
   const locked = lockSeconds > 0;
   const signOutMessage =
-    lastSignOutReason === "suspended" ? accountSuspendedMessage() : lastSignOutReason ? reasonMessages[lastSignOutReason] : null;
+    lastSignOutReason === "suspended"
+      ? accountSuspendedMessage()
+      : lastSignOutReason && lastSignOutReason !== "manual"
+        ? t.login.signOutReasons[lastSignOutReason]
+        : null;
 
   return (
-    <AuthShell eyebrow="Bem-vindo de volta" title="Entre na sua conta" subtitle="Acesse seus ingressos e pedidos.">
+    <AuthShell eyebrow={t.login.eyebrow} title={t.login.title} subtitle={t.login.subtitle}>
       <div className="space-y-4">
-        {state?.registered && <Alert type="success">Conta criada. Faça login para continuar.</Alert>}
+        {state?.registered && <Alert type="success">{t.login.registered}</Alert>}
         {signOutMessage && !mutation.error && <Alert type="info">{signOutMessage}</Alert>}
       </div>
       <form onSubmit={submit} className="mt-4 space-y-5">
-        <Field label="E-mail">
-          <Input type="email" required maxLength={254} autoComplete="email" inputMode="email" placeholder="voce@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Field label={t.login.email}>
+          <Input type="email" required maxLength={254} autoComplete="email" inputMode="email" placeholder={t.login.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
-        <Field label="Senha">
-          <PasswordInput required maxLength={72} autoComplete="current-password" placeholder="Digite sua senha" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Field label={t.login.password}>
+          <PasswordInput required maxLength={72} autoComplete="current-password" placeholder={t.login.passwordPlaceholder} value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         {errorText && !locked && <Alert>{errorText}</Alert>}
         {locked && (
           <Alert type="warning">
-            Muitas tentativas. Tente novamente em <span className="tabular font-bold">{lockSeconds} s</span>.
+            {t.login.lockedBefore} <span className="tabular font-bold">{t.common.seconds(lockSeconds)}</span>.
           </Alert>
         )}
         <Button type="submit" size="lg" className="w-full" loading={mutation.isPending} disabled={locked}>
-          {locked ? `Aguarde ${lockSeconds} s` : "Entrar"}
+          {locked ? t.common.wait(lockSeconds) : t.login.submit}
         </Button>
       </form>
       <p className="mt-6 text-center text-sm text-muted">
-        Ainda não tem conta?{" "}
+        {t.login.noAccount}{" "}
         <Link to="/register" state={{ from }} className="font-semibold text-accent-text hover:underline">
-          Criar conta
+          {t.login.createAccount}
         </Link>
       </p>
     </AuthShell>

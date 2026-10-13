@@ -17,7 +17,7 @@ import type {
 const seg = (value: string) => encodeURIComponent(value);
 
 // Usuários e autenticação
-export const register = (data: { name: string; email: string; password: string }) =>
+export const register = (data: { name: string; email: string; password: string; language?: string }) =>
   api.post<UserDetails>("/users", data);
 export const login = (data: { email: string; password: string }) => authApi.post<TokenResponse>("/auth/login", data);
 export const logoutAll = () => authApi.post<void>("/auth/logout-all", undefined, { authenticated: true });
@@ -27,6 +27,7 @@ export const becomeOrganizer = () => api.post<void>("/users/me/organizer");
 export const getMe = () => api.get<UserProfile>("/users/me");
 // "" remove a foto; uma URL https troca.
 export const updateAvatar = (avatarUrl: string) => api.patch<UserProfile>("/users/me/avatar", { avatarUrl });
+export const updateLanguage = (language: string) => api.patch<UserProfile>("/users/me/language", { language });
 
 // Eventos
 export function listEvents({

@@ -29,6 +29,7 @@ export interface UserProfile {
   role: Role;
   // Foto de perfil (https). null quando o usuário não tem foto.
   avatarUrl?: string | null;
+  language?: string;
 }
 
 export type EventCategory =

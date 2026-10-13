@@ -535,7 +535,7 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
 
   const apiError = mutation.error instanceof ApiError ? mutation.error : null;
   const nameConflict = apiError?.problemType === "ticket-type-name-already-exists";
-  const belowSold = apiError?.problemType === "invalid-ticket-type-quantity" && /quantityTotal/i.test(apiError.detail ?? "");
+  const belowSold = apiError?.problemType === "invalid-ticket-type-quantity" && apiError.properties.reason === "below-sold";
   const nameError = nameConflict ? errorMessage(apiError, "lot") ?? undefined : fieldError(mutation.error, "name");
   const quantityError = belowSold ? errorMessage(apiError, "lot") ?? undefined : fieldError(mutation.error, "quantityTotal");
   const buyerLimitError = fieldError(mutation.error, "maxPerBuyer");

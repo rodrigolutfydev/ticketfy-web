@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useI18n } from "../i18n/LocaleContext";
 
 // Mostra quanto falta para a reserva do pedido expirar (mm:ss).
 // O relógio de verdade é o da API: quando o tempo acaba aqui, a tela
 // recarrega o pedido para ver o status que a API decidiu.
 export default function Countdown({ until, onExpire }: { until: string; onExpire?: () => void }) {
+  const { t } = useI18n();
   const target = new Date(until).getTime();
   const [remaining, setRemaining] = useState(() => target - Date.now());
 
@@ -20,7 +22,7 @@ export default function Countdown({ until, onExpire }: { until: string; onExpire
     return () => clearInterval(interval);
   }, [target, onExpire]);
 
-  if (remaining <= 0) return <span className="font-semibold text-danger">reserva expirada</span>;
+  if (remaining <= 0) return <span className="font-semibold text-danger">{t.payment.expired}</span>;
 
   const minutes = Math.floor(remaining / 60000);
   const seconds = Math.floor((remaining % 60000) / 1000);

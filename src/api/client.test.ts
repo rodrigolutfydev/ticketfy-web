@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
-import { ApiError, api, authApi, clearSession, configureClient, errorMessage, getSession, setSession, type Session, type SessionEndReason } from "./client";
+import { ApiError, api, authApi, clearSession, configureClient, errorMessage, fieldError, getSession, setSession, type Session, type SessionEndReason } from "./client";
+import { setLocale } from "../i18n/locale";
 
 const OLD_TOKEN = "header.old.signature";
 const NEW_TOKEN = "header.new.signature";
@@ -172,6 +173,49 @@ describe("mensagens de erro", () => {
     expect(errorMessage(error, "check-in")).toBe("Código não encontrado.");
     expect(errorMessage(new Error("falhou"))).toBe("falhou");
     expect(errorMessage(null)).toBeNull();
+  });
+
+  it("traduz os erros por campo pelo código e parâmetros, sem usar a mensagem em inglês", async () => {
+    mockFetch(() =>
+      json(400, {
+        type: "https://x/problems/validation-failed",
+        errors: [
+          { field: "password", message: "Password must be at least 8 characters long", code: "size", params: { min: 8, max: 72 } },
+          { field: "email", message: "must be a well-formed email address", code: "email", params: {} },
+          { field: "name", message: "must not be blank" },
+        ],
+      })
+    );
+
+    const error = (await api.post("/users", {}).catch((e: unknown) => e)) as ApiError;
+
+    expect(error.fieldErrors[0]).toEqual({ field: "password", message: "Password must be at least 8 characters long", code: "size", params: { min: 8, max: 72 } });
+    expect(fieldError(error, "password")).toBe("Use de 8 a 72 caracteres.");
+    expect(fieldError(error, "email")).toBe("Informe um e-mail válido.");
+    expect(fieldError(error, "name")).toBe("Valor inválido.");
+    expect(fieldError(error, "other")).toBeUndefined();
+  });
+
+  it("monta a mensagem do motivo estruturado e acompanha a troca de idioma", async () => {
+    mockFetch(() =>
+      json(400, {
+        type: "https://x/problems/invalid-coupon-settings",
+        detail: "maxUses cannot be lower than the 2 uses already made",
+        reason: "max-uses-below-used",
+        usesCount: 2,
+      })
+    );
+
+    const error = (await api.put("/x", {}).catch((e: unknown) => e)) as ApiError;
+
+    expect(error.message).toBe("O limite de usos não pode ficar abaixo dos 2 usos já feitos.");
+    try {
+      setLocale("en");
+      expect(errorMessage(error)).toBe("The usage limit can't be lower than the 2 uses already made.");
+      expect(fieldError(new ApiError(400, "", [{ field: "a", message: "x", code: "required", params: {} }]), "a")).toBe("This field is required.");
+    } finally {
+      setLocale("pt-BR");
+    }
   });
 });
 

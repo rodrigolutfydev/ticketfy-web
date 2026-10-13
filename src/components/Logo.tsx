@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { useI18n } from "../i18n/LocaleContext";
 
 // Marca do Ticketfy: um ingresso em contorno coral, com o picote no meio.
 export function LogoMark({ size = 26 }: { size?: number }) {
@@ -17,8 +18,9 @@ export function LogoMark({ size = 26 }: { size?: number }) {
 }
 
 export default function Logo({ to = "/" }: { to?: string }) {
+  const { t } = useI18n();
   return (
-    <Link to={to} className="font-display flex items-center gap-2 text-[1.35rem] font-bold tracking-tight text-ink" aria-label="Ticketfy, página inicial">
+    <Link to={to} className="font-display flex items-center gap-2 text-[1.35rem] font-bold tracking-tight text-ink" aria-label={t.layout.logoLabel}>
       <LogoMark />
       ticketfy
     </Link>

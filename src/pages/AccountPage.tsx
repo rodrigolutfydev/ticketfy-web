@@ -6,10 +6,10 @@ import { changePassword, logoutAll, updateAvatar } from "../api/endpoints";
 import type { UserProfile } from "../api/types";
 import Avatar from "../components/Avatar";
 import { passwordStrength, safeImageUrl } from "../utils/security";
-import { BadgeCheck, Clock, KeyRound, LogOut, Mail, MonitorSmartphone, ShieldCheck, Timer, Trash2, UserRound } from "lucide-react";
+import { BadgeCheck, Check, Clock, KeyRound, Languages, LogOut, Mail, MonitorSmartphone, ShieldCheck, Timer, Trash2, UserRound } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
-import BackendNotice, { Code } from "../components/BackendNotice";
+import BackendNotice from "../components/BackendNotice";
 import BecomeOrganizer from "../components/BecomeOrganizer";
 import { ConfirmButton } from "../components/ConfirmDialog";
 import { ErrorMessage, Loading } from "../components/StateMessage";
@@ -17,41 +17,46 @@ import { TabPanel, Tabs, useTabParam } from "../components/Tabs";
 import { Alert, Button, ButtonLink, Card, Field, InfoRow, Input, PageTitle, PasswordInput } from "../components/ui";
 import { formatTime } from "../utils/format";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useI18n } from "../i18n/LocaleContext";
+import { LOCALES } from "../i18n/locale";
 
-const roleLabels = { USER: "Comprador", ORGANIZER: "Organizador", ADMIN: "Administrador" };
 const TABS = ["perfil", "seguranca", "organizador"] as const;
 
 export default function AccountPage() {
-  usePageTitle("Minha conta");
+  const { t } = useI18n();
+  usePageTitle(t.account.pageTitle);
   const [tab, setTab] = useTabParam(TABS, "perfil");
   const { me, isLoading, error, endpointMissing } = useMe();
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageTitle title="Minha conta" />
+      <PageTitle title={t.account.title} />
       <Tabs
-        label="Seções da conta"
+        label={t.account.tabsLabel}
         idPrefix="conta"
         value={tab}
         onChange={setTab}
         items={[
-          { key: "perfil", label: "Perfil", icon: <UserRound size={16} /> },
-          { key: "seguranca", label: "Segurança", icon: <ShieldCheck size={16} /> },
-          { key: "organizador", label: "Organizador", icon: <BadgeCheck size={16} /> },
+          { key: "perfil", label: t.account.tabs.profile, icon: <UserRound size={16} /> },
+          { key: "seguranca", label: t.account.tabs.security, icon: <ShieldCheck size={16} /> },
+          { key: "organizador", label: t.account.tabs.organizer, icon: <BadgeCheck size={16} /> },
         ]}
       />
       <TabPanel idPrefix="conta" activeKey={tab}>
         {tab !== "seguranca" && isLoading && <Loading />}
         {tab !== "seguranca" && endpointMissing && (
-          <BackendNotice title="Perfil indisponível">
-            <p>
-              A API ainda não tem a rota <Code>GET /users/me</Code>, então não dá para mostrar seus dados aqui.
-            </p>
+          <BackendNotice title={t.account.profileUnavailable}>
+            <p>{t.account.profileUnavailableText}</p>
           </BackendNotice>
         )}
-        {tab !== "seguranca" && error && !endpointMissing && <ErrorMessage message={error.message} />}
+        {tab !== "seguranca" && error && !endpointMissing && <ErrorMessage message={errorMessage(error) ?? ""} />}
 
-        {tab === "perfil" && me && <ProfileTab me={me} />}
+        {tab === "perfil" && me && (
+          <div className="space-y-5">
+            <ProfileTab me={me} />
+            <LanguageCard />
+          </div>
+        )}
 
         {tab === "seguranca" && <SecurityTab />}
 
@@ -59,14 +64,14 @@ export default function AccountPage() {
           <Card>
             {me.role === "USER" ? (
               <>
-                <h2 className="mb-5 text-lg font-extrabold text-ink">Quer vender ingressos?</h2>
+                <h2 className="mb-5 text-lg font-extrabold text-ink">{t.account.wantToSell}</h2>
                 <BecomeOrganizer />
               </>
             ) : (
               <>
-                <h2 className="text-lg font-extrabold text-ink">Sua conta é organizadora</h2>
-                <p className="mb-5 mt-1 text-muted">Crie eventos, cadastre lotes e faça o check-in na entrada.</p>
-                <ButtonLink to="/organizer">Abrir área do organizador</ButtonLink>
+                <h2 className="text-lg font-extrabold text-ink">{t.account.isOrganizer}</h2>
+                <p className="mb-5 mt-1 text-muted">{t.account.isOrganizerText}</p>
+                <ButtonLink to="/organizer">{t.account.openOrganizer}</ButtonLink>
               </>
             )}
           </Card>
@@ -79,7 +84,50 @@ export default function AccountPage() {
 // Aba de segurança: mostra como a sessão é protegida e permite sair.
 // Perfil com foto: a foto é um endereço https (a API não recebe upload de arquivo).
 // A prévia muda enquanto a pessoa digita; "Remover foto" manda "" para a API.
+function LanguageCard() {
+  const { locale, t, changeLocale, saving, saveError } = useI18n();
+  const [changed, setChanged] = useState(false);
+  return (
+    <Card>
+      <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
+        <Languages size={18} className="text-accent-text" aria-hidden /> {t.language.accountTitle}
+      </h2>
+      <p className="mt-1 text-sm text-muted">{t.language.accountHint}</p>
+      <div role="radiogroup" aria-label={t.language.label} className="mt-5 grid gap-3 sm:grid-cols-2">
+        {LOCALES.map((option) => {
+          const selected = option === locale;
+          return (
+            <button
+              key={option}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              lang={option}
+              disabled={saving}
+              onClick={() => {
+                setChanged(true);
+                changeLocale(option);
+              }}
+              className={`flex items-center justify-between gap-3 rounded-xl border p-4 text-left font-semibold transition-colors disabled:cursor-wait ${
+                selected ? "border-accent bg-accent/5 text-ink" : "border-line bg-surface text-muted hover:border-line-strong hover:text-ink"
+              }`}
+            >
+              {t.language.names[option]}
+              {selected && <Check size={18} className="text-accent-text" aria-hidden />}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-4" aria-live="polite">
+        {saveError && <Alert>{t.language.saveError}</Alert>}
+        {changed && !saving && !saveError && <Alert type="success">{t.language.saved}</Alert>}
+      </div>
+    </Card>
+  );
+}
+
 function ProfileTab({ me }: { me: UserProfile }) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [url, setUrl] = useState(me.avatarUrl ?? "");
   const trimmed = url.trim();
@@ -107,38 +155,38 @@ function ProfileTab({ me }: { me: UserProfile }) {
         <Avatar name={me.name} url={preview ?? (trimmed ? null : me.avatarUrl)} size={112} />
         <div className="text-center sm:text-left">
           <p className="font-display text-3xl font-semibold tracking-tight text-ink">{me.name}</p>
-          <p className="mt-1 text-muted">{roleLabels[me.role] ?? me.role}</p>
+          <p className="mt-1 text-muted">{t.account.roles[me.role] ?? me.role}</p>
         </div>
       </div>
 
       <form onSubmit={submit} className="mt-8 space-y-4 border-t border-line pt-8">
         <Field
-          label="Foto de perfil"
-          hint="Cole o endereço de uma imagem que comece com https://. Quadrada fica melhor."
-          error={invalid ? "Use um endereço que comece com https://" : fieldError(mutation.error, "avatarUrl")}
+          label={t.account.photo}
+          hint={t.account.photoHint}
+          error={invalid ? t.account.photoInvalid : fieldError(mutation.error, "avatarUrl")}
         >
           <Input type="url" inputMode="url" maxLength={500} placeholder="https://..." value={url} onChange={(e) => setUrl(e.target.value)} />
         </Field>
-        {mutation.error && hasUnmappedError(mutation.error, ["avatarUrl"]) && <Alert>{mutation.error.message}</Alert>}
-        {mutation.isSuccess && !changed && <Alert type="success">Foto atualizada.</Alert>}
+        {mutation.error && hasUnmappedError(mutation.error, ["avatarUrl"]) && <Alert>{errorMessage(mutation.error)}</Alert>}
+        {mutation.isSuccess && !changed && <Alert type="success">{t.account.photoSaved}</Alert>}
         <div className="flex flex-wrap gap-3">
           <Button type="submit" loading={mutation.isPending && mutation.variables !== ""} disabled={invalid || !changed || mutation.isPending}>
-            Salvar foto
+            {t.account.savePhoto}
           </Button>
           {me.avatarUrl && (
             <Button variant="ghost" loading={mutation.isPending && mutation.variables === ""} disabled={mutation.isPending} onClick={() => mutation.mutate("")}>
-              <Trash2 size={16} aria-hidden /> Remover foto
+              <Trash2 size={16} aria-hidden /> {t.account.removePhoto}
             </Button>
           )}
         </div>
       </form>
 
       <dl className="mt-8 grid gap-5 border-t border-line pt-8 sm:grid-cols-2">
-        <InfoRow icon={<Mail size={18} />} label="E-mail">
+        <InfoRow icon={<Mail size={18} />} label={t.account.email}>
           <span className="break-all">{me.email}</span>
         </InfoRow>
-        <InfoRow icon={<BadgeCheck size={18} />} label="Perfil">
-          {roleLabels[me.role] ?? me.role}
+        <InfoRow icon={<BadgeCheck size={18} />} label={t.account.role}>
+          {t.account.roles[me.role] ?? me.role}
         </InfoRow>
       </dl>
     </Card>
@@ -146,6 +194,8 @@ function ProfileTab({ me }: { me: UserProfile }) {
 }
 
 function SecurityTab() {
+  const { t, locale } = useI18n();
+  const s = t.account.security;
   const { signOut, expiresAt } = useAuth();
   const navigate = useNavigate();
   const logoutAllMutation = useMutation({
@@ -157,16 +207,14 @@ function SecurityTab() {
   });
 
   const items = [
-    { icon: <MonitorSmartphone size={18} />, label: "Sessão neste navegador", text: "As abas abertas compartilham a mesma sessão. Sair em uma encerra todas." },
-    { icon: <Timer size={18} />, label: "Inatividade", text: "Depois de 30 minutos sem uso em nenhuma aba, você sai automaticamente." },
+    { icon: <MonitorSmartphone size={18} />, label: s.sessionLabel, text: s.sessionText },
+    { icon: <Timer size={18} />, label: s.idleLabel, text: s.idleText },
     {
       icon: <Clock size={18} />,
-      label: "Validade do acesso",
-      text: expiresAt
-        ? `O acesso é renovado enquanto você usa o site. O atual vale até ${formatTime(new Date(expiresAt).toISOString())}.`
-        : "Sessão não iniciada.",
+      label: s.validityLabel,
+      text: expiresAt ? s.validityText(formatTime(new Date(expiresAt).toISOString(), locale)) : s.noSession,
     },
-    { icon: <KeyRound size={18} />, label: "Senha", text: "Use uma senha longa e que você não usa em outros sites." },
+    { icon: <KeyRound size={18} />, label: s.passwordLabel, text: s.passwordText },
   ];
 
   return (
@@ -183,8 +231,8 @@ function SecurityTab() {
       <PasswordCard />
       <Card className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="font-bold text-ink">Sair desta sessão</p>
-          <p className="text-sm text-muted">Use num computador compartilhado antes de sair de perto.</p>
+          <p className="font-bold text-ink">{s.signOutTitle}</p>
+          <p className="text-sm text-muted">{s.signOutText}</p>
         </div>
         <Button
           variant="secondary"
@@ -193,27 +241,27 @@ function SecurityTab() {
             navigate("/");
           }}
         >
-          <LogOut size={16} aria-hidden /> Sair da conta
+          <LogOut size={16} aria-hidden /> {s.signOut}
         </Button>
       </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="font-bold text-ink">Sair de todos os dispositivos</p>
-            <p className="text-sm text-muted">Encerra as sessões em todos os navegadores e aparelhos, inclusive esta.</p>
+            <p className="font-bold text-ink">{s.signOutAllTitle}</p>
+            <p className="text-sm text-muted">{s.signOutAllText}</p>
           </div>
           <ConfirmButton
-            title="Sair de todos os dispositivos?"
-            description="Todas as sessões da sua conta serão encerradas, inclusive esta. Você vai precisar entrar de novo."
-            confirmLabel="Sair de todos"
+            title={s.signOutAllConfirmTitle}
+            description={s.signOutAllConfirmText}
+            confirmLabel={s.signOutAll}
             danger
             loading={logoutAllMutation.isPending}
             onConfirm={() => logoutAllMutation.mutate()}
           >
-            <MonitorSmartphone size={16} aria-hidden /> Sair de todos
+            <MonitorSmartphone size={16} aria-hidden /> {s.signOutAll}
           </ConfirmButton>
         </div>
-        {logoutAllMutation.error && <Alert>{logoutAllMutation.error.message}</Alert>}
+        {logoutAllMutation.error && <Alert>{errorMessage(logoutAllMutation.error)}</Alert>}
       </Card>
     </div>
   );
@@ -222,6 +270,8 @@ function SecurityTab() {
 const PASSWORD_FIELDS = ["currentPassword", "newPassword"] as const;
 
 function PasswordCard() {
+  const { t } = useI18n();
+  const p = t.account.passwordCard;
   const { replaceSession } = useAuth();
   const { me } = useMe();
   const [form, setForm] = useState({ current: "", next: "", confirm: "" });
@@ -260,9 +310,9 @@ function PasswordCard() {
   function submit(e: FormEvent) {
     e.preventDefault();
     if (locked) return;
-    if (form.next !== form.confirm) return setLocalError("As senhas novas não conferem.");
-    if (form.next === form.current) return setLocalError("A senha nova precisa ser diferente da atual.");
-    if (strength.score < 2) return setLocalError("Escolha uma senha mais forte.");
+    if (form.next !== form.confirm) return setLocalError(p.newMismatch);
+    if (form.next === form.current) return setLocalError(p.sameAsCurrent);
+    if (strength.score < 2) return setLocalError(p.weak);
     mutation.mutate();
   }
 
@@ -272,37 +322,43 @@ function PasswordCard() {
       : problemType === "too-many-password-attempts"
         ? null
         : error && hasUnmappedError(error, PASSWORD_FIELDS)
-          ? error.message
+          ? errorMessage(error)
           : null;
 
   return (
     <Card>
-      <h2 className="text-lg font-extrabold text-ink">Trocar senha</h2>
-      <p className="mt-1 text-sm text-muted">Ao trocar a senha, as sessões em outros aparelhos são encerradas. Esta continua aberta.</p>
+      <h2 className="text-lg font-extrabold text-ink">{p.title}</h2>
+      <p className="mt-1 text-sm text-muted">{p.text}</p>
       <form onSubmit={submit} className="mt-5 space-y-4">
-        <Field label="Senha atual" error={fieldError(error, "currentPassword")}>
+        <Field label={p.current} error={fieldError(error, "currentPassword")}>
           <PasswordInput required maxLength={100} autoComplete="current-password" value={form.current} onChange={set("current")} />
         </Field>
         <Field
-          label="Nova senha"
-          hint={form.next ? `Força: ${strength.label}${strength.tips.length > 0 ? ` · ${strength.tips.join(" ")}` : ""}` : "Entre 8 e 72 caracteres."}
+          label={p.next}
+          hint={
+            form.next
+              ? `${t.password.strength}: ${t.password.levels[strength.score]}${
+                  strength.tips.length > 0 ? ` · ${strength.tips.map((tip) => t.password.tips[tip]).join(" ")}` : ""
+                }`
+              : t.password.lengthHint
+          }
           error={fieldError(error, "newPassword")}
         >
           <PasswordInput required minLength={8} maxLength={72} autoComplete="new-password" value={form.next} onChange={set("next")} />
         </Field>
-        <Field label="Confirmar nova senha" error={form.confirm && form.confirm !== form.next ? "As senhas não conferem." : undefined}>
+        <Field label={p.confirm} error={form.confirm && form.confirm !== form.next ? t.password.mismatch : undefined}>
           <PasswordInput required maxLength={72} autoComplete="new-password" value={form.confirm} onChange={set("confirm")} />
         </Field>
         {localError && <Alert>{localError}</Alert>}
         {errorText && <Alert>{errorText}</Alert>}
         {locked && (
           <Alert type="warning">
-            Muitas tentativas com a senha errada. Tente novamente em <span className="tabular font-bold">{lockSeconds} s</span>.
+            {p.lockedBefore} <span className="tabular font-bold">{t.common.seconds(lockSeconds)}</span>.
           </Alert>
         )}
-        {mutation.isSuccess && <Alert type="success">Senha alterada. As sessões em outros aparelhos foram encerradas.</Alert>}
+        {mutation.isSuccess && <Alert type="success">{p.success}</Alert>}
         <Button type="submit" loading={mutation.isPending} disabled={locked}>
-          {locked ? `Aguarde ${lockSeconds} s` : "Trocar senha"}
+          {locked ? t.common.wait(lockSeconds) : p.submit}
         </Button>
       </form>
     </Card>

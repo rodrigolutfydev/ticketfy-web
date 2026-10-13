@@ -11,6 +11,7 @@
 import { useState } from "react";
 import { safeImageUrl } from "../utils/security";
 import { dateParts } from "../utils/format";
+import { useI18n } from "../i18n/LocaleContext";
 
 // Fundos da capa gerada. A escolha depende do nome do evento, então o
 // mesmo evento sempre tem a mesma capa.
@@ -42,6 +43,7 @@ interface Props {
 }
 
 export default function EventCover({ name, startsAt, imageUrl, className = "", large = false, fit = "cover" }: Props) {
+  const { t, locale } = useI18n();
   const src = safeImageUrl(imageUrl);
   // Guarda QUAL url falhou: se o organizador trocar a foto, a nova é tentada.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export default function EventCover({ name, startsAt, imageUrl, className = "", l
             contêiner, e a foto se ajusta dentro dele, seja vertical ou horizontal. */}
         <img
           src={src}
-          alt={`Foto do evento ${name}`}
+          alt={t.cover.photoAlt(name)}
           decoding="async"
           referrerPolicy="no-referrer"
           onError={() => setFailedSrc(src)}
@@ -70,7 +72,7 @@ export default function EventCover({ name, startsAt, imageUrl, className = "", l
     return (
       <img
         src={src}
-        alt={`Foto do evento ${name}`}
+        alt={t.cover.photoAlt(name)}
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"
@@ -81,11 +83,11 @@ export default function EventCover({ name, startsAt, imageUrl, className = "", l
   }
 
   const [from, to] = PALETTES[hash(name) % PALETTES.length];
-  const { day, month } = dateParts(startsAt);
+  const { day, month } = dateParts(startsAt, locale);
   return (
     <div
       role="img"
-      aria-label={`Capa do evento ${name}`}
+      aria-label={t.cover.generatedAlt(name)}
       className={`relative flex h-full w-full items-end overflow-hidden p-5 ${className}`}
       style={{ background: `radial-gradient(120% 90% at 100% 0%, ${from}, ${to} 75%)` }}
     >

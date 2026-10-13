@@ -1,43 +1,62 @@
-// Formatação de datas, preços e IDs para exibição em português.
-// Intl é a API de internacionalização do próprio navegador: sabe escrever
-// "sáb., 10 de dez." e "R$ 80,00" sem nenhuma biblioteca.
+import { getLocale, type Locale } from "../i18n/locale";
+import { MESSAGES } from "../i18n/messages";
 
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+const numberFormatters = new Map<string, Intl.NumberFormat>();
+
+function dateFormatter(locale: Locale, options: Intl.DateTimeFormatOptions) {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let formatter = dateFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    dateFormatters.set(key, formatter);
+  }
+  return formatter;
+}
+
+function numberFormatter(locale: Locale, options: Intl.NumberFormatOptions) {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let formatter = numberFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, options);
+    numberFormatters.set(key, formatter);
+  }
+  return formatter;
+}
+
+const DATE: Intl.DateTimeFormatOptions = {
   weekday: "short", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-});
-const shortDateFormatter = new Intl.DateTimeFormat("pt-BR", {
-  day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
-});
-const timeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
-const longDayFormatter = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" });
-const priceFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+};
+const SHORT_DATE: Intl.DateTimeFormatOptions = { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" };
+const TIME: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
+const LONG_DAY: Intl.DateTimeFormatOptions = { weekday: "long", day: "numeric", month: "long" };
+const FULL_DAY: Intl.DateTimeFormatOptions = { weekday: "long", day: "numeric", month: "long", year: "numeric" };
+const PRICE: Intl.NumberFormatOptions = { style: "currency", currency: "BRL" };
 
-export const formatDate = (iso: string) => dateFormatter.format(new Date(iso));
-export const formatShortDate = (iso: string) => shortDateFormatter.format(new Date(iso));
-export const formatTime = (iso: string) => timeFormatter.format(new Date(iso));
-export const formatLongDay = (iso: string) => longDayFormatter.format(new Date(iso));
-export const formatPrice = (value: number) => priceFormatter.format(value);
+export const formatDate = (iso: string, locale: Locale = getLocale()) => dateFormatter(locale, DATE).format(new Date(iso));
+export const formatShortDate = (iso: string, locale: Locale = getLocale()) => dateFormatter(locale, SHORT_DATE).format(new Date(iso));
+export const formatTime = (iso: string, locale: Locale = getLocale()) => dateFormatter(locale, TIME).format(new Date(iso));
+export const formatLongDay = (iso: string, locale: Locale = getLocale()) => dateFormatter(locale, LONG_DAY).format(new Date(iso));
+export const formatFullDay = (iso: string, locale: Locale = getLocale()) => dateFormatter(locale, FULL_DAY).format(new Date(iso));
+export const formatPrice = (value: number, locale: Locale = getLocale()) => numberFormatter(locale, PRICE).format(value);
+export const formatNumber = (value: number, maximumFractionDigits: number, locale: Locale = getLocale()) =>
+  numberFormatter(locale, { maximumFractionDigits }).format(value);
 
-// Pedaços da data para o "selo" dos cartões (ex.: 10 / dez / sáb).
-export function dateParts(iso: string) {
+const clean = (value: string) => value.replace(".", "");
+
+export function dateParts(iso: string, locale: Locale = getLocale()) {
   const d = new Date(iso);
   return {
-    day: d.toLocaleDateString("pt-BR", { day: "2-digit" }),
-    month: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
-    weekday: d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""),
+    day: dateFormatter(locale, { day: "2-digit" }).format(d),
+    month: clean(dateFormatter(locale, { month: "short" }).format(d)),
+    weekday: clean(dateFormatter(locale, { weekday: "short" }).format(d)),
   };
 }
 
-// "em 3 dias", "amanhã", "hoje", "já aconteceu".
-export function relativeDay(iso: string): string {
+export function relativeDay(iso: string, locale: Locale = getLocale()): string {
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const days = Math.round((startOfDay(new Date(iso)) - startOfDay(new Date())) / 86_400_000);
-  if (days < 0) return "já aconteceu";
-  if (days === 0) return "hoje";
-  if (days === 1) return "amanhã";
-  if (days < 30) return `em ${days} dias`;
-  const months = Math.round(days / 30);
-  return months === 1 ? "em 1 mês" : `em ${months} meses`;
+  return MESSAGES[locale].common.relativeDay(days);
 }
 
 export const isPast = (iso: string) => new Date(iso).getTime() < Date.now();
@@ -73,17 +92,14 @@ export const UFS = [
   "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
 ] as const;
 
-// Carimbo de data dos cartões, como no Figma: "SÁB, 18 JAN • 16:00".
-const stampDay = new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "short" });
-export function eventStamp(iso: string) {
-  const parts = stampDay.formatToParts(new Date(iso));
+export function eventStamp(iso: string, locale: Locale = getLocale()) {
+  const parts = dateFormatter(locale, { weekday: "short", day: "2-digit", month: "short" }).formatToParts(new Date(iso));
   const get = (type: string) => parts.find((p) => p.type === type)?.value.replace(".", "") ?? "";
-  return `${get("weekday")}, ${get("day")} ${get("month")} • ${formatTime(iso)}`.toUpperCase();
+  return `${get("weekday")}, ${get("day")} ${get("month")} • ${formatTime(iso, locale)}`.toUpperCase();
 }
 
-// Dashboard: percentuais de 0 a 100 e valores que podem não existir (null vira "—").
-const percentFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
-export const formatPercent = (value: number | null | undefined) => (value === null || value === undefined ? "—" : `${percentFormatter.format(value)}%`);
-export const formatMaybePrice = (value: number | null | undefined) => (value === null || value === undefined ? "—" : formatPrice(value));
-const integerFormatter = new Intl.NumberFormat("pt-BR");
-export const formatInt = (value: number) => integerFormatter.format(value);
+export const formatPercent = (value: number | null | undefined, locale: Locale = getLocale()) =>
+  value === null || value === undefined ? "—" : `${formatNumber(value, 1, locale)}%`;
+export const formatMaybePrice = (value: number | null | undefined, locale: Locale = getLocale()) =>
+  value === null || value === undefined ? "—" : formatPrice(value, locale);
+export const formatInt = (value: number, locale: Locale = getLocale()) => numberFormatter(locale, {}).format(value);

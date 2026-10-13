@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useI18n } from "../i18n/LocaleContext";
 import { Button } from "./ui";
 
 interface Props {
@@ -9,17 +10,18 @@ interface Props {
 
 // Navegação entre páginas de uma listagem paginada da API.
 export default function Pagination({ page, totalPages, onChange }: Props) {
+  const { t } = useI18n();
   if (totalPages <= 1) return null;
   return (
-    <nav aria-label="Paginação" className="mt-10 flex items-center justify-center gap-3">
+    <nav aria-label={t.pagination.label} className="mt-10 flex items-center justify-center gap-3">
       <Button variant="secondary" size="sm" disabled={page === 0} onClick={() => onChange(page - 1)}>
-        <ChevronLeft size={16} aria-hidden /> Anterior
+        <ChevronLeft size={16} aria-hidden /> {t.pagination.previous}
       </Button>
       <span className="text-sm text-muted" aria-current="page">
-        Página {page + 1} de {totalPages}
+        {t.pagination.page(page + 1, totalPages)}
       </span>
       <Button variant="secondary" size="sm" disabled={page + 1 >= totalPages} onClick={() => onChange(page + 1)}>
-        Próxima <ChevronRight size={16} aria-hidden />
+        {t.pagination.next} <ChevronRight size={16} aria-hidden />
       </Button>
     </nav>
   );

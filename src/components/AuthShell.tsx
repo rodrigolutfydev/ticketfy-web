@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
+import { useI18n } from "../i18n/LocaleContext";
+import LanguageSwitcher from "./LanguageSwitcher";
 import Logo from "./Logo";
 
 // "Porta de entrada": tela dividida. À esquerda (só no computador), um painel
@@ -15,6 +17,7 @@ export default function AuthShell({
   subtitle: string;
   children: ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <div className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
       <aside className="relative hidden overflow-hidden border-r border-line bg-[#07090c] lg:block" aria-hidden>
@@ -23,21 +26,24 @@ export default function AuthShell({
         <div className="absolute inset-x-0 bottom-0 h-2/3 bg-[linear-gradient(to_top,#07090c_25%,transparent)]" />
         <StageCrowd />
         <div className="absolute bottom-14 left-14 right-14">
-          <p className="text-[11px] font-bold tracking-[0.14em] text-[#ff6f64]">SEU PRÓXIMO MOMENTO</p>
+          <p className="text-[11px] font-bold tracking-[0.14em] text-[#ff6f64]">{t.authShell.eyebrow}</p>
           <p className="font-display mt-3 text-6xl font-bold leading-[0.95] tracking-[-0.03em] text-[#f2f4f7] xl:text-7xl">
-            Começa
+            {t.authShell.headlineTop}
             <br />
-            por aqui.
+            {t.authShell.headlineBottom}
           </p>
         </div>
       </aside>
 
       <div className="flex flex-col">
-        <div className="flex h-16 items-center justify-between px-6 sm:px-10">
+        <div className="flex h-16 items-center justify-between gap-3 px-6 sm:px-10">
           <Logo />
-          <Link to="/" className="text-sm font-medium text-muted hover:text-ink">
-            Voltar para o início
-          </Link>
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            <Link to="/" className="hidden text-sm font-medium text-muted hover:text-ink sm:inline">
+              {t.authShell.backHome}
+            </Link>
+          </div>
         </div>
         <main id="conteudo" className="flex flex-1 items-center justify-center px-6 py-10 sm:px-10">
           <div className="w-full max-w-sm">

@@ -1,13 +1,11 @@
 import { ApiError, errorMessage } from "../api/client";
 import type { DiscountType } from "../api/types";
-import { formatPrice } from "./format";
-
-const percentFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
+import { formatNumber, formatPrice } from "./format";
 
 export const normalizeCouponCode = (code: string) => code.trim().toUpperCase();
 
 export const formatDiscount = (type: DiscountType, value: number) =>
-  type === "PERCENT" ? `${percentFormatter.format(value)}%` : formatPrice(value);
+  type === "PERCENT" ? `${formatNumber(value, 2)}%` : formatPrice(value);
 
 export const couponErrorMessage = (error: unknown) => errorMessage(error, "checkout-coupon");
 

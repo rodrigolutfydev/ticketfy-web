@@ -8,6 +8,7 @@
 import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { Link, type LinkProps } from "react-router";
 import { ArrowLeft, CircleCheck, Eye, EyeOff, Info, TriangleAlert } from "lucide-react";
+import { useI18n } from "../i18n/LocaleContext";
 
 // ---------------------------------------------------------------------------
 // Botões
@@ -103,6 +104,7 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
 // Campo de senha com botão de mostrar/ocultar.
 export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, "type">) {
   const [visible, setVisible] = useState(false);
+  const { t } = useI18n();
   return (
     <span className="relative block">
       <input
@@ -118,7 +120,7 @@ export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>,
         type="button"
         onClick={() => setVisible((v) => !v)}
         className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-subtle hover:text-ink"
-        aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
+        aria-label={visible ? t.ui.hidePassword : t.ui.showPassword}
       >
         {visible ? <EyeOff size={18} /> : <Eye size={18} />}
       </button>

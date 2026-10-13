@@ -2,6 +2,7 @@ import { useCallback, useState, type ReactNode } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreditCard, Lock, QrCode, Timer } from "lucide-react";
+import { errorMessage } from "../api/client";
 import { cancelOrder, getOrder, payOrder } from "../api/endpoints";
 import CheckoutSummary from "../components/CheckoutSummary";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -12,12 +13,14 @@ import { formatPrice, shortId } from "../utils/format";
 import { isValidId } from "../utils/security";
 import NotFoundPage from "./NotFoundPage";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useI18n } from "../i18n/LocaleContext";
 
 // Tela de pagamento de um pedido pendente.
 // A API confere que o pedido é do usuário logado (senão devolve 403/404),
 // então abrir /orders/<id-de-outra-pessoa>/payment não mostra nada.
 export default function PaymentPage() {
-  usePageTitle("Pagamento");
+  const { t, locale } = useI18n();
+  usePageTitle(t.payment.pageTitle);
   const { id = "" } = useParams();
   const validId = isValidId(id);
   const navigate = useNavigate();
@@ -56,7 +59,7 @@ export default function PaymentPage() {
 
   if (!validId) return <NotFoundPage />;
   if (isLoading) return <Loading />;
-  if (error) return <ErrorMessage message={error.message} />;
+  if (error) return <ErrorMessage message={errorMessage(error) ?? ""} />;
   const o = order!;
 
   // Pedido que não está mais pendente não tem o que pagar.
@@ -67,29 +70,29 @@ export default function PaymentPage() {
   return (
     <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1fr_360px] lg:gap-12">
       <div>
-        <BackLink to="/orders">Meus pedidos</BackLink>
-        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-ink">Como você quer pagar?</h1>
-        <p className="mt-2 text-muted">Pedido #{shortId(o.id)}</p>
+        <BackLink to="/orders">{t.payment.myOrders}</BackLink>
+        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-ink">{t.payment.title}</h1>
+        <p className="mt-2 text-muted">{t.payment.order(shortId(o.id))}</p>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/35 bg-warning/10 px-4 py-3">
           <span className="flex items-center gap-2.5 text-sm text-warning">
-            <Timer size={18} aria-hidden /> Seus ingressos estão reservados por
+            <Timer size={18} aria-hidden /> {t.payment.reservedFor}
           </span>
           <Countdown until={o.expiresAt} onExpire={onExpire} />
         </div>
 
         {/* Escolha do método: dois cartões que funcionam como botões de rádio. */}
-        <div className="mt-5 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Forma de pagamento">
-          <MethodOption selected={method === "pix"} onSelect={() => setMethod("pix")} icon={<QrCode size={22} />} title="Pix" hint="Aprovação imediata" />
-          <MethodOption selected={method === "card"} onSelect={() => setMethod("card")} icon={<CreditCard size={22} />} title="Cartão" hint="Crédito em até 6×" />
+        <div className="mt-5 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label={t.payment.methodLabel}>
+          <MethodOption selected={method === "pix"} onSelect={() => setMethod("pix")} icon={<QrCode size={22} />} title={t.payment.pix} hint={t.payment.pixHint} />
+          <MethodOption selected={method === "card"} onSelect={() => setMethod("card")} icon={<CreditCard size={22} />} title={t.payment.card} hint={t.payment.cardHint} />
         </div>
 
         <div className="mt-4 rounded-2xl border border-line bg-surface p-5 sm:p-6">
           {method === "pix" ? (
             <>
-              <h2 className="text-xl font-semibold text-ink">Pague com Pix</h2>
+              <h2 className="text-xl font-semibold text-ink">{t.payment.pixTitle}</h2>
               <ol className="mt-4 space-y-3 text-sm text-muted">
-                {["Abra o app do seu banco", "Escolha pagar com Pix", "Leia o QR Code ou cole o código"].map((step, i) => (
+                {t.payment.pixSteps.map((step, i) => (
                   <li key={step} className="flex items-center gap-3">
                     <span className="tabular flex h-6 w-6 items-center justify-center rounded-full bg-raised text-xs font-bold text-ink">{i + 1}</span>
                     {step}
@@ -99,12 +102,12 @@ export default function PaymentPage() {
             </>
           ) : (
             <>
-              <h2 className="text-xl font-semibold text-ink">Pague com cartão</h2>
-              <p className="mt-3 text-sm text-muted">Os dados do cartão seriam digitados numa tela segura do gateway de pagamento, fora do Ticketfy.</p>
+              <h2 className="text-xl font-semibold text-ink">{t.payment.cardTitle}</h2>
+              <p className="mt-3 text-sm text-muted">{t.payment.cardText}</p>
             </>
           )}
           <p className="mt-5 rounded-xl border border-dashed border-line-strong p-3 text-xs text-muted">
-            Ambiente de demonstração: o pagamento é simulado e nenhum valor é cobrado.
+            {t.payment.demo}
           </p>
         </div>
       </div>
@@ -115,27 +118,27 @@ export default function PaymentPage() {
           discount={o.couponCode ? { code: o.couponCode, amount: o.discountAmount, subtotal: o.subtotalAmount } : null}
           lines={o.items.map((item) => ({ key: item.ticketTypeId, label: item.ticketTypeName, quantity: item.quantity, subtotal: item.subtotal }))}
         />
-        {(pay.error || cancel.error) && <Alert>{(pay.error ?? cancel.error)!.message}</Alert>}
+        {(pay.error || cancel.error) && <Alert>{errorMessage(pay.error ?? cancel.error)}</Alert>}
         {/* Desabilitado enquanto qualquer ação roda: evita pagar e cancelar ao mesmo tempo. */}
         <Button size="lg" className="w-full" loading={pay.isPending} disabled={busy} onClick={() => pay.mutate()}>
-          <Lock size={16} aria-hidden /> Pagar {formatPrice(o.totalAmount)}
+          <Lock size={16} aria-hidden /> {t.payment.pay(formatPrice(o.totalAmount, locale))}
         </Button>
         <div className="flex items-center justify-between">
           <Link to="/orders" className="text-sm font-semibold text-muted hover:text-ink">
-            Pagar depois
+            {t.payment.payLater}
           </Link>
           <Button variant="ghost" size="sm" disabled={busy} onClick={() => setConfirmCancel(true)}>
-            Cancelar pedido
+            {t.payment.cancelOrder}
           </Button>
         </div>
       </div>
 
       <ConfirmDialog
         open={confirmCancel}
-        title="Cancelar este pedido?"
-        description="Os ingressos reservados voltam à venda e outra pessoa pode comprá-los."
-        confirmLabel="Cancelar pedido"
-        cancelLabel="Manter pedido"
+        title={t.payment.cancelTitle}
+        description={t.payment.cancelText}
+        confirmLabel={t.payment.cancelOrder}
+        cancelLabel={t.payment.keepOrder}
         danger
         loading={cancel.isPending}
         onClose={() => setConfirmCancel(false)}

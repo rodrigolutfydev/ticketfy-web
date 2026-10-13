@@ -77,10 +77,11 @@ export function normalizeTicketCode(value: string): string {
 // Força da senha
 // ---------------------------------------------------------------------------
 
+export type PasswordTip = "common" | "personal" | "length" | "mix";
+
 export interface PasswordStrength {
   score: 0 | 1 | 2 | 3 | 4;
-  label: string;
-  tips: string[];
+  tips: PasswordTip[];
 }
 
 // Senhas que aparecem no topo de todo vazamento. A API deveria ter uma
@@ -92,19 +93,19 @@ const COMMON_PASSWORDS = new Set([
 
 // Avaliação simples, sem bibliotecas: comprimento conta mais que símbolos.
 export function passwordStrength(password: string, context: string[] = []): PasswordStrength {
-  const tips: string[] = [];
-  if (!password) return { score: 0, label: "", tips };
+  const tips: PasswordTip[] = [];
+  if (!password) return { score: 0, tips };
 
   const lower = password.toLowerCase();
   if (COMMON_PASSWORDS.has(lower)) {
-    return { score: 0, label: "Muito fraca", tips: ["Essa senha está entre as mais usadas em vazamentos."] };
+    return { score: 0, tips: ["common"] };
   }
   // Senha que contém o próprio nome ou e-mail é fácil de adivinhar.
   const personal = context
     .map((part) => part.toLowerCase().split("@")[0].trim())
     .filter((part) => part.length >= 3);
   if (personal.some((part) => lower.includes(part))) {
-    tips.push("Evite usar seu nome ou e-mail na senha.");
+    tips.push("personal");
   }
 
   let score = 0;
@@ -113,13 +114,12 @@ export function passwordStrength(password: string, context: string[] = []): Pass
   if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
   if (/\d/.test(password) && /[^A-Za-z0-9]/.test(password)) score++;
 
-  if (password.length < 12) tips.push("Use 12 caracteres ou mais.");
-  if (!/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) tips.push("Misture números e símbolos.");
-  if (tips.some((t) => t.startsWith("Evite"))) score = Math.max(0, score - 1);
+  if (password.length < 12) tips.push("length");
+  if (!/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) tips.push("mix");
+  if (tips.includes("personal")) score = Math.max(0, score - 1);
 
-  const labels = ["Muito fraca", "Fraca", "Razoável", "Boa", "Forte"];
   const final = Math.min(score, 4) as PasswordStrength["score"];
-  return { score: final, label: labels[final], tips };
+  return { score: final, tips };
 }
 
 // ---------------------------------------------------------------------------

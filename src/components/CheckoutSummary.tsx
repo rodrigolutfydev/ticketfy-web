@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { formatPrice, formatShortDate } from "../utils/format";
+import { useI18n } from "../i18n/LocaleContext";
 import EventCover from "./EventCover";
 
 export interface SummaryLine {
@@ -23,9 +24,10 @@ export default function CheckoutSummary({
   discount?: { code: string; amount: number; subtotal: number } | null;
   footer?: ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <div className="elevated rounded-2xl border border-line bg-surface p-5 sm:p-6">
-      <h2 className="text-xl font-semibold text-ink">Resumo</h2>
+      <h2 className="text-xl font-semibold text-ink">{t.summary.title}</h2>
       {event && (
         <div className="mt-4 flex items-center gap-3 border-b border-line pb-4">
           <div className="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-line bg-raised">
@@ -50,19 +52,19 @@ export default function CheckoutSummary({
       {discount && (
         <dl className="space-y-2 border-b border-line py-4 text-sm">
           <div className="flex justify-between gap-3">
-            <dt className="text-muted">Subtotal</dt>
+            <dt className="text-muted">{t.summary.subtotal}</dt>
             <dd className="tabular font-semibold text-ink">{formatPrice(discount.subtotal)}</dd>
           </div>
           <div className="flex justify-between gap-3">
             <dt className="text-muted">
-              Desconto <span className="font-semibold text-success">{discount.code}</span>
+              {t.summary.discount} <span className="font-semibold text-success">{discount.code}</span>
             </dt>
             <dd className="tabular font-semibold text-success">−{formatPrice(discount.amount)}</dd>
           </div>
         </dl>
       )}
       <div className="flex items-center justify-between pt-4">
-        <span className="font-semibold text-ink">Total</span>
+        <span className="font-semibold text-ink">{t.summary.total}</span>
         <span className="tabular text-2xl font-bold text-accent-text">{formatPrice(total)}</span>
       </div>
       {footer && <div className="mt-4">{footer}</div>}

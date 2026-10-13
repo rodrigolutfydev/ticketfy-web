@@ -6,15 +6,18 @@ import { Link, NavLink, Outlet, matchPath, useLocation, useNavigate } from "reac
 import { CircleQuestionMark, LogOut, Menu, Moon, ReceiptText, Sun, Ticket, UserRound, X } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
+import { useI18n } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import Avatar from "./Avatar";
 import CheckoutSteps from "./CheckoutSteps";
+import LanguageSwitcher from "./LanguageSwitcher";
 import Logo from "./Logo";
 import { ButtonLink } from "./ui";
 
 export default function Layout() {
   const { isAuthenticated, isChecking, signOut } = useAuth();
   const { me, isOrganizer, isAdmin } = useMe();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -54,9 +57,12 @@ export default function Layout() {
             <div className="mx-auto sm:mx-0">
               <CheckoutSteps current={checkoutStep} />
             </div>
-            <Link to="/" className="hidden text-sm font-semibold text-muted hover:text-ink sm:block">
-              Sair
-            </Link>
+            <div className="hidden items-center gap-4 sm:flex">
+              <LanguageSwitcher />
+              <Link to="/" className="text-sm font-semibold text-muted hover:text-ink">
+                {t.layout.exitCheckout}
+              </Link>
+            </div>
           </div>
         </header>
         <main id="conteudo" className="page-container flex-1 py-8 sm:py-12">
@@ -67,16 +73,16 @@ export default function Layout() {
   }
 
   const links = [
-    { to: "/", label: "Eventos", end: true, also: "/events/" },
+    { to: "/", label: t.layout.nav.events, end: true, also: "/events/" },
     ...(isAuthenticated
       ? [
-          { to: "/tickets", label: "Meus ingressos" },
-          { to: "/orders", label: "Pedidos" },
+          { to: "/tickets", label: t.layout.nav.tickets },
+          { to: "/orders", label: t.layout.nav.orders },
         ]
       : []),
-    { to: "/organizer", label: isOrganizer ? "Organizador" : "Para organizadores" },
-    ...(isAdmin ? [{ to: "/admin", label: "Administração" }] : []),
-    { to: "/help", label: "Ajuda" },
+    { to: "/organizer", label: isOrganizer ? t.layout.nav.organizer : t.layout.nav.forOrganizers },
+    ...(isAdmin ? [{ to: "/admin", label: t.layout.nav.admin }] : []),
+    { to: "/help", label: t.layout.nav.help },
   ];
 
   // Item ativo: texto claro com um traço coral colado na borda de baixo do cabeçalho.
@@ -95,14 +101,14 @@ export default function Layout() {
       {location.pathname === "/" && <div className="hero-glow pointer-events-none absolute inset-x-0 top-0 h-[560px]" aria-hidden />}
       {/* Link escondido que aparece ao apertar Tab: pula o menu e vai direto ao conteúdo. */}
       <a href="#conteudo" className="sr-only z-50 rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
-        Pular para o conteúdo
+        {t.layout.skipToContent}
       </a>
 
       <header className="sticky top-0 z-30 border-b border-line bg-canvas/85 backdrop-blur-md">
         <div className="page-container flex h-16 items-center justify-between gap-4">
           <Logo />
 
-          <nav aria-label="Principal" className="hidden items-center gap-1 md:flex">
+          <nav aria-label={t.layout.mainNav} className="hidden items-center gap-1 md:flex">
             {links.map((link) => (
               <NavLink
                 key={link.to}
@@ -116,18 +122,20 @@ export default function Layout() {
           </nav>
 
           <div className="hidden items-center gap-3 md:flex">
+            <LanguageSwitcher />
             <ThemeToggle />
             {isChecking ? null : isAuthenticated ? (
               <UserMenu name={firstName} fullName={me?.name} avatarUrl={me?.avatarUrl} onSignOut={handleSignOut} />
             ) : (
               <ButtonLink to="/login" variant="secondary" size="sm" className="h-10 px-4">
-                <UserRound size={17} aria-hidden /> Entrar
+                <UserRound size={17} aria-hidden /> {t.layout.signIn}
               </ButtonLink>
             )}
           </div>
 
           {/* Celular: tema + botão que abre o menu. */}
-          <div className="flex items-center gap-1 md:hidden">
+          <div className="flex items-center gap-2 md:hidden">
+            <LanguageSwitcher />
             <ThemeToggle />
             <button
               type="button"
@@ -135,7 +143,7 @@ export default function Layout() {
               className="flex h-10 w-10 items-center justify-center rounded-lg text-ink hover:bg-raised"
               aria-expanded={mobileOpen}
               aria-controls="mobile-menu"
-              aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+              aria-label={mobileOpen ? t.layout.closeMenu : t.layout.openMenu}
             >
               {mobileOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
@@ -143,7 +151,7 @@ export default function Layout() {
         </div>
 
         {mobileOpen && (
-          <nav id="mobile-menu" aria-label="Principal" className="border-t border-line bg-canvas px-4 pb-5 pt-3 md:hidden">
+          <nav id="mobile-menu" aria-label={t.layout.mainNav} className="border-t border-line bg-canvas px-4 pb-5 pt-3 md:hidden">
             <div className="flex flex-col">
               {links.map((link) => (
                 <NavLink key={link.to} to={link.to} end={link.end} className={mobileLinkClass}>
@@ -153,18 +161,18 @@ export default function Layout() {
               {isChecking ? null : isAuthenticated ? (
                 <>
                   <NavLink to="/account" className={mobileLinkClass}>
-                    Minha conta
+                    {t.layout.myAccount}
                   </NavLink>
                   <button type="button" onClick={handleSignOut} className="rounded-lg px-3 py-2 text-left text-sm font-semibold text-danger">
-                    Sair
+                    {t.layout.signOut}
                   </button>
                 </>
               ) : (
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <ButtonLink to="/login" variant="secondary">
-                    Entrar
+                    {t.layout.signIn}
                   </ButtonLink>
-                  <ButtonLink to="/register">Criar conta</ButtonLink>
+                  <ButtonLink to="/register">{t.layout.signUp}</ButtonLink>
                 </div>
               )}
             </div>
@@ -183,8 +191,9 @@ export default function Layout() {
 
 function ThemeToggle() {
   const { theme, toggle } = useTheme();
+  const { t } = useI18n();
   const isLight = theme === "light";
-  const label = isLight ? "Usar tema escuro" : "Usar tema claro";
+  const label = isLight ? t.layout.theme.toDark : t.layout.theme.toLight;
   // Interruptor em pílula: o botão desliza para a direita no tema claro.
   return (
     <button
@@ -192,7 +201,7 @@ function ThemeToggle() {
       role="switch"
       aria-checked={isLight}
       onClick={toggle}
-      aria-label="Tema claro"
+      aria-label={t.layout.theme.label}
       title={label}
       className="relative h-7 w-[52px] shrink-0 rounded-full border border-line-strong bg-raised transition-colors"
     >
@@ -222,6 +231,7 @@ function UserMenu({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  const { t } = useI18n();
 
   useEffect(() => setOpen(false), [location.pathname]);
 
@@ -249,25 +259,25 @@ function UserMenu({
         className="flex items-center gap-2 rounded-full border border-line py-1 pl-1 pr-3 text-sm font-semibold text-ink hover:border-accent/60"
       >
         <Avatar name={fullName} url={avatarUrl} size={28} />
-        {name ?? "Conta"}
+        {name ?? t.layout.account}
       </button>
       {open && (
         <div role="menu" className="absolute right-0 mt-2 w-52 rounded-xl border border-line bg-surface p-1.5 shadow-2xl">
           <Link role="menuitem" to="/account" className={item}>
-            <UserRound size={16} aria-hidden /> Minha conta
+            <UserRound size={16} aria-hidden /> {t.layout.myAccount}
           </Link>
           <Link role="menuitem" to="/tickets" className={item}>
-            <Ticket size={16} aria-hidden /> Meus ingressos
+            <Ticket size={16} aria-hidden /> {t.layout.myTickets}
           </Link>
           <Link role="menuitem" to="/orders" className={item}>
-            <ReceiptText size={16} aria-hidden /> Meus pedidos
+            <ReceiptText size={16} aria-hidden /> {t.layout.myOrders}
           </Link>
           <Link role="menuitem" to="/help" className={item}>
-            <CircleQuestionMark size={16} aria-hidden /> Ajuda
+            <CircleQuestionMark size={16} aria-hidden /> {t.layout.help}
           </Link>
           <div className="my-1 border-t border-line" />
           <button role="menuitem" type="button" onClick={onSignOut} className={`${item} text-danger`}>
-            <LogOut size={16} aria-hidden /> Sair
+            <LogOut size={16} aria-hidden /> {t.layout.signOut}
           </button>
         </div>
       )}
@@ -276,24 +286,25 @@ function UserMenu({
 }
 
 function Footer() {
+  const { t } = useI18n();
   return (
     <footer className="relative mt-20 border-t border-line">
       <div className="page-container flex flex-col gap-6 py-10 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
           <Logo />
-          <p className="text-sm text-muted">Eventos que ficam na memória.</p>
+          <p className="text-sm text-muted">{t.layout.footer.tagline}</p>
         </div>
-        <nav aria-label="Rodapé" className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted">
+        <nav aria-label={t.layout.footerNav} className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted">
           <Link to="/how-it-works" className="hover:text-ink">
-            Como funciona
+            {t.layout.footer.howItWorks}
           </Link>
           <Link to="/help" className="hover:text-ink">
-            Central de ajuda
+            {t.layout.footer.helpCenter}
           </Link>
           <Link to="/help?tab=seguranca" className="hover:text-ink">
-            Segurança
+            {t.layout.footer.security}
           </Link>
-          <span className="text-subtle">© {new Date().getFullYear()} Ticketfy · projeto de Rodrigo Lutfy</span>
+          <span className="text-subtle">{t.layout.footer.credits(new Date().getFullYear())}</span>
         </nav>
       </div>
     </footer>

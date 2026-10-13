@@ -14,6 +14,7 @@ import { formatPrice } from "../utils/format";
 import { newIdempotencyKey } from "../utils/idempotency";
 import { isValidId } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useI18n } from "../i18n/LocaleContext";
 
 // Revisão do pedido antes de reservar. Rota privada: sem login, vai para
 // o login e volta para cá com a mesma seleção (ela está na URL).
@@ -22,7 +23,8 @@ import { usePageTitle } from "../hooks/usePageTitle";
 // valor de verdade é a API, na criação do pedido. Se alguém editar a URL
 // ou o JavaScript para "baixar o preço", o pedido sai com o preço do banco.
 export default function CheckoutPage() {
-  usePageTitle("Revisar pedido");
+  const { t, locale } = useI18n();
+  usePageTitle(t.checkout.pageTitle);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -80,14 +82,14 @@ export default function CheckoutPage() {
 
   if (!eventId || items.length === 0) {
     return (
-      <Empty title="Nenhum ingresso selecionado" hint="Escolha os ingressos na página do evento.">
-        <ButtonLink to="/">Ver eventos</ButtonLink>
+      <Empty title={t.checkout.emptyTitle} hint={t.checkout.emptyHint}>
+        <ButtonLink to="/">{t.common.seeEvents}</ButtonLink>
       </Empty>
     );
   }
   if (eventQuery.isLoading || typesQuery.isLoading) return <Loading />;
-  if (eventQuery.error) return <ErrorMessage message={eventQuery.error.message} />;
-  if (typesQuery.error) return <ErrorMessage message={typesQuery.error.message} />;
+  if (eventQuery.error) return <ErrorMessage message={errorMessage(eventQuery.error) ?? ""} />;
+  if (typesQuery.error) return <ErrorMessage message={errorMessage(typesQuery.error) ?? ""} />;
 
   const event = eventQuery.data!;
   const lines = items.map((item) => ({ ...item, type: typesQuery.data!.find((t) => t.id === item.ticketTypeId) }));
@@ -108,13 +110,13 @@ export default function CheckoutPage() {
   return (
     <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1fr_360px] lg:gap-12">
       <div>
-        <BackLink to={`/events/${eventId}`}>Voltar ao evento</BackLink>
-        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-ink">Revise seu pedido</h1>
-        <p className="mt-2 text-muted">Confira os detalhes antes de seguir para o pagamento.</p>
+        <BackLink to={`/events/${eventId}`}>{t.checkout.backToEvent}</BackLink>
+        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-ink">{t.checkout.title}</h1>
+        <p className="mt-2 text-muted">{t.checkout.subtitle}</p>
 
         <p className="mt-6 flex items-start gap-2.5 rounded-xl border border-warning/35 bg-warning/10 px-4 py-3 text-sm text-warning">
           <Timer size={18} className="mt-px shrink-0" aria-hidden />
-          Ao continuar, os ingressos ficam reservados para você por alguns minutos enquanto paga.
+          {t.checkout.holdNotice}
         </p>
 
         <ul className="mt-5 space-y-3">
@@ -124,20 +126,20 @@ export default function CheckoutPage() {
               <span className="absolute -right-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-line bg-canvas" aria-hidden />
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="eyebrow">Ingresso</p>
+                  <p className="eyebrow">{t.checkout.ticket}</p>
                   <p className="mt-2 text-xl font-semibold text-ink">
                     {line.quantity > 1 && <span className="tabular">{line.quantity}× </span>}
-                    {line.type?.name ?? "Lote indisponível"}
+                    {line.type?.name ?? t.checkout.unavailableLot}
                   </p>
                   <p className="mt-1 text-sm text-muted">{event.name}</p>
                 </div>
-                <p className="tabular text-lg font-bold text-accent-text">{line.type ? formatPrice(line.type.price * line.quantity) : "—"}</p>
+                <p className="tabular text-lg font-bold text-accent-text">{line.type ? formatPrice(line.type.price * line.quantity, locale) : t.common.notAvailable}</p>
               </div>
             </li>
           ))}
         </ul>
         <Link to={`/events/${eventId}`} className="mt-4 inline-block text-sm font-semibold text-muted hover:text-ink">
-          Alterar seleção
+          {t.checkout.changeSelection}
         </Link>
       </div>
 
@@ -148,7 +150,7 @@ export default function CheckoutPage() {
           discount={applied ? { code: applied.code, amount: applied.discount, subtotal: applied.subtotal } : null}
           lines={lines.map((l) => ({
             key: l.ticketTypeId,
-            label: l.type?.name ?? "Lote indisponível",
+            label: l.type?.name ?? t.checkout.unavailableLot,
             quantity: l.quantity,
             subtotal: l.type ? l.type.price * l.quantity : null,
           }))}
@@ -159,17 +161,18 @@ export default function CheckoutPage() {
               <p className="flex items-center gap-2 text-sm text-ink">
                 <TicketPercent size={18} className="text-success" aria-hidden />
                 <span>
-                  Cupom <span className="font-semibold">{applied.code}</span> aplicado ({formatDiscount(applied.discountType, applied.discountValue)})
+                  {t.checkout.couponApplied} <span className="font-semibold">{applied.code}</span>{" "}
+                  {t.checkout.couponAppliedSuffix(formatDiscount(applied.discountType, applied.discountValue))}
                 </span>
               </p>
               <Button size="sm" variant="ghost" onClick={removeCoupon} disabled={mutation.isPending}>
-                <X size={15} aria-hidden /> Remover
+                <X size={15} aria-hidden /> {t.checkout.removeCoupon}
               </Button>
             </div>
           ) : (
             <form onSubmit={applyCoupon} noValidate className="flex items-end gap-2">
               <div className="min-w-0 flex-1">
-                <Field label="Cupom" error={couponError ?? undefined}>
+                <Field label={t.checkout.coupon} error={couponError ?? undefined}>
                   <Input
                     value={couponInput}
                     onChange={(e) => setCouponInput(e.target.value)}
@@ -177,21 +180,21 @@ export default function CheckoutPage() {
                     autoComplete="off"
                     autoCapitalize="characters"
                     spellCheck={false}
-                    placeholder="Código do cupom"
+                    placeholder={t.checkout.couponPlaceholder}
                   />
                 </Field>
               </div>
               <Button type="submit" variant="secondary" loading={preview.isPending} disabled={!couponInput.trim() || unavailable}>
-                Aplicar
+                {t.checkout.applyCoupon}
               </Button>
             </form>
           )}
           {applied && couponError && <p className="mt-2 text-sm text-danger">{couponError}</p>}
         </div>
-        {unavailable && <Alert>Algum lote esgotou ou não aceita essa quantidade. Volte e ajuste a seleção.</Alert>}
+        {unavailable && <Alert>{t.checkout.unavailable}</Alert>}
         {orderError && <Alert>{orderError}</Alert>}
         <Button size="lg" className="w-full" disabled={unavailable || preview.isPending} loading={mutation.isPending} onClick={() => mutation.mutate()}>
-          {total === 0 ? "Confirmar pedido" : "Reservar e ir para pagamento"} <ArrowRight size={17} aria-hidden />
+          {total === 0 ? t.checkout.confirmFree : t.checkout.reserve} <ArrowRight size={17} aria-hidden />
         </Button>
       </div>
     </div>

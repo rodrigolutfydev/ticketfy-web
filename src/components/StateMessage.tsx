@@ -3,22 +3,25 @@
 
 import type { ReactNode } from "react";
 import { TriangleAlert } from "lucide-react";
+import { useI18n } from "../i18n/LocaleContext";
 
-export function Loading({ text = "Carregando..." }: { text?: string }) {
+export function Loading({ text }: { text?: string }) {
+  const { t } = useI18n();
   return (
     <div className="flex items-center justify-center gap-3 py-16 text-muted" role="status">
       <span className="h-5 w-5 animate-spin rounded-full border-2 border-line border-t-accent" aria-hidden />
-      {text}
+      {text ?? t.common.loading}
     </div>
   );
 }
 
 export function ErrorMessage({ message, action }: { message: string; action?: ReactNode }) {
+  const { t } = useI18n();
   return (
     <div role="alert" className="flex gap-3 rounded-2xl border border-danger/35 bg-danger/10 px-5 py-4 text-danger">
       <TriangleAlert size={20} className="mt-0.5 shrink-0" aria-hidden />
       <div>
-        <p className="font-semibold">Não deu para carregar</p>
+        <p className="font-semibold">{t.common.loadErrorTitle}</p>
         <p className="text-sm opacity-90">{message}</p>
         {action && <div className="mt-3">{action}</div>}
       </div>

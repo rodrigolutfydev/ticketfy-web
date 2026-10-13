@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Link } from "react-router";
 import { Pause, Play } from "lucide-react";
 import type { EventSummary } from "../api/types";
+import { useI18n } from "../i18n/LocaleContext";
 import EventCover from "./EventCover";
 
 // Tempo de cada foto na vitrine.
@@ -24,6 +25,7 @@ function usePrefersReducedMotion() {
 // Vitrine "palco": só as fotos dos eventos em destaque, trocando sozinhas.
 // Embaixo, um segmento por foto; o da foto atual enche como barra de progresso.
 export default function FeaturedCarousel({ events }: { events: EventSummary[] }) {
+  const { t } = useI18n();
   const [index, setIndex] = useState(0);
   const [hovering, setHovering] = useState(false);
   const [userPaused, setUserPaused] = useState(false);
@@ -62,8 +64,8 @@ export default function FeaturedCarousel({ events }: { events: EventSummary[] })
 
   return (
     <section
-      aria-roledescription="carrossel"
-      aria-label="Eventos em destaque"
+      aria-roledescription={t.carousel.roleDescription}
+      aria-label={t.carousel.label}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       onFocus={() => setHovering(true)}
@@ -83,7 +85,7 @@ export default function FeaturedCarousel({ events }: { events: EventSummary[] })
               to={`/events/${event.id}`}
               draggable={false}
               onClick={(e) => dragged.current && e.preventDefault()}
-              aria-label={`${event.name}: ver evento e ingressos`}
+              aria-label={t.carousel.open(event.name)}
               aria-hidden={!active}
               tabIndex={active ? 0 : -1}
               className={`absolute inset-0 transition-opacity duration-700 ease-out ${active ? "opacity-100" : "pointer-events-none opacity-0"}`}
@@ -96,13 +98,13 @@ export default function FeaturedCarousel({ events }: { events: EventSummary[] })
 
       {count > 1 && (
         <div className="mt-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2" role="group" aria-label="Escolher destaque">
+          <div className="flex items-center gap-2" role="group" aria-label={t.carousel.choose}>
             {events.map((event, i) => (
               <button
                 key={event.id}
                 type="button"
                 onClick={() => setIndex(i)}
-                aria-label={`Destaque ${i + 1} de ${count}: ${event.name}`}
+                aria-label={t.carousel.slide(i + 1, count, event.name)}
                 aria-current={i === index}
                 className="group flex h-6 items-center"
               >
@@ -121,7 +123,7 @@ export default function FeaturedCarousel({ events }: { events: EventSummary[] })
             <button
               type="button"
               onClick={() => setUserPaused((p) => !p)}
-              aria-label={userPaused ? "Continuar passagem automática" : "Pausar passagem automática"}
+              aria-label={userPaused ? t.carousel.play : t.carousel.pause}
               className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-raised hover:text-ink"
             >
               {userPaused ? <Play size={15} /> : <Pause size={15} />}

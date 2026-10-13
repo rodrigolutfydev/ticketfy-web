@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CATALOGS, LOCALES, genericMessage, hasProblemMessage, problemMessage, problemText, type ProblemContext } from "./problems";
+import { LOCALES } from "./locale";
+import { CATALOGS, genericMessage, hasProblemMessage, hasReasonMessage, problemMessage, problemText, type ProblemContext } from "./problems";
 
 const problemTypes = JSON.parse(readFileSync(new URL("./problem-types.json", import.meta.url), "utf8")) as {
   slug: string;
   status: number;
+  reasons: string[];
 }[];
 const slugs = problemTypes.map((type) => type.slug);
 
@@ -23,7 +25,7 @@ describe("problem-types.json", () => {
   });
 });
 
-describe.each(LOCALES)("messages for %s", (locale) => {
+describe.each([...LOCALES])("messages for %s", (locale) => {
   it("has a message for every API problem type", () => {
     const missing = slugs.filter((slug) => !hasProblemMessage(slug, locale));
     expect(missing).toEqual([]);
@@ -38,6 +40,31 @@ describe.each(LOCALES)("messages for %s", (locale) => {
     for (const [scope, messages] of Object.entries(CATALOGS[locale].scopes)) {
       const unknown = Object.keys(messages).filter((slug) => !slugs.includes(slug));
       expect(unknown, scope).toEqual([]);
+    }
+  });
+
+  it("has a message for every structured reason of the API", () => {
+    const missing = problemTypes.flatMap(({ slug, reasons }) =>
+      reasons.filter((reason) => !hasReasonMessage(slug, reason, locale)).map((reason) => `${slug}:${reason}`),
+    );
+    expect(missing).toEqual([]);
+  });
+
+  it("has no message for a reason the API does not have", () => {
+    const extra = Object.entries(CATALOGS[locale].reasons).flatMap(([slug, reasons]) => {
+      const known = problemTypes.find((type) => type.slug === slug)?.reasons ?? [];
+      return Object.keys(reasons).filter((reason) => !known.includes(reason)).map((reason) => `${slug}:${reason}`);
+    });
+    expect(extra).toEqual([]);
+  });
+
+  it("renders a non-empty text for every reason, with or without extra data", () => {
+    for (const { slug, status, reasons } of problemTypes) {
+      for (const reason of reasons) {
+        const text = problemMessage(slug, context({ status, properties: { reason } }), undefined, locale);
+        expect(text, `${slug}:${reason}`).toBeTruthy();
+        expect(text, `${slug}:${reason}`).not.toMatch(/undefined|NaN|null/);
+      }
     }
   });
 
@@ -98,9 +125,28 @@ describe("messages with extra data", () => {
   it("uses the scope message when a screen needs a specific text", () => {
     expect(problemMessage("ticket-type-not-found", context(), "checkout-coupon")).toBe("Algum ingresso do pedido não está mais à venda.");
     expect(problemMessage("ticket-type-not-found", context())).toBe("Este lote não está mais à venda.");
-    expect(problemMessage("invalid-coupon-settings", context({ detail: "maxUses cannot be lower than usesCount" }), "coupon-management")).toBe(
-      "O limite de usos não pode ficar abaixo dos usos já feitos.",
+  });
+
+  it("uses the structured reason instead of the English detail", () => {
+    const detail = "maxUses cannot be lower than the 2 uses already made";
+    expect(problemMessage("invalid-coupon-settings", context({ detail, properties: { reason: "max-uses-below-used", usesCount: 2 } }), "coupon-management")).toBe(
+      "O limite de usos não pode ficar abaixo dos 2 usos já feitos.",
     );
+    expect(problemMessage("invalid-coupon-settings", context({ detail: "endsAt must be after startsAt", properties: { reason: "percent-out-of-range" } }))).toBe(
+      "O percentual precisa estar entre 0,01 e 100.",
+    );
+    expect(problemMessage("invalid-ticket-type-quantity", context({ properties: { reason: "below-sold", quantitySold: 37 } }), "lot")).toBe(
+      "Abaixo dos 37 já vendidos ou reservados.",
+    );
+    expect(problemMessage("invalid-coupon-settings", context({ properties: { reason: "something-new" } }))).toBe("Confira as configurações do cupom.");
+  });
+
+  it("writes the messages in English", () => {
+    expect(problemMessage("invalid-coupon-settings", context({ properties: { reason: "max-uses-below-used", usesCount: 1 } }), undefined, "en")).toBe(
+      "The usage limit can't be lower than the 1 use already made.",
+    );
+    expect(problemMessage("payout-below-minimum", context({ properties: { minAmount: 20 } }), undefined, "en")).toBe("The minimum withdrawal is R$20.00.");
+    expect(genericMessage(418, "abc-123", "en")).toBe("The action couldn't be completed (error 418). Error code: abc-123");
   });
 });
 

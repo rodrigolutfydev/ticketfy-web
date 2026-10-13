@@ -1,5 +1,5 @@
 import type { EventCategory } from "../api/types";
-import { getLocale, type Locale } from "./problems";
+import { getLocale, type Locale } from "./locale";
 
 export const EVENT_CATEGORIES: readonly EventCategory[] = [
   "MUSIC",
@@ -28,6 +28,19 @@ export const CATEGORY_LABELS: Record<Locale, Record<EventCategory, string>> = {
     FOOD: "Gastronomia",
     KIDS: "Infantil",
     OTHER: "Outros",
+  },
+  en: {
+    MUSIC: "Music",
+    THEATER: "Theater",
+    COMEDY: "Comedy",
+    PARTIES: "Parties",
+    SPORTS: "Sports",
+    COURSES: "Courses and workshops",
+    TALKS: "Talks and conferences",
+    ARTS: "Art and exhibitions",
+    FOOD: "Food and drink",
+    KIDS: "Kids",
+    OTHER: "Other",
   },
 };
 

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "../api/client";
 import { couponErrorMessage, couponManagementError, couponStatus, formatDiscount, isCouponError, normalizeCouponCode } from "./coupon";
 
-const problem = (status: number, type: string, detail = "x", retryAfter: number | null = null) =>
-  new ApiError(status, detail, [], retryAfter, type, null, detail);
+const problem = (status: number, type: string, detail = "x", retryAfter: number | null = null, properties: Record<string, unknown> = {}) =>
+  new ApiError(status, detail, [], retryAfter, type, null, detail, properties);
 
 describe("normalizeCouponCode", () => {
   it("trims and uppercases", () => {
@@ -48,12 +48,19 @@ describe("couponManagementError", () => {
   it("maps each organizer problem type", () => {
     expect(couponManagementError(problem(409, "coupon-code-already-exists"))).toContain("Já existe um cupom");
     expect(couponManagementError(problem(409, "coupon-already-used"))).toContain("só desativado");
-    expect(couponManagementError(problem(400, "invalid-coupon-settings", "maxUses cannot be lower than the 2 uses already made"))).toContain(
-      "limite de usos",
+    expect(couponManagementError(problem(409, "coupon-already-used", "x", null, { reason: "delete-blocked" }))).toContain("pode desativá-lo");
+    expect(couponManagementError(problem(400, "invalid-coupon-settings", "x", null, { reason: "max-uses-below-used", usesCount: 2 }))).toBe(
+      "O limite de usos não pode ficar abaixo dos 2 usos já feitos.",
     );
-    expect(couponManagementError(problem(400, "invalid-coupon-settings", "endsAt must be after startsAt"))).toContain("fim da validade");
-    expect(couponManagementError(problem(400, "invalid-coupon-settings", "Percentage discounts must be between 0.01 and 100"))).toContain(
-      "Percentual",
+    expect(couponManagementError(problem(400, "invalid-coupon-settings", "x", null, { reason: "ends-before-starts" }))).toContain("fim da validade");
+    expect(couponManagementError(problem(400, "invalid-coupon-settings", "x", null, { reason: "percent-out-of-range" }))).toContain(
+      "percentual",
+    );
+  });
+
+  it("no longer reads the English detail", () => {
+    expect(couponManagementError(problem(400, "invalid-coupon-settings", "maxUses cannot be lower than the 2 uses already made"))).toBe(
+      "Confira as configurações do cupom.",
     );
   });
 });
