@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { fieldError, hasUnmappedError } from "../api/client";
-import type { EventDetails, EventInput } from "../api/types";
+import type { EventCategory, EventDetails, EventInput } from "../api/types";
+import { EVENT_CATEGORIES, categoryLabel, isEventCategory } from "../i18n/categories";
 import { fromInputDateTime, toInputDateTime, UFS } from "../utils/format";
 import { safeImageUrl } from "../utils/security";
 import EventCover from "./EventCover";
@@ -15,7 +16,7 @@ interface Props {
 }
 
 const DESCRIPTION_MAX = 2000;
-const API_FIELDS = ["imageUrl", "startsAt", "endsAt"] as const;
+const API_FIELDS = ["imageUrl", "startsAt", "endsAt", "category"] as const;
 
 // Formulário compartilhado por "criar evento" e "editar evento".
 //
@@ -38,6 +39,7 @@ export default function EventForm({ initial, submitLabel, loading, error, onSubm
     state: initial?.state ?? "",
     startsAt: toInputDateTime(initial?.startsAt),
     endsAt: toInputDateTime(initial?.endsAt),
+    category: initial?.category ?? "",
   });
   const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
 
@@ -51,6 +53,9 @@ export default function EventForm({ initial, submitLabel, loading, error, onSubm
     const found: typeof errors = {};
     if (form.imageUrl.trim() && !safeImageUrl(form.imageUrl)) {
       found.imageUrl = "Use um endereço que comece com https://";
+    }
+    if (!isEventCategory(form.category)) {
+      found.category = "Escolha uma categoria.";
     }
     if (form.endsAt && form.startsAt && form.endsAt <= form.startsAt) {
       found.endsAt = "O fim precisa ser depois do início.";
@@ -76,6 +81,7 @@ export default function EventForm({ initial, submitLabel, loading, error, onSubm
       endsAt: form.endsAt ? fromInputDateTime(form.endsAt) : null,
       // Campo vazio manda "" (e não null): no PUT, null mantém a foto antiga e "" remove.
       imageUrl: form.imageUrl.trim() ? safeImageUrl(form.imageUrl) : "",
+      category: form.category as EventCategory,
     });
   }
 
@@ -86,6 +92,18 @@ export default function EventForm({ initial, submitLabel, loading, error, onSubm
       <Section title="Informações" description="O que as pessoas veem primeiro na página do evento.">
         <Field label="Nome do evento">
           <Input required maxLength={150} value={form.name} onChange={set("name")} placeholder="Ex.: Noite de Jazz na Praia" />
+        </Field>
+        <Field label="Categoria" hint="Ajuda o público a encontrar o evento na vitrine." error={errors.category ?? fieldError(error, "category")}>
+          <Select required value={form.category} onChange={set("category")}>
+            <option value="" disabled>
+              Escolha uma categoria
+            </option>
+            {EVENT_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {categoryLabel(category)}
+              </option>
+            ))}
+          </Select>
         </Field>
         <Field label="Descrição" hint={`${form.description.length}/${DESCRIPTION_MAX} caracteres`}>
           <Textarea rows={5} maxLength={DESCRIPTION_MAX} value={form.description} onChange={set("description")} placeholder="Atrações, classificação, o que levar..." />

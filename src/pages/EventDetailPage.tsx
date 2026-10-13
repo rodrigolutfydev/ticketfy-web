@@ -1,7 +1,7 @@
 // Página pública do evento: capa, informações em abas e escolha de ingressos.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CalendarDays, Check, Clock, ExternalLink, Info, Maximize2, MapPin, Minus, Plus, Share2, ShieldCheck, Timer, X } from "lucide-react";
 import { getEvent, listTicketTypes } from "../api/endpoints";
@@ -16,6 +16,7 @@ import FeaturedToggle from "../components/FeaturedToggle";
 import { encodeItems } from "../utils/cart";
 import { formatDate, formatPrice, formatTime, relativeDay } from "../utils/format";
 import { salesPanel } from "../utils/sales";
+import { categoryLabel } from "../i18n/categories";
 import { isValidId, mapsUrl, safeImageUrl } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
 import NotFoundPage from "./NotFoundPage";
@@ -94,7 +95,17 @@ export default function EventDetailPage() {
           </div>
           {photoOpen && photo && <PhotoViewer src={photo} name={event.name} onClose={() => setPhotoOpen(false)} />}
 
-          <p className="eyebrow mt-10">{relativeDay(event.startsAt)}</p>
+          <div className="mt-10 flex flex-wrap items-center gap-3">
+            <p className="eyebrow">{relativeDay(event.startsAt)}</p>
+            {event.category && (
+              <Link
+                to={`/?category=${event.category}#eventos`}
+                className="rounded-md bg-raised px-2 py-1 text-xs font-semibold text-muted hover:text-ink"
+              >
+                {categoryLabel(event.category)}
+              </Link>
+            )}
+          </div>
           <h1 className="mt-3 break-words text-5xl font-semibold leading-[0.98] tracking-[-0.035em] text-ink sm:text-6xl lg:text-7xl">{event.name}</h1>
 
           <dl className="mt-10 grid gap-6 border-y border-line py-7 sm:grid-cols-3">

@@ -1,6 +1,6 @@
 // Página inicial: busca de eventos e vitrine.
 //
-// Os filtros (q, city, page) ficam na URL (?q=jazz&city=Rio). Vantagens:
+// Os filtros (q, city, category, page) ficam na URL (?q=jazz&city=Rio&category=MUSIC). Vantagens:
 // o botão "voltar" do navegador desfaz uma busca, dá para compartilhar o
 // link de uma busca e recarregar a página não perde nada.
 
@@ -8,7 +8,10 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import { useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CalendarSearch, MapPin, Search, X } from "lucide-react";
-import { listEvents } from "../api/endpoints";
+import { listEventCategories, listEvents } from "../api/endpoints";
+import type { EventCategory, EventCategoryCount } from "../api/types";
+import { categoryLabel, parseCategoryParam } from "../i18n/categories";
+import { showcaseSearchParams, visibleCategoryFilters } from "../utils/categoryFilters";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
 import { safeImageUrl } from "../utils/security";
@@ -26,9 +29,10 @@ export default function EventsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const q = searchParams.get("q") ?? "";
   const city = searchParams.get("city") ?? "";
+  const category = parseCategoryParam(searchParams.get("category"));
   // Number("abc") é NaN: qualquer valor estranho em ?page= vira 0.
   const page = Math.max(0, Number.parseInt(searchParams.get("page") ?? "0", 10) || 0);
-  const filtering = Boolean(q || city);
+  const filtering = Boolean(q || city || category);
 
   // Estado dos campos (o que está sendo digitado) é separado do filtro
   // aplicado (o que está na URL): a busca só roda ao apertar Enter.
@@ -43,19 +47,22 @@ export default function EventsPage() {
   // useQuery chama a API e guarda o resultado em cache pela queryKey.
   // Mudou a chave (outra busca, outra página) = nova chamada.
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["events", { q, city, page, soldOut: false }],
-    queryFn: () => listEvents({ q, city, page, soldOut: false }),
+    queryKey: ["events", { q, city, category, page, soldOut: false }],
+    queryFn: () => listEvents({ q, city, category: category ?? undefined, page, soldOut: false }),
     placeholderData: (previous) => previous, // mantém a lista antiga enquanto a nova carrega
   });
 
   function applyFilters(e: FormEvent) {
     e.preventDefault();
-    const params: Record<string, string> = {};
-    if (qInput.trim()) params.q = qInput.trim().slice(0, 100);
-    if (cityInput.trim()) params.city = cityInput.trim().slice(0, 100);
-    setSearchParams(params);
+    setSearchParams(showcaseSearchParams({ q: qInput, city: cityInput, category }));
     document.getElementById("eventos")?.scrollIntoView({ behavior: "smooth" });
   }
+
+  function selectCategory(next: EventCategory | null) {
+    setSearchParams(showcaseSearchParams({ q, city, category: next }));
+  }
+
+  const categoriesQuery = useQuery({ queryKey: ["event-categories"], queryFn: listEventCategories });
 
   function goToPage(newPage: number) {
     setSearchParams({ ...Object.fromEntries(searchParams), page: String(newPage) });
@@ -142,6 +149,10 @@ export default function EventsPage() {
           }
         />
 
+        {categoriesQuery.data && (
+          <CategoryFilter counts={categoriesQuery.data} selected={category} onSelect={selectCategory} />
+        )}
+
         {isLoading && (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }, (_, i) => (
@@ -154,7 +165,7 @@ export default function EventsPage() {
           <Empty
             icon={<CalendarSearch size={22} />}
             title={filtering ? "Nenhum evento com esses filtros" : "Nenhum evento à venda ainda"}
-            hint={filtering ? "Tente outro nome ou outra cidade." : "Quando um organizador publicar um evento, ele aparece aqui."}
+            hint={filtering ? "Tente outro nome, outra cidade ou outra categoria." : "Quando um organizador publicar um evento, ele aparece aqui."}
           >
             {!filtering && (
               <ButtonLink to="/organizer/events/new" variant="secondary">
@@ -191,6 +202,41 @@ function SectionHeading({ id, title, subtitle, action }: { id?: string; title: s
         {subtitle && <p className="mt-2 pl-[1.1rem] text-sm text-muted">{subtitle}</p>}
       </div>
       {action}
+    </div>
+  );
+}
+
+function CategoryFilter({
+  counts,
+  selected,
+  onSelect,
+}: {
+  counts: EventCategoryCount[];
+  selected: EventCategory | null;
+  onSelect: (category: EventCategory | null) => void;
+}) {
+  const visible = visibleCategoryFilters(counts, selected);
+  if (visible.length === 0) return null;
+  const chip = (active: boolean) =>
+    `shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+      active ? "border-accent bg-accent/12 text-accent-text" : "border-line text-muted hover:border-line-strong hover:text-ink"
+    }`;
+  return (
+    <div role="group" aria-label="Filtrar por categoria" className="-mx-1 mb-7 flex gap-2 overflow-x-auto px-1 pb-1">
+      <button type="button" className={chip(selected === null)} aria-pressed={selected === null} onClick={() => onSelect(null)}>
+        Todas
+      </button>
+      {visible.map((entry) => (
+        <button
+          key={entry.category}
+          type="button"
+          className={chip(selected === entry.category)}
+          aria-pressed={selected === entry.category}
+          onClick={() => onSelect(selected === entry.category ? null : entry.category)}
+        >
+          {categoryLabel(entry.category)} <span className="tabular font-normal opacity-75">{entry.events}</span>
+        </button>
+      ))}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { ArrowRight, MapPin } from "lucide-react";
 import type { EventSummary } from "../api/types";
+import { categoryLabel } from "../i18n/categories";
 import { eventStamp, formatDate, formatPrice } from "../utils/format";
 import EventCover from "./EventCover";
 import { Skeleton } from "./ui";
@@ -19,6 +20,11 @@ export default function EventCard({ event }: { event: EventSummary }) {
         <EventCover name={event.name} startsAt={event.startsAt} imageUrl={event.imageUrl} className="transition-transform duration-500 group-hover:scale-[1.03]" />
         {event.featured && (
           <span className="absolute left-3 top-3 rounded-md bg-accent px-2 py-1 text-[11px] font-bold text-accent-ink">Em destaque</span>
+        )}
+        {event.category && (
+          <span className="absolute right-3 top-3 rounded-md bg-black/60 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur">
+            {categoryLabel(event.category)}
+          </span>
         )}
       </div>
 

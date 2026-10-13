@@ -5,7 +5,7 @@
 import { ApiError, api, apiDownload, authApi } from "./client";
 import { participantsQuery } from "../utils/participants";
 import type {
-  EventCancellationResult, EventDashboard, EventDetails, EventInput, EventOrderRow, EventSummary, OrderDetails, OrderStatus, OrderSummary,
+  EventCancellationResult, EventCategory, EventCategoryCount, EventDashboard, EventDetails, EventInput, EventOrderRow, EventSummary, OrderDetails, OrderStatus, OrderSummary,
   AdminPayout, AdminUser, AuditEntry, AuditTargetType, Balance, Coupon, CouponInput, CouponPreview, CouponSettings, LedgerEntry, OrganizerDashboard, OrganizerPayoutStatus, Page, Payout,
   Participant, ParticipantFilters, PayoutAccount, PayoutAccountInput, PaymentDetails, TicketDetails, TicketTransferResult, TicketTypeDetails, TicketTypeInput, TicketTypeSummary,
   TicketTypeUpdate, TokenResponse, UserDetails, UserProfile,
@@ -30,16 +30,18 @@ export const updateAvatar = (avatarUrl: string) => api.patch<UserProfile>("/user
 
 // Eventos
 export function listEvents({
-  q, city, featured, soldOut, page = 0, size = 12,
-}: { q?: string; city?: string; featured?: boolean; soldOut?: boolean; page?: number; size?: number }) {
+  q, city, category, featured, soldOut, page = 0, size = 12,
+}: { q?: string; city?: string; category?: EventCategory; featured?: boolean; soldOut?: boolean; page?: number; size?: number }) {
   // URLSearchParams codifica os filtros digitados pelo usuário.
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   if (q) params.set("q", q.slice(0, 100));
   if (city) params.set("city", city.slice(0, 100));
+  if (category) params.set("category", category);
   if (featured !== undefined) params.set("featured", String(featured));
   if (soldOut !== undefined) params.set("soldOut", String(soldOut));
   return api.get<Page<EventSummary>>(`/events?${params}`);
 }
+export const listEventCategories = () => api.get<EventCategoryCount[]>("/events/categories");
 export const listMyEvents = (page = 0, size = 12) =>
   api.get<Page<EventSummary>>(`/events/mine?page=${page}&size=${size}`);
 export const getEvent = (id: string) => api.get<EventDetails>(`/events/${seg(id)}`);

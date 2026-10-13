@@ -31,6 +31,24 @@ export interface UserProfile {
   avatarUrl?: string | null;
 }
 
+export type EventCategory =
+  | "MUSIC"
+  | "THEATER"
+  | "COMEDY"
+  | "PARTIES"
+  | "SPORTS"
+  | "COURSES"
+  | "TALKS"
+  | "ARTS"
+  | "FOOD"
+  | "KIDS"
+  | "OTHER";
+
+export interface EventCategoryCount {
+  category: EventCategory;
+  events: number;
+}
+
 export interface EventSummary {
   id: string;
   name: string;
@@ -44,6 +62,7 @@ export interface EventSummary {
   minPrice: number | null;
   soldOut: boolean;
   cancelledAt?: string | null;
+  category: EventCategory;
 }
 
 export interface EventDetails extends Omit<EventSummary, "minPrice" | "soldOut"> {
@@ -77,6 +96,7 @@ export interface EventInput {
   startsAt: string;
   endsAt: string | null;
   imageUrl: string | null;
+  category: EventCategory;
 }
 
 // Rota pública de lotes. A API não revela quantos ingressos restam, a não
