@@ -27,6 +27,9 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   ACCOUNT_DELETED: "Conta excluída",
   ACCOUNT_SUSPENDED: "Conta suspensa",
   ACCOUNT_REACTIVATED: "Conta reativada",
+  TICKET_TYPE_DEACTIVATED: "Lote desativado",
+  TICKET_TYPE_REACTIVATED: "Lote reativado",
+  PARTICIPANTS_EXPORTED: "Lista de participantes exportada",
 };
 
 export const AUDIT_TARGET_LABELS: Record<AuditTargetType, string> = {

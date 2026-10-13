@@ -14,6 +14,7 @@ import PayoutHistory from "./finance/PayoutHistory";
 import { payoutBlockedReason } from "./finance/payoutMeta";
 import { formatDate, formatPrice, formatTime, plural, shortId } from "../../utils/format";
 import { usePageTitle } from "../../hooks/usePageTitle";
+import { saveBlob } from "../../utils/download";
 
 const ENTRY_LABELS: Record<LedgerEntryType, string> = {
   SALE_CREDIT: "Venda",
@@ -251,14 +252,7 @@ function ExportButton({ eventId, onError }: { eventId?: string; onError: (messag
     onError(null);
     try {
       const { blob, filename } = await downloadLedgerCsv({ eventId });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename ?? "extrato-ticketfy.csv";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      saveBlob(blob, filename ?? "extrato-ticketfy.csv");
     } catch (error) {
       onError(error instanceof Error ? error.message : "Não foi possível exportar o extrato.");
     } finally {

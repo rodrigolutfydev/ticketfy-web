@@ -3,10 +3,11 @@
 // só este arquivo muda.
 
 import { ApiError, api, apiDownload, authApi } from "./client";
+import { participantsQuery } from "../utils/participants";
 import type {
   EventCancellationResult, EventDashboard, EventDetails, EventInput, EventOrderRow, EventSummary, OrderDetails, OrderStatus, OrderSummary,
   AdminPayout, AdminUser, AuditEntry, AuditTargetType, Balance, Coupon, CouponInput, CouponPreview, CouponSettings, LedgerEntry, OrganizerDashboard, OrganizerPayoutStatus, Page, Payout,
-  PayoutAccount, PayoutAccountInput, PaymentDetails, TicketDetails, TicketTransferResult, TicketTypeDetails, TicketTypeInput, TicketTypeSummary,
+  Participant, ParticipantFilters, PayoutAccount, PayoutAccountInput, PaymentDetails, TicketDetails, TicketTransferResult, TicketTypeDetails, TicketTypeInput, TicketTypeSummary,
   TicketTypeUpdate, TokenResponse, UserDetails, UserProfile,
 } from "./types";
 
@@ -61,6 +62,14 @@ export const listManagedTicketTypes = (eventId: string) =>
   api.get<TicketTypeDetails[]>(`/events/${seg(eventId)}/ticket-types/manage`);
 export const updateTicketType = (eventId: string, ticketTypeId: string, data: TicketTypeUpdate) =>
   api.patch<TicketTypeDetails>(`/events/${seg(eventId)}/ticket-types/${seg(ticketTypeId)}`, data);
+export const deactivateTicketType = (eventId: string, ticketTypeId: string) =>
+  api.post<TicketTypeDetails>(`/events/${seg(eventId)}/ticket-types/${seg(ticketTypeId)}/deactivate`);
+export const reactivateTicketType = (eventId: string, ticketTypeId: string) =>
+  api.post<TicketTypeDetails>(`/events/${seg(eventId)}/ticket-types/${seg(ticketTypeId)}/reactivate`);
+export const listParticipants = (eventId: string, filters: ParticipantFilters) =>
+  api.get<Page<Participant>>(`/events/${seg(eventId)}/participants${participantsQuery(filters)}`);
+export const downloadParticipantsCsv = (eventId: string, filters: ParticipantFilters) =>
+  apiDownload(`/events/${seg(eventId)}/participants.csv${participantsQuery({ ...filters, page: undefined, size: undefined })}`);
 
 export const listCoupons = (eventId: string) => api.get<Coupon[]>(`/events/${seg(eventId)}/coupons`);
 export const createCoupon = (eventId: string, data: CouponInput) => api.post<Coupon>(`/events/${seg(eventId)}/coupons`, data);

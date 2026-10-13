@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChartColumn, ExternalLink, Layers, Pencil, Plus, Receipt, Settings, TicketPercent, X } from "lucide-react";
+import { ChartColumn, ExternalLink, Layers, Pencil, Plus, Receipt, Settings, TicketPercent, Users, X } from "lucide-react";
 import { ApiError, errorMessage, fieldError, hasUnmappedError } from "../../api/client";
-import { cancelEvent, createTicketType, deleteEvent, getEvent, getEventDashboard, listManagedTicketTypes, updateTicketType } from "../../api/endpoints";
+import {
+  cancelEvent, createTicketType, deactivateTicketType, deleteEvent, getEvent, getEventDashboard, listManagedTicketTypes, reactivateTicketType,
+  updateTicketType,
+} from "../../api/endpoints";
 import type { EventCancellationResult, EventDetails, TicketTypeDetails, TicketTypeUpdate } from "../../api/types";
 import { ConfirmButton } from "../../components/ConfirmDialog";
 import EventCover from "../../components/EventCover";
@@ -13,15 +16,17 @@ import { Alert, BackLink, Button, ButtonLink, Card, Field, Input, Textarea } fro
 import FeaturedToggle from "../../components/FeaturedToggle";
 import CouponsTab from "./CouponsTab";
 import EventOrders from "./dashboard/EventOrders";
+import EventParticipants from "./dashboard/EventParticipants";
 import EventOverview from "./dashboard/EventOverview";
 import { eventStamp, formatInt, formatPrice, formatShortDate, isPast, plural } from "../../utils/format";
 import { maxPerBuyerChange, suggestedMaxPerBuyer } from "../../utils/lots";
+import { lotToggleCopy } from "../../utils/participants";
 import { isValidId } from "../../utils/security";
 import NotFoundPage from "../NotFoundPage";
 import OwnershipGuard from "./OwnershipGuard";
 import { usePageTitle } from "../../hooks/usePageTitle";
 
-const TABS = ["visao", "lotes", "cupons", "pedidos", "configuracoes"] as const;
+const TABS = ["visao", "lotes", "cupons", "pedidos", "participantes", "configuracoes"] as const;
 
 // Painel de um evento do organizador, dividido em abas:
 // visão geral, lotes de ingresso e configurações (exclusão).
@@ -82,6 +87,7 @@ export default function OrganizerEventManagePage() {
             { key: "lotes", label: "Lotes", icon: <Layers size={16} /> },
             { key: "cupons", label: "Cupons", icon: <TicketPercent size={16} /> },
             { key: "pedidos", label: "Pedidos", icon: <Receipt size={16} /> },
+            { key: "participantes", label: "Participantes", icon: <Users size={16} /> },
             { key: "configuracoes", label: "Configurações", icon: <Settings size={16} /> },
           ]}
         />
@@ -90,6 +96,7 @@ export default function OrganizerEventManagePage() {
           {tab === "lotes" && <TicketTypesTab eventId={id} />}
           {tab === "cupons" && <CouponsTab eventId={id} cancelled={!!event.cancelledAt} />}
           {tab === "pedidos" && <EventOrders eventId={id} />}
+          {tab === "participantes" && <EventParticipants eventId={id} />}
           {tab === "configuracoes" && <SettingsTab event={event} />}
         </TabPanel>
       </OwnershipGuard>
@@ -176,7 +183,7 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
         )}
         {lots.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
+            <table className="w-full min-w-[880px] text-sm">
               <thead>
                 <tr className="border-b border-line text-left text-xs text-muted">
                   <th className="px-5 py-3 font-medium">Lote</th>
@@ -184,6 +191,7 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
                   <th className="px-3 py-3 font-medium">Vendidos + reservados</th>
                   <th className="px-3 py-3 text-right font-medium">Máx. por pedido</th>
                   <th className="px-3 py-3 text-right font-medium">Máx. por comprador</th>
+                  <th className="px-3 py-3 font-medium">Situação</th>
                   <th className="px-5 py-3">
                     <span className="sr-only">Ações</span>
                   </th>
@@ -191,7 +199,7 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
               </thead>
               <tbody>
                 {lots.map((lot) => (
-                  <tr key={lot.id} className={`border-b border-line last:border-0 ${lot.active ? "" : "opacity-55"}`}>
+                  <tr key={lot.id} className="border-b border-line last:border-0">
                     <td className="px-5 py-3.5">
                       <p className="font-semibold text-ink">{lot.name}</p>
                       {lot.description && <p className="line-clamp-1 text-xs text-muted">{lot.description}</p>}
@@ -210,10 +218,22 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
                     </td>
                     <td className="tabular px-3 py-3.5 text-right text-muted">{lot.maxPerOrder ?? "—"}</td>
                     <td className="tabular px-3 py-3.5 text-right text-muted">{lot.maxPerBuyer ?? "—"}</td>
-                    <td className="px-5 py-3.5 text-right">
-                      <Button size="sm" variant="ghost" onClick={() => setEditing(lot)}>
-                        <Pencil size={15} aria-hidden /> Editar
-                      </Button>
+                    <td className="px-3 py-3.5">
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${
+                          lot.active ? "bg-success/12 text-success" : "bg-raised text-muted"
+                        }`}
+                      >
+                        {lot.active ? "À venda" : "Desativado"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-start justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => setEditing(lot)}>
+                          <Pencil size={15} aria-hidden /> Editar
+                        </Button>
+                        <LotToggle eventId={eventId} lot={lot} lots={lots} />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -259,6 +279,35 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
         </form>
       </Card>
       )}
+    </div>
+  );
+}
+
+function LotToggle({ eventId, lot, lots }: { eventId: string; lot: TicketTypeDetails; lots: TicketTypeDetails[] }) {
+  const queryClient = useQueryClient();
+  const copy = lotToggleCopy(lot, lots);
+  const mutation = useMutation({
+    mutationFn: () => (lot.active ? deactivateTicketType(eventId, lot.id) : reactivateTicketType(eventId, lot.id)),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket-types-manage", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["ticket-types", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["event-dashboard", eventId] });
+    },
+  });
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <ConfirmButton
+        variant={lot.active ? "danger" : "secondary"}
+        title={copy.title}
+        description={copy.description}
+        confirmLabel={copy.confirmLabel}
+        loading={mutation.isPending}
+        onConfirm={() => mutation.mutate()}
+      >
+        {copy.confirmLabel}
+      </ConfirmButton>
+      {mutation.error && <p className="max-w-[16rem] text-right text-xs text-danger">{mutation.error.message}</p>}
     </div>
   );
 }

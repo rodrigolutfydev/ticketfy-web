@@ -64,6 +64,7 @@ const PT_BR: Catalog = {
     "invalid-parameter": "Algum filtro ou valor informado é inválido.",
     "ticket-type-not-found": "Este lote não está mais à venda.",
     "invalid-ticket-type-quantity": "A quantidade do lote não pode ficar abaixo do que já foi vendido ou reservado.",
+    "invalid-ticket-type-state": "A situação do lote mudou. Atualize a página.",
     "ticket-type-name-already-exists": "Já existe um lote com esse nome neste evento.",
     "invalid-order-state": "Este pedido não permite mais esta ação. Atualize a página para ver a situação atual.",
     "insufficient-stock": "Não há mais ingressos suficientes neste lote.",

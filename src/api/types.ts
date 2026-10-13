@@ -107,6 +107,25 @@ export interface TicketTypeDetails {
 }
 
 // Edição parcial: só os campos enviados mudam.
+export interface Participant {
+  ticketId: string;
+  ticketTypeId: string;
+  ticketTypeName: string;
+  status: TicketStatus;
+  checkedInAt: string | null;
+  transferred: boolean;
+  holderName: string;
+  codeSuffix: string;
+}
+
+export interface ParticipantFilters {
+  ticketTypeId?: string;
+  status?: TicketStatus;
+  q?: string;
+  page?: number;
+  size?: number;
+}
+
 export interface TicketTypeUpdate {
   name?: string;
   description?: string; // "" remove a descrição
@@ -449,7 +468,10 @@ export type AuditAction =
   | "DATA_EXPORTED"
   | "ACCOUNT_DELETED"
   | "ACCOUNT_SUSPENDED"
-  | "ACCOUNT_REACTIVATED";
+  | "ACCOUNT_REACTIVATED"
+  | "TICKET_TYPE_DEACTIVATED"
+  | "TICKET_TYPE_REACTIVATED"
+  | "PARTICIPANTS_EXPORTED";
 
 export interface AuditEntry {
   id: string;
