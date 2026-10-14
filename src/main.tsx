@@ -13,6 +13,8 @@ import { BrowserRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ApiError } from "./api/client";
 import { AuthProvider } from "./auth/AuthContext";
+import ErrorBoundary from "./components/ErrorBoundary";
+import ServerWakeNotice from "./components/ServerWakeNotice";
 import { LocaleProvider } from "./i18n/LocaleContext";
 import { detectLocale, setLocale } from "./i18n/locale";
 import { ThemeProvider } from "./theme/ThemeContext";
@@ -35,16 +37,19 @@ setLocale(detectLocale());
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <LocaleProvider>
-          <ThemeProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </ThemeProvider>
-        </LocaleProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary scope="app">
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <LocaleProvider>
+            <ThemeProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+              <ServerWakeNotice />
+            </ThemeProvider>
+          </LocaleProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>
 );

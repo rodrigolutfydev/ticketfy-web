@@ -10,9 +10,11 @@ import { useI18n } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import Avatar from "./Avatar";
 import CheckoutSteps from "./CheckoutSteps";
+import ErrorBoundary from "./ErrorBoundary";
 import LanguageSwitcher from "./LanguageSwitcher";
 import Logo from "./Logo";
 import { ButtonLink } from "./ui";
+import { PRIVACY_CONTACT_EMAIL, privacyContactHref } from "../utils/contact";
 
 export default function Layout() {
   const { isAuthenticated, isChecking, signOut } = useAuth();
@@ -23,6 +25,11 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const checkoutStep = getCheckoutStep(location.pathname);
   const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
+  const page = (
+    <ErrorBoundary scope="page" resetKey={location.pathname}>
+      <Outlet />
+    </ErrorBoundary>
+  );
 
   // Ao trocar de tela: fecha o menu do celular e volta ao topo.
   useEffect(() => {
@@ -39,9 +46,7 @@ export default function Layout() {
   // Telas de entrada (login/cadastro) têm página própria, sem cabeçalho.
   if (isAuthPage) {
     return (
-      <div className="min-h-screen">
-        <Outlet />
-      </div>
+      <div className="min-h-screen">{page}</div>
     );
   }
 
@@ -66,7 +71,7 @@ export default function Layout() {
           </div>
         </header>
         <main id="conteudo" className="page-container flex-1 py-8 sm:py-12">
-          <Outlet />
+          {page}
         </main>
       </div>
     );
@@ -181,7 +186,7 @@ export default function Layout() {
       </header>
 
       <main id="conteudo" className="page-container relative flex-1 py-8 sm:py-10">
-        <Outlet />
+        {page}
       </main>
 
       <Footer />
@@ -310,6 +315,9 @@ function Footer() {
           <Link to="/privacy" className="hover:text-ink">
             {t.legal.footerPrivacy}
           </Link>
+          <a href={privacyContactHref} className="hover:text-ink">
+            {t.legal.footerContact}: {PRIVACY_CONTACT_EMAIL}
+          </a>
           <span className="text-subtle">{t.layout.footer.credits(new Date().getFullYear())}</span>
         </nav>
       </div>

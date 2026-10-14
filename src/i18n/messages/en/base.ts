@@ -147,6 +147,17 @@ export const base: typeof reference = {
     haveAccount: "Already have an account?",
     signIn: "Sign in",
   },
+  errorBoundary: {
+    title: "Something went wrong on this screen",
+    hint: "Try again. If the problem continues, go back to the home page.",
+    retry: "Try again",
+    backHome: "Back to home",
+    reloadingTitle: "Updating the site",
+    reloadingHint: "A new version of Ticketfy is out. The page will reload in a moment.",
+  },
+  serverWake: {
+    message: "The server is starting up, this may take up to a minute.",
+  },
   notFound: {
     pageTitle: "Page not found",
     title: "Page not found",

@@ -32,14 +32,27 @@ export function isValidId(value: string | null | undefined): value is string {
 // Esse destino nunca pode apontar para fora do site: "//site-falso.com"
 // ou "https://site-falso.com" seria um "open redirect", golpe clássico de
 // phishing (o link parece do Ticketfy, mas termina em outro lugar).
+const REDIRECT_BASE = "https://ticketfy.invalid";
+const MAX_REDIRECT_LENGTH = 2048;
+
 export function safeRedirectPath(value: unknown, fallback = "/"): string {
-  if (typeof value !== "string") return fallback;
+  if (typeof value !== "string" || value.length > MAX_REDIRECT_LENGTH) return fallback;
   // Precisa começar com uma barra só. "//" e "/\" o navegador entende como outro domínio.
   if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return fallback;
+  if (/[\u0000-\u001F\u007F]/.test(value)) return fallback;
+  let url: URL;
+  try {
+    url = new URL(value, REDIRECT_BASE);
+  } catch {
+    return fallback;
+  }
+  if (url.origin !== REDIRECT_BASE) return fallback;
   // Não volta para as próprias telas de login/cadastro (evita laço).
-  if (value.startsWith("/login") || value.startsWith("/register")) return fallback;
+  if (isAuthPath(value) || isAuthPath(url.pathname)) return fallback;
   return value;
 }
+
+const isAuthPath = (path: string) => path.startsWith("/login") || path.startsWith("/register");
 
 // ---------------------------------------------------------------------------
 // Imagens de evento

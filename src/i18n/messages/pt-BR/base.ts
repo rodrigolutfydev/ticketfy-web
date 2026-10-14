@@ -145,6 +145,17 @@ export const base = {
     haveAccount: "Já tem conta?",
     signIn: "Entrar",
   },
+  errorBoundary: {
+    title: "Algo deu errado nesta tela",
+    hint: "Tente de novo. Se o problema continuar, volte para o início.",
+    retry: "Tentar de novo",
+    backHome: "Voltar para o início",
+    reloadingTitle: "Atualizando o site",
+    reloadingHint: "Saiu uma versão nova do Ticketfy. A página vai recarregar em instantes.",
+  },
+  serverWake: {
+    message: "O servidor está iniciando, isso pode levar até um minuto.",
+  },
   notFound: {
     pageTitle: "Página não encontrada",
     title: "Página não encontrada",

@@ -5,6 +5,7 @@ export const legal = {
   updated: "Última atualização: outubro de 2026.",
   footerTerms: "Termos de uso",
   footerPrivacy: "Privacidade",
+  footerContact: "Contato sobre seus dados",
   registerConsent: {
     before: "Ao criar a conta, você concorda com os ",
     terms: "Termos de uso",
@@ -135,5 +136,13 @@ export const legal = {
         ],
       },
     ],
+    contact: {
+      title: "Contato do responsável pelos dados",
+      paragraphs: [
+        "Pelo e-mail abaixo, você fala com o responsável pelos dados pessoais do Ticketfy. Por ele, você pode pedir acesso, correção, exportação e exclusão dos seus dados, além de tirar dúvidas sobre esta política.",
+        "O canal vale também quando não for possível usar as telas do site, inclusive se a sua conta estiver suspensa. Escreva a partir do e-mail cadastrado na conta ou informe esse e-mail na mensagem; podemos pedir uma confirmação de identidade antes de atender o pedido, para proteger os seus dados.",
+      ],
+      emailLabel: "E-mail do responsável pelos dados:",
+    },
   },
 };

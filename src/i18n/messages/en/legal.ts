@@ -7,6 +7,7 @@ export const legal: typeof reference = {
   updated: "Last updated: October 2026.",
   footerTerms: "Terms of use",
   footerPrivacy: "Privacy",
+  footerContact: "Contact about your data",
   registerConsent: {
     before: "By creating an account, you agree to the ",
     terms: "Terms of use",
@@ -137,5 +138,13 @@ export const legal: typeof reference = {
         ],
       },
     ],
+    contact: {
+      title: "Contact for the person responsible for your data",
+      paragraphs: [
+        "Through the email below, you reach the person responsible for Ticketfy's personal data. You can use it to request access to, correction, export and deletion of your data, and to ask questions about this policy.",
+        "This channel also works when you can't use the site's screens, including if your account is suspended. Write from the email registered on your account or include that email in your message; we may ask you to confirm your identity before handling the request, to protect your data.",
+      ],
+      emailLabel: "Email of the person responsible for the data:",
+    },
   },
 };

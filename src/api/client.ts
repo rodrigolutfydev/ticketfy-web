@@ -9,6 +9,9 @@ const AUTH_HEADER = "X-Ticketfy-Auth";
 const REFRESH_LOCK = "ticketfy-refresh";
 
 const TIMEOUT_MS = 15_000;
+export const SESSION_TIMEOUT_MS = 60_000;
+export const SLOW_REQUEST_MS = 5_000;
+const HEALTH_PATH = "/actuator/health";
 const MAX_MESSAGE_LENGTH = 300;
 const MIN_VALIDITY_MS = 10_000;
 const MAX_EXPIRES_IN_SECONDS = 86_400;
@@ -23,6 +26,58 @@ const AUTH_ROUTES: Record<string, string> = {
   "/users/me/password": "PATCH",
   "/users/me/deletion": "POST",
 };
+
+const SESSION_ROUTES: Record<string, string> = {
+  "/auth/login": "POST",
+  "/auth/refresh": "POST",
+  "/auth/logout": "POST",
+  "/users/me": "GET",
+};
+
+export function timeoutFor(method: string, path: string): number {
+  return SESSION_ROUTES[path] === method.toUpperCase() ? SESSION_TIMEOUT_MS : TIMEOUT_MS;
+}
+
+let slowRequests = 0;
+const slowListeners = new Set<(slow: boolean) => void>();
+
+function setSlowRequests(next: number) {
+  const wasSlow = slowRequests > 0;
+  slowRequests = Math.max(next, 0);
+  const isSlow = slowRequests > 0;
+  if (wasSlow !== isSlow) slowListeners.forEach((listener) => listener(isSlow));
+}
+
+export const isWaitingSlowRequest = () => slowRequests > 0;
+
+export function subscribeSlowRequests(listener: (slow: boolean) => void) {
+  slowListeners.add(listener);
+  return () => {
+    slowListeners.delete(listener);
+  };
+}
+
+let waking: Promise<void> | null = null;
+
+export function wakeApi(): Promise<void> {
+  if (!waking) {
+    const init: RequestInit = { method: "GET", headers: { Accept: "application/json" }, credentials: "omit", cache: "no-store" };
+    waking = timedFetch(`${API_URL}${HEALTH_PATH}`, init, SESSION_TIMEOUT_MS)
+      .then(
+        () => undefined,
+        () => undefined
+      )
+      .finally(() => {
+        waking = null;
+      });
+  }
+  return waking;
+}
+
+export async function resumeSession(): Promise<boolean> {
+  await wakeApi();
+  return session ? true : refreshSession();
+}
 
 export type FieldError = { field: string; message: string; code: string | null; params: Record<string, unknown> };
 
@@ -216,7 +271,7 @@ async function sendOnce(
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     credentials: "omit",
     cache: token ? "no-store" : "default",
-  });
+  }, timeoutFor(method, path.split("?")[0]));
   return { result, used: token };
 }
 
@@ -240,7 +295,7 @@ async function authFetch(method: string, path: string, options: AuthOptions): Pr
     credentials: "same-origin",
     cache: "no-store",
     keepalive: options.keepalive ?? false,
-  });
+  }, timeoutFor(method, path));
 }
 
 export async function authRequest<T>(method: string, path: string, options: AuthOptions = {}): Promise<T> {
@@ -263,9 +318,14 @@ export function sendLogout() {
   authFetch("POST", "/auth/logout", { keepalive: true }).catch(() => {});
 }
 
-async function timedFetch(url: string, init: RequestInit): Promise<Response> {
+async function timedFetch(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let slow = false;
+  const slowTimer = setTimeout(() => {
+    slow = true;
+    setSlowRequests(slowRequests + 1);
+  }, SLOW_REQUEST_MS);
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } catch (error) {
@@ -273,6 +333,8 @@ async function timedFetch(url: string, init: RequestInit): Promise<Response> {
     throw clientError(timedOut ? "timeout" : "network");
   } finally {
     clearTimeout(timer);
+    clearTimeout(slowTimer);
+    if (slow) setSlowRequests(slowRequests - 1);
   }
 }
 

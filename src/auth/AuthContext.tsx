@@ -8,6 +8,7 @@ import {
   refreshSession,
   sendLogout,
   setSession,
+  resumeSession,
   type Session,
 } from "../api/client";
 import type { TokenResponse } from "../api/types";
@@ -203,7 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     markActivity(true);
-    refreshSession().catch(() => {
+    resumeSession().catch(() => {
       if (!getSession()) setStatus("anonymous");
     });
   }, [finish, markActivity]);

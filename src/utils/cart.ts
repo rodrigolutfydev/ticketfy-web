@@ -12,6 +12,7 @@ export type CartItem = { ticketTypeId: string; quantity: number };
 
 const MAX_LINES = 10; // nenhum evento real tem mais de 10 lotes num pedido
 const MAX_QUANTITY = 20; // teto por lote; o limite real vem do maxPerOrder da API
+const ITEM_PATTERN = /^([^:]+):(\d{1,3})$/;
 
 export function encodeItems(items: CartItem[]) {
   return items.map((i) => `${i.ticketTypeId}:${i.quantity}`).join(",");
@@ -24,8 +25,8 @@ export function decodeItems(value: string | null): CartItem[] {
     .split(",")
     .slice(0, MAX_LINES)
     .map((pair) => {
-      const [ticketTypeId, quantity] = pair.split(":");
-      return { ticketTypeId, quantity: Number(quantity) };
+      const match = ITEM_PATTERN.exec(pair);
+      return match ? { ticketTypeId: match[1], quantity: Number(match[2]) } : { ticketTypeId: "", quantity: 0 };
     })
     .filter((item) => {
       const ok =
