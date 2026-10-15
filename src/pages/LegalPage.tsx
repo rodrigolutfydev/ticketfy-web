@@ -9,7 +9,7 @@ export default function LegalPage({ document }: { document: "terms" | "privacy" 
   const content = t.legal[document];
   usePageTitle(content.pageTitle);
   return (
-    <article className="mx-auto max-w-3xl">
+    <article className="max-w-3xl">
       <PageTitle title={content.title} subtitle={content.subtitle} />
       <div role="note" className="mb-8 flex gap-3 rounded-2xl border border-accent-line bg-accent-soft p-4 text-sm text-ink">
         <TriangleAlert size={20} className="mt-0.5 shrink-0 text-warning" aria-hidden />

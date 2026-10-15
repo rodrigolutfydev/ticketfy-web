@@ -56,7 +56,7 @@ export default function EventDetailPage() {
 
   return (
     <div className="pb-28 lg:pb-0">
-      <div className="mx-auto mb-6 flex max-w-[1100px] flex-wrap items-center justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <BackLink to="/">{t.eventDetail.back}</BackLink>
         <div className="flex flex-wrap gap-2">
           <FeaturedToggle eventId={id} featured={!!event.featured} />
@@ -71,7 +71,7 @@ export default function EventDetailPage() {
       </div>
 
       {cancelled && (
-        <div className="mx-auto mb-6 max-w-[1100px]">
+        <div className="mb-6">
           <Alert>
             <p className="font-semibold">{t.eventDetail.cancelledTitle}</p>
             <p className="mt-1">
@@ -83,7 +83,7 @@ export default function EventDetailPage() {
       )}
 
       {/* Topo focado na compra: a arte do organizador (inteira, sem nada por cima) ao lado das informações e dos ingressos. */}
-      <div className="mx-auto grid max-w-[1100px] items-start gap-8 lg:grid-cols-[minmax(0,600px)_460px] lg:justify-center lg:gap-10">
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(400px,480px)] lg:gap-12">
         <figure className="relative m-0 lg:sticky lg:top-24">
           {photo ? (
             <div className="relative grid place-items-center">
@@ -103,7 +103,7 @@ export default function EventDetailPage() {
               </button>
             </div>
           ) : (
-            <div className="aspect-[4/5] max-h-[540px] overflow-hidden rounded-3xl shadow-[0_24px_60px_rgb(0_0_0/0.5)] max-lg:aspect-[16/10]">
+            <div className="aspect-[16/10] w-full overflow-hidden rounded-3xl shadow-[0_24px_60px_rgb(0_0_0/0.5)]">
               <EventCover name={event.name} startsAt={event.startsAt} imageUrl={null} large />
             </div>
           )}
@@ -181,7 +181,7 @@ export default function EventDetailPage() {
       </div>
 
       {/* Sobre, local e informações: texto à esquerda, local e organizador à direita. */}
-      <div className="mx-auto mt-14 grid max-w-[1100px] items-start gap-8 lg:mt-16 lg:grid-cols-[minmax(0,600px)_460px] lg:justify-center lg:gap-10">
+      <div className="mt-14 grid items-start gap-8 lg:mt-16 lg:grid-cols-[minmax(0,1fr)_minmax(400px,480px)] lg:gap-12">
         <div className="min-w-0">
           <Tabs
             label={t.eventDetail.tabsLabel}
@@ -233,20 +233,36 @@ export default function EventDetailPage() {
         </aside>
       </div>
 
-      {/* Celular: barra fixa no rodapé com o menor preço e atalho para os lotes. */}
-      {panel === "open" && minPrice !== null && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur lg:hidden">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs text-muted">{t.eventDetail.from}</p>
-              <p className="tabular font-display text-lg font-extrabold tracking-[-0.03em] text-ink">{formatPrice(minPrice, locale)}</p>
-            </div>
-            <Button size="lg" onClick={() => document.getElementById("ingressos")?.scrollIntoView({ behavior: "smooth" })}>
-              {t.eventDetail.chooseTickets}
-            </Button>
-          </div>
+      {panel === "open" && minPrice !== null && <MobileBuyBar minPrice={minPrice} />}
+    </div>
+  );
+}
+
+// Celular: barra fixa no rodapé com o menor preço e atalho para os lotes.
+// Some enquanto o cartão de ingressos está na tela (senão cobria o botão
+// "Continuar" dele).
+function MobileBuyBar({ minPrice }: { minPrice: number }) {
+  const { t, locale } = useI18n();
+  const [panelInView, setPanelInView] = useState(false);
+  useEffect(() => {
+    const panel = document.getElementById("ingressos");
+    if (!panel || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => setPanelInView(entry.isIntersecting), { threshold: 0.1 });
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, []);
+  if (panelInView) return null;
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur lg:hidden">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs text-muted">{t.eventDetail.from}</p>
+          <p className="tabular font-display text-lg font-extrabold tracking-[-0.03em] text-ink">{formatPrice(minPrice, locale)}</p>
         </div>
-      )}
+        <Button size="lg" onClick={() => document.getElementById("ingressos")?.scrollIntoView({ behavior: "smooth" })}>
+          {t.eventDetail.chooseTickets}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -491,10 +507,10 @@ function StepButton({ label, disabled, onClick, children }: { label: string; dis
 
 function EventDetailSkeleton() {
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div>
       <Skeleton className="mb-6 h-5 w-24" />
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,600px)_460px] lg:justify-center lg:gap-10">
-        <Skeleton className="aspect-[4/5] max-h-[540px] rounded-3xl" />
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(400px,480px)] lg:gap-12">
+        <Skeleton className="aspect-[16/10] w-full rounded-3xl" />
         <div className="flex flex-col gap-4">
           <div className="flex gap-4">
             <Skeleton className="h-[86px] w-[70px] rounded-2xl" />

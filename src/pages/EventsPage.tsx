@@ -318,7 +318,8 @@ function Hero({ heroEvent, qInput, cityInput, setQInput, setCityInput, onSubmit 
         <form
           role="search"
           onSubmit={onSubmit}
-          className="tf-cut-y relative mb-16 mt-20 flex flex-col overflow-hidden rounded-[20px] bg-surface shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)] [--cut-y:calc(100%-86px)] [--r:15px] md:mt-24 md:flex-row md:[--cut-y:50%]"
+          data-hero-repel
+          className="tf-hero-search tf-cut-y relative mb-16 mt-20 flex flex-col overflow-hidden rounded-[20px] bg-surface shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)] [--cut-y:calc(100%-86px)] [--r:15px] md:mt-24 md:flex-row md:[--cut-y:50%]"
         >
           <label className="relative flex flex-[1.5] cursor-text items-center gap-3.5 px-6 py-[18px] transition-colors focus-within:bg-ink/[0.035] hover:bg-ink/[0.035] md:py-4 md:pl-10">
             <Search size={22} className="shrink-0 text-accent-text" aria-hidden />

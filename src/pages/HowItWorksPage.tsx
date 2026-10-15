@@ -22,7 +22,7 @@ export default function HowItWorksPage() {
       ? { steps: h.buy.map((step, i) => ({ ...step, icon: BUY_ICONS[i] })), cta: { to: "/", label: h.buyCta } }
       : { steps: h.organize.map((step, i) => ({ ...step, icon: ORGANIZE_ICONS[i] })), cta: { to: "/organizer", label: h.organizeCta } };
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-3xl">
       <PageTitle title={h.title} subtitle={h.subtitle} />
       <Tabs
         label={h.tabsLabel}

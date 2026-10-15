@@ -1,5 +1,17 @@
-import { describe, expect, it } from "vitest";
-import { floatOffset, heroDropFrame, heroDropTravel, motionEnabled, scrollProgress, tiltAngles, tiltTransform, tiltsWithPointer } from "./motion";
+import { describe, expect, it, vi } from "vitest";
+import {
+  floatOffset,
+  heroDropFrame,
+  heroDropTravel,
+  heroRepel,
+  heroRepelSide,
+  motionEnabled,
+  scrollProgress,
+  tiltAngles,
+  tiltTransform,
+  tiltsWithPointer,
+  trackHoverPointer,
+} from "./motion";
 
 describe("quando os efeitos ligam", () => {
   it("desligam só com pedido de menos movimento", () => {
@@ -12,6 +24,76 @@ describe("quando os efeitos ligam", () => {
     expect(tiltsWithPointer("pen")).toBe(true);
     expect(tiltsWithPointer("touch")).toBe(false);
     expect(tiltsWithPointer("")).toBe(false);
+  });
+});
+
+describe("hover do CSS segue o ponteiro de verdade", () => {
+  // Sem DOM nos testes: um EventTarget faz o papel do window e um objeto
+  // simples guarda os atributos do <html>.
+  function setup() {
+    const target = new EventTarget();
+    vi.stubGlobal("window", target);
+    const attrs = new Set<string>();
+    const root = {
+      setAttribute: (name: string) => attrs.add(name),
+      removeAttribute: (name: string) => attrs.delete(name),
+    } as unknown as HTMLElement;
+    const stop = trackHoverPointer(root);
+    const fire = (type: string, pointerType: string) => target.dispatchEvent(Object.assign(new Event(type), { pointerType }));
+    return { attrs, stop, fire };
+  }
+
+  it("liga com mouse ou caneta, mesmo sem (hover: hover)", () => {
+    const { attrs, fire } = setup();
+    expect(attrs.has("data-hover")).toBe(false);
+    fire("pointermove", "mouse");
+    expect(attrs.has("data-hover")).toBe(true);
+  });
+
+  it("toque desliga; caneta liga de novo", () => {
+    const { attrs, fire } = setup();
+    fire("pointermove", "mouse");
+    fire("pointerdown", "touch");
+    expect(attrs.has("data-hover")).toBe(false);
+    fire("pointermove", "pen");
+    expect(attrs.has("data-hover")).toBe(true);
+  });
+
+  it("para de ouvir depois de desligado", () => {
+    const { attrs, stop, fire } = setup();
+    stop();
+    fire("pointermove", "mouse");
+    expect(attrs.has("data-hover")).toBe(false);
+  });
+});
+
+describe("busca do topo se recolhe quando o ingresso passa", () => {
+  // Busca de 100px de altura entre 1000 e 1100; ingresso de 500px.
+  const bar = [1000, 1100] as const;
+
+  it("parada enquanto o ingresso está longe", () => {
+    expect(heroRepel(300, 800, ...bar)).toBe(0);
+  });
+
+  it("começa a recolher antes de encostar", () => {
+    const value = heroRepel(450, 950, ...bar);
+    expect(value).toBeGreaterThan(0);
+    expect(value).toBeLessThan(1);
+  });
+
+  it("toda recolhida com o ingresso por cima dela", () => {
+    expect(heroRepel(700, 1200, ...bar)).toBe(1);
+  });
+
+  it("volta ao normal depois que o ingresso passou", () => {
+    expect(heroRepel(1200, 1700, ...bar)).toBe(0);
+    expect(heroRepel(1150, 1650, ...bar)).toBeGreaterThan(0);
+  });
+
+  it("recua para longe do ingresso; no meio, só encolhe", () => {
+    expect(heroRepelSide(1100, 40, 1360)).toBe(-1);
+    expect(heroRepelSide(100, 40, 1360)).toBe(1);
+    expect(heroRepelSide(195, 16, 358)).toBe(0);
   });
 });
 

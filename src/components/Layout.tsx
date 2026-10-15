@@ -106,7 +106,7 @@ export default function Layout() {
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `rounded-full px-4 py-2 text-[0.9375rem] whitespace-nowrap transition-[color,background-color,box-shadow] duration-200 ${
       isActive
-        ? "bg-accent/[0.18] font-semibold text-ink shadow-[inset_0_0_0_1px_var(--accent-line),0_0_22px_color-mix(in_srgb,var(--accent)_22%,transparent)]"
+        ? "bg-accent/[0.18] font-semibold text-ink shadow-[inset_0_0_0_1px_var(--accent-line),0_0_14px_color-mix(in_srgb,var(--accent)_12%,transparent)]"
         : "font-medium text-muted hover:bg-ink/[0.06] hover:text-ink"
     }`;
   const mobileLinkClass = ({ isActive }: { isActive: boolean }) =>

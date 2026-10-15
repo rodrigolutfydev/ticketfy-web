@@ -45,7 +45,7 @@ export default function OrderDetailPage() {
   const hasTransferred = (o.tickets ?? []).some((t) => t.transferred);
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div>
       <BackLink to="/orders">{d.myOrders}</BackLink>
 
       {o.status === "EXPIRED" && (

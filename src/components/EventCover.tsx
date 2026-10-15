@@ -49,12 +49,14 @@ export function coverBackground(name: string) {
 }
 
 // Capa gerada, sem depender do idioma (o texto alternativo vem de fora).
+// É um container (@container): em miniatura (menos de 10rem de largura) o nome
+// some e ficam só as iniciais, do tamanho da capa, em vez de um texto cortado.
 export function CoverFallback({ name, label, large = false, className = "" }: { name: string; label: string; large?: boolean; className?: string }) {
   return (
     <div
       role="img"
       aria-label={label}
-      className={`relative flex h-full w-full items-end overflow-hidden ${large ? "p-8" : "p-4"} ${className}`}
+      className={`@container relative flex h-full w-full items-end overflow-hidden ${large ? "p-8" : "p-4"} ${className}`}
       style={{ background: coverBackground(name) }}
     >
       {/* Brilho violeta discreto, como as luzes de palco do layout. */}
@@ -62,12 +64,12 @@ export function CoverFallback({ name, label, large = false, className = "" }: { 
       <span
         aria-hidden
         className={`pointer-events-none absolute right-3 top-1 font-display font-extrabold leading-none tracking-[-0.06em] text-white/20 ${
-          large ? "text-[11rem]" : "text-[6.5rem]"
+          large ? "text-[11rem]" : "text-[clamp(1.75rem,60cqw,6.5rem)]"
         }`}
       >
         {coverInitials(name)}
       </span>
-      <span aria-hidden className={`relative line-clamp-2 max-w-[85%] font-display font-bold leading-tight tracking-[-0.03em] text-white/90 ${large ? "text-2xl" : "text-sm"}`}>
+      <span aria-hidden className={`relative hidden max-w-[85%] font-display @[10rem]:line-clamp-2 font-bold leading-tight tracking-[-0.03em] text-white/90 ${large ? "text-2xl" : "text-sm"}`}>
         {name}
       </span>
     </div>

@@ -166,14 +166,15 @@ function TicketCard({ ticket, onEnlarge, onTransfer }: { ticket: TicketDetails; 
             <p className="mt-1.5 text-sm text-muted">{eventStamp(ticket.eventStartsAt, locale)}</p>
           </div>
         </div>
-        <dl className="grid grid-cols-2 gap-4 pt-1 text-sm">
+        {/* O código (16 caracteres) define a largura da coluna dele; o lote quebra linha se precisar. */}
+        <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 pt-1 text-sm">
           <div>
             <dt className="text-[11px] font-bold tracking-[0.14em] text-accent-text">{k.lot}</dt>
             <dd className="mt-0.5 font-semibold text-ink">{ticket.ticketTypeName}</dd>
           </div>
           <div>
             <dt className="text-[11px] font-bold tracking-[0.14em] text-accent-text">{ticket.usedAt ? k.entry : k.code}</dt>
-            <dd className="tabular mt-0.5 font-semibold text-ink">{ticket.usedAt ? formatShortDate(ticket.usedAt, locale) : ticket.code}</dd>
+            <dd className="tabular mt-0.5 font-semibold text-ink [overflow-wrap:anywhere]">{ticket.usedAt ? formatShortDate(ticket.usedAt, locale) : ticket.code}</dd>
           </div>
         </dl>
         {(valid || ticket.transferable) && (
@@ -242,7 +243,7 @@ function EnlargedQr({ ticket, onClose }: { ticket: TicketDetails; onClose: () =>
           <div className="flex flex-col items-center gap-4 px-6 pb-8 pt-7">
             <p className="eyebrow">{ticket.ticketTypeName}</p>
             <p className="font-display text-2xl font-extrabold leading-tight tracking-[-0.035em]">{ticket.eventName}</p>
-            <div className="rounded-[22px] bg-white p-[18px] shadow-[0_0_0_8px_color-mix(in_srgb,var(--accent)_22%,transparent),0_30px_80px_color-mix(in_srgb,var(--accent)_25%,transparent)]">
+            <div className="rounded-[22px] bg-white p-[18px] shadow-[0_0_0_8px_color-mix(in_srgb,var(--accent)_14%,transparent),0_24px_60px_color-mix(in_srgb,var(--accent)_12%,transparent)]">
               <QRCodeSVG value={ticket.code} size={size} level="M" />
             </div>
             <p className="font-mono text-xl font-bold tracking-[0.2em]">{ticket.code}</p>

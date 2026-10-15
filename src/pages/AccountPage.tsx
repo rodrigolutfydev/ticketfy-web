@@ -30,7 +30,7 @@ export default function AccountPage() {
   const { me, isLoading, error, endpointMissing } = useMe();
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div>
       <PageTitle title={t.account.title} />
       <Tabs
         label={t.account.tabsLabel}
@@ -45,41 +45,44 @@ export default function AccountPage() {
         ]}
       />
       <TabPanel idPrefix="conta" activeKey={tab}>
-        {tab !== "seguranca" && tab !== "privacidade" && isLoading && <Loading />}
-        {tab !== "seguranca" && tab !== "privacidade" && endpointMissing && (
-          <BackendNotice title={t.account.profileUnavailable}>
-            <p>{t.account.profileUnavailableText}</p>
-          </BackendNotice>
-        )}
-        {tab !== "seguranca" && tab !== "privacidade" && error && !endpointMissing && <ErrorMessage message={errorMessage(error) ?? ""} />}
+        {/* Perfil usa duas colunas em tela larga; formulários ficam numa coluna legível. */}
+        <div className={tab === "perfil" ? "" : "max-w-3xl"}>
+          {tab !== "seguranca" && tab !== "privacidade" && isLoading && <Loading />}
+          {tab !== "seguranca" && tab !== "privacidade" && endpointMissing && (
+            <BackendNotice title={t.account.profileUnavailable}>
+              <p>{t.account.profileUnavailableText}</p>
+            </BackendNotice>
+          )}
+          {tab !== "seguranca" && tab !== "privacidade" && error && !endpointMissing && <ErrorMessage message={errorMessage(error) ?? ""} />}
 
-        {tab === "privacidade" && <PrivacyTab />}
+          {tab === "privacidade" && <PrivacyTab />}
 
-        {tab === "perfil" && me && (
-          <div className="space-y-5">
-            <ProfileTab me={me} />
-            <LanguageCard />
-          </div>
-        )}
+          {tab === "perfil" && me && (
+            <div className="grid items-start gap-5 lg:grid-cols-2">
+              <ProfileTab me={me} />
+              <LanguageCard />
+            </div>
+          )}
 
-        {tab === "seguranca" && <SecurityTab />}
+          {tab === "seguranca" && <SecurityTab />}
 
-        {tab === "organizador" && me && (
-          <Card>
-            {me.role === "USER" ? (
-              <>
-                <h2 className="mb-5 text-lg font-extrabold text-ink">{t.account.wantToSell}</h2>
-                <BecomeOrganizer />
-              </>
-            ) : (
-              <>
-                <h2 className="text-lg font-extrabold text-ink">{t.account.isOrganizer}</h2>
-                <p className="mb-5 mt-1 text-muted">{t.account.isOrganizerText}</p>
-                <ButtonLink to="/organizer">{t.account.openOrganizer}</ButtonLink>
-              </>
-            )}
-          </Card>
-        )}
+          {tab === "organizador" && me && (
+            <Card>
+              {me.role === "USER" ? (
+                <>
+                  <h2 className="mb-5 text-lg font-extrabold text-ink">{t.account.wantToSell}</h2>
+                  <BecomeOrganizer />
+                </>
+              ) : (
+                <>
+                  <h2 className="text-lg font-extrabold text-ink">{t.account.isOrganizer}</h2>
+                  <p className="mb-5 mt-1 text-muted">{t.account.isOrganizerText}</p>
+                  <ButtonLink to="/organizer">{t.account.openOrganizer}</ButtonLink>
+                </>
+              )}
+            </Card>
+          )}
+        </div>
       </TabPanel>
     </div>
   );

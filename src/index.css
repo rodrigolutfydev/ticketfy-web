@@ -19,6 +19,15 @@
 @import "@fontsource-variable/inter-tight";
 @import "@fontsource-variable/unbounded";
 
+/*
+  hover: do Tailwind. O padrão do v4 envolve tudo em @media (hover: hover), e o
+  Chromium no Linux (Brave, Chrome) pode responder "hover: none" mesmo com
+  mouse, apagando todos os efeitos. Aqui o hover vale quando o <html> tem
+  data-hover, ligado pelo primeiro movimento de mouse ou caneta
+  (trackHoverPointer em hooks/motion.ts). Toque desliga, para não "grudar".
+*/
+@custom-variant hover (&:where(:root[data-hover] *):hover);
+
 @theme inline {
   --font-sans: "Inter Tight Variable", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Unbounded Variable", "Inter Tight Variable", ui-sans-serif, sans-serif;
@@ -63,7 +72,7 @@
   --accent: #ff5b1f;
   --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
   --accent-line: color-mix(in srgb, var(--accent) 55%, transparent);
-  --accent-glow: color-mix(in srgb, var(--accent) 35%, transparent);
+  --accent-glow: color-mix(in srgb, var(--accent) 20%, transparent);
   --accent-deep: color-mix(in srgb, var(--accent) 55%, #000);
   --accent-strong: color-mix(in srgb, var(--accent) 86%, #fff);
   --accent-ink: #0b0a0c;
@@ -164,14 +173,17 @@
 
 @layer components {
   /*
-    Largura do conteúdo: até 1440px de layout, com respiro lateral que
-    cresce com a tela (16px no celular).
+    Largura do conteúdo: no máximo 1360px úteis, com respiro lateral de 16px
+    (celular) a 40px. A partir de 1440px de tela o conteúdo não cresce mais:
+    em 1920 ou 2560 fica igual ao de 1440, só com mais margem (o fundo das
+    seções continua ocupando a tela toda).
   */
   .page-container {
+    --gutter: clamp(1rem, 4vw, 2.5rem);
     width: 100%;
-    max-width: 90rem;
+    max-width: calc(85rem + var(--gutter) * 2);
     margin-inline: auto;
-    padding-inline: clamp(1rem, 5vw, 5rem);
+    padding-inline: var(--gutter);
   }
 
   /* Rótulo curto em laranja acima de títulos. */
@@ -225,7 +237,9 @@
     background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.32) 48%, rgb(255 255 255 / 0.08) 56%, transparent 66%);
     transform: translateX(-120%);
   }
-  @media (hover: hover) {
+  /* Hover só com mouse/caneta de verdade: data-hover vem de trackHoverPointer
+     (hooks/motion.ts). :where() mantém a especificidade de antes. */
+  :where(:root[data-hover]) {
     .tf-btn:not(:disabled):hover {
       transform: translateY(-2px);
     }
@@ -270,7 +284,7 @@
     place-items: center;
     transition: transform 0.5s var(--ease-spring);
   }
-  @media (hover: hover) {
+  :where(:root[data-hover]) {
     .tf-btn-hero:hover .tf-dot {
       transform: rotate(45deg) scale(1.08);
     }
@@ -315,7 +329,7 @@
     inset: 18px 14px -2px;
     z-index: -1;
     border-radius: 18px;
-    box-shadow: 0 24px 60px rgb(0 0 0 / 0.4), 0 10px 60px var(--accent-glow);
+    box-shadow: 0 18px 40px rgb(0 0 0 / 0.35), 0 8px 30px var(--accent-glow);
     opacity: 0;
     transition: opacity 0.4s ease;
     pointer-events: none;
@@ -387,8 +401,8 @@
       background-position: 10px 0;
     }
   }
-  /* any-hover: basta haver um mouse; o ponteiro "principal" pode vir errado no Chromium/Linux. */
-  @media (any-hover: hover) {
+  /* Sem (any-hover: hover): o Chromium no Linux pode dizer que não há mouse. */
+  :where(:root[data-hover]) {
     .tf-tk:hover {
       --perf: var(--accent-line);
       translate: 0 -6px;
@@ -457,7 +471,7 @@
     width: min(1100px, 100%);
     height: 620px;
     transform: translateX(-50%);
-    background: radial-gradient(closest-side, color-mix(in srgb, var(--glow) 22%, transparent), var(--accent-soft) 45%, transparent);
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--glow) 11%, transparent), color-mix(in srgb, var(--accent) 7%, transparent) 45%, transparent);
     pointer-events: none;
   }
   .tf-rail {
@@ -688,9 +702,32 @@
   /* Ingresso do topo descendo com a rolagem (useHeroDrop): --drop, --sway,
      --tks e --tko vêm do JS; sem JS ou com menos movimento, fica parado. */
   .tf-hero-drop {
+    position: relative;
+    z-index: 2; /* passa na frente da busca, nunca por trás */
     opacity: var(--tko, 1);
     transform: translate3d(0, var(--drop, 0px), 0) rotate(var(--sway, 0deg)) scale(var(--tks, 1));
     will-change: transform, opacity;
+  }
+
+  /* Busca do topo: se recolhe enquanto o ingresso passa por ela (--repel de 0
+     a 1, vindo do useHeroDrop). Encolhe e recua para o lado oposto ao
+     ingresso (data-repel-side); no celular, onde ele passa pelo meio, só
+     encolhe e afunda. Sem JS ou com menos movimento, --repel fica 0. */
+  .tf-hero-search {
+    --repel: 0;
+    --repel-x: -32px;
+    z-index: 1;
+    transform-origin: left center;
+    transform: translate3d(calc(var(--repel) * var(--repel-x)), calc(var(--repel) * 6px), 0) scale(calc(1 - var(--repel) * 0.1));
+    opacity: calc(1 - var(--repel) * 0.6);
+  }
+  .tf-hero-search[data-repel-side="right"] {
+    --repel-x: 32px;
+    transform-origin: right center;
+  }
+  .tf-hero-search[data-repel-side="center"] {
+    --repel-x: 0px;
+    transform-origin: center top;
   }
 
   /* Topo da home: foto do palco em laranja, escurecida para o texto ler bem. */
@@ -723,8 +760,8 @@
   /* Brilho laranja e violeta no topo das telas internas. */
   .tf-topglow {
     background:
-      radial-gradient(45% 60% at 82% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
-      radial-gradient(35% 50% at 10% 0%, color-mix(in srgb, var(--glow) 12%, transparent), transparent 70%);
+      radial-gradient(45% 60% at 82% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%),
+      radial-gradient(35% 50% at 10% 0%, color-mix(in srgb, var(--glow) 7%, transparent), transparent 70%);
   }
 
   /* ------------------------------------------------------------------
@@ -775,7 +812,7 @@
     font-family: var(--font-display);
     font-weight: 800;
     font-size: 22px;
-    box-shadow: 0 20px 60px var(--accent-glow);
+    box-shadow: 0 12px 32px var(--accent-glow);
   }
   @media (max-width: 600px) {
     .tf-tapes {
@@ -807,8 +844,8 @@
     overflow: hidden;
     isolation: isolate;
     background:
-      radial-gradient(70% 120% at 0% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 60%),
-      radial-gradient(60% 90% at 100% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 65%),
+      radial-gradient(70% 120% at 0% 0%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 60%),
+      radial-gradient(60% 90% at 100% 100%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 65%),
       var(--surface);
     box-shadow: inset 0 0 0 1px var(--accent-line);
     mask:

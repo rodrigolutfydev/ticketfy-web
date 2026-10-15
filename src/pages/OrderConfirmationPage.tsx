@@ -29,7 +29,7 @@ export default function OrderConfirmationPage() {
   const firstTicket = (o.tickets ?? []).find((ticket) => !ticket.transferred && ticket.status === "VALID");
 
   return (
-    <div className="mx-auto grid max-w-[1100px] items-center gap-12 py-4 lg:grid-cols-[minmax(0,1fr)_420px]">
+    <div className="grid items-center gap-12 py-4 lg:grid-cols-[minmax(0,1fr)_420px]">
       <div className={`flex flex-col gap-5 ${paid ? "" : "items-center text-center lg:col-span-2"}`}>
         {paid ? (
           <span className="animate-badge-pop flex h-[88px] w-[88px] items-center justify-center rounded-full bg-success/[0.14] text-success shadow-[0_0_0_10px_color-mix(in_srgb,var(--success)_6%,transparent)]">
@@ -93,7 +93,7 @@ function IssuedTicket({ code, lot, more }: { code: string; lot: string; more: nu
       >
         <div className="flex flex-col items-center gap-4 px-7 pb-8 pt-7 text-center">
           <p className="eyebrow">{t.confirmation.ticketTop}</p>
-          <div className="rounded-[22px] bg-white p-[18px] shadow-[0_0_0_8px_color-mix(in_srgb,var(--accent)_22%,transparent),0_30px_80px_color-mix(in_srgb,var(--accent)_25%,transparent)]">
+          <div className="rounded-[22px] bg-white p-[18px] shadow-[0_0_0_8px_color-mix(in_srgb,var(--accent)_14%,transparent),0_24px_60px_color-mix(in_srgb,var(--accent)_12%,transparent)]">
             <QRCodeSVG value={code} size={190} level="M" />
           </div>
           <p className="select-all font-mono text-sm font-bold tracking-[0.16em] text-muted">{code}</p>

@@ -48,7 +48,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div>
       <PageTitle title={o.title} subtitle={o.subtitle} />
       <Tabs
         label={o.tabsLabel}
@@ -94,9 +94,9 @@ export default function OrdersPage() {
                       {order.createdAt && <p className="text-sm text-muted">{formatShortDate(order.createdAt, locale)}</p>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="ml-auto flex items-center gap-3 sm:gap-4">
                     <StatusBadge status={order.status} />
-                    <span className="tabular w-28 text-right font-bold text-ink">{formatPrice(order.totalAmount, locale)}</span>
+                    <span className="tabular text-right font-bold text-ink sm:w-28">{formatPrice(order.totalAmount, locale)}</span>
                     <ChevronRight size={18} className="text-subtle" aria-hidden />
                   </div>
                 </Link>

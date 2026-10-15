@@ -14,6 +14,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ApiError } from "./api/client";
 import { AuthProvider } from "./auth/AuthContext";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { trackHoverPointer } from "./hooks/motion";
 import ServerWakeNotice from "./components/ServerWakeNotice";
 import { LocaleProvider } from "./i18n/LocaleContext";
 import { detectLocale, setLocale } from "./i18n/locale";
@@ -34,6 +35,7 @@ const queryClient = new QueryClient({
 });
 
 setLocale(detectLocale());
+trackHoverPointer();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

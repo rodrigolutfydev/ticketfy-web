@@ -26,6 +26,23 @@ export const motionEnabled = ({ reducedMotion }: MotionPreference) => !reducedMo
 // Ponteiro que inclina o card: mouse ou caneta. Toque ("touch") nunca inclina.
 export const tiltsWithPointer = (pointerType: string) => pointerType === "mouse" || pointerType === "pen";
 
+// Hover do CSS (cards subindo, brilho nos botões, hover: do Tailwind) segue a
+// mesma regra: o primeiro movimento de mouse ou caneta liga data-hover no
+// <html> e um toque desliga. O CSS só aplica hover debaixo de [data-hover]
+// (ver index.css), em vez de confiar em (hover: hover) / (any-hover: hover).
+export function trackHoverPointer(root: HTMLElement = document.documentElement) {
+  const update = (event: PointerEvent) => {
+    if (tiltsWithPointer(event.pointerType)) root.setAttribute("data-hover", "");
+    else if (event.pointerType === "touch") root.removeAttribute("data-hover");
+  };
+  window.addEventListener("pointermove", update, { passive: true });
+  window.addEventListener("pointerdown", update, { passive: true });
+  return () => {
+    window.removeEventListener("pointermove", update);
+    window.removeEventListener("pointerdown", update);
+  };
+}
+
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 // Ângulos da inclinação a partir da posição do ponteiro dentro do elemento.
@@ -244,33 +261,72 @@ export function heroDropFrame(drop: number, layout: HeroDropLayout, viewportWidt
   };
 }
 
+// Quanto a busca do topo se recolhe (0 a 1) enquanto o ingresso passa por
+// ela: começa `lead` px antes de a base do ingresso encostar, chega a 1
+// quando a base passa da busca inteira e volta a 0 conforme o topo do
+// ingresso sai por baixo dela.
+export function heroRepel(ticketTop: number, ticketBottom: number, barTop: number, barBottom: number, lead = 80) {
+  const span = barBottom - barTop + lead;
+  if (span <= 0 || ticketBottom <= ticketTop) return 0;
+  const entering = clamp((ticketBottom + lead - barTop) / span, 0, 1);
+  const leaving = clamp((barBottom + lead - ticketTop) / span, 0, 1);
+  return Math.round(smoothstep(Math.min(entering, leaving)) * 1000) / 1000;
+}
+
+// Para que lado a busca recua: para longe do ingresso (-1 esquerda, 1
+// direita) ou 0 quando ele passa pelo meio dela (celular).
+export function heroRepelSide(ticketCenterX: number, barLeft: number, barWidth: number) {
+  const offset = ticketCenterX - (barLeft + barWidth / 2);
+  if (Math.abs(offset) < barWidth * 0.12) return 0;
+  return offset > 0 ? -1 : 1;
+}
+
+// Folga do corte na fenda: o ingresso vai inclinado e flutuando, então as
+// pontas descem um pouco além da conta feita com ele reto.
+const CUT_SLACK = 28;
+
 // Liga o percurso: o elemento desce com a rolagem até o elemento `slot` (as
 // fitas). Escreve --drop, --sway, --tks e --tko e corta a parte que já entrou
 // na fenda (clip-path). Suavizado com inércia, igual em 60 ou 120 Hz.
-export function useHeroDrop<T extends HTMLElement>(slotSelector: string): RefObject<T | null> {
+// Se `repelSelector` existir (a busca), ela ganha --repel (0 a 1) e
+// data-repel-side (left/right/center) para recuar enquanto o ingresso passa.
+export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSelector?: string): RefObject<T | null> {
   const ref = useRef<T>(null);
   const enabled = motionEnabled(useMotionPreference());
 
   useEffect(() => {
     const element = ref.current;
     const slotElement = document.querySelector<HTMLElement>(slotSelector);
+    const bar = repelSelector ? document.querySelector<HTMLElement>(repelSelector) : null;
     if (!element || !slotElement || !enabled) return;
     let layout: HeroDropLayout = { center: 0, height: 0, slot: 0 };
+    let barBox = { top: 0, bottom: 0 };
     let current = 0;
     let frame = 0;
     let last = 0;
 
+    // Mede tudo "parado" (sem os transforms do efeito), em coordenadas da página.
+    const restingRect = (el: HTMLElement) => {
+      const keep = el.style.transform;
+      el.style.transform = "none";
+      const rect = el.getBoundingClientRect();
+      el.style.transform = keep;
+      return rect;
+    };
     const measure = () => {
-      const keepTransform = element.style.transform;
-      element.style.transform = "none";
-      const rect = element.getBoundingClientRect();
-      element.style.transform = keepTransform;
+      const rect = restingRect(element);
       const slotRect = slotElement.getBoundingClientRect();
       layout = {
         center: rect.top + window.scrollY + rect.height / 2,
         height: rect.height,
         slot: slotRect.top + window.scrollY + slotRect.height / 2,
       };
+      if (bar) {
+        const barRect = restingRect(bar);
+        barBox = { top: barRect.top + window.scrollY, bottom: barRect.bottom + window.scrollY };
+        const side = heroRepelSide(rect.left + rect.width / 2, barRect.left, barRect.width);
+        bar.dataset.repelSide = side < 0 ? "left" : side > 0 ? "right" : "center";
+      }
     };
     const target = () => clamp(window.scrollY * 0.9, 0, heroDropTravel(layout));
     const render = () => {
@@ -279,7 +335,15 @@ export function useHeroDrop<T extends HTMLElement>(slotSelector: string): RefObj
       element.style.setProperty("--sway", `${f.sway}deg`);
       element.style.setProperty("--tks", String(f.scale));
       element.style.setProperty("--tko", String(f.opacity));
-      element.style.clipPath = f.cut > 0 ? `inset(-80px -80px ${f.cut}px -80px)` : "";
+      const cut = f.cut > 0 ? Math.min(layout.height + CUT_SLACK, f.cut + CUT_SLACK) : 0;
+      element.style.clipPath = cut > 0 ? `inset(-80px -80px ${cut}px -80px)` : "";
+      // Já entrou toda na fenda: some de vez (nada de ponta aparecendo lá embaixo).
+      element.style.visibility = f.opacity <= 0.001 ? "hidden" : "";
+      if (bar) {
+        const top = layout.center + f.drop - layout.height / 2;
+        const repel = heroRepel(top, top + layout.height, barBox.top, barBox.bottom) * f.opacity;
+        bar.style.setProperty("--repel", repel.toFixed(3));
+      }
     };
     const tick = (now: number) => {
       frame = 0;
@@ -318,8 +382,11 @@ export function useHeroDrop<T extends HTMLElement>(slotSelector: string): RefObj
       observer?.disconnect();
       for (const name of ["--drop", "--sway", "--tks", "--tko"]) element.style.removeProperty(name);
       element.style.clipPath = "";
+      element.style.visibility = "";
+      bar?.style.removeProperty("--repel");
+      if (bar) delete bar.dataset.repelSide;
     };
-  }, [enabled, slotSelector]);
+  }, [enabled, slotSelector, repelSelector]);
 
   return ref;
 }

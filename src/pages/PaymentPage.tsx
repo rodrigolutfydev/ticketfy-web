@@ -68,7 +68,7 @@ export default function PaymentPage() {
   const busy = pay.isPending || cancel.isPending;
 
   return (
-    <div className="mx-auto grid max-w-[1180px] items-start gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
+    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-12">
       <div>
         <BackLink to="/orders">{t.payment.myOrders}</BackLink>
         <h1 className="mt-6 text-[clamp(1.875rem,3.4vw,2.75rem)] font-extrabold leading-[1.05] tracking-[-0.045em] text-ink">{t.payment.title}</h1>

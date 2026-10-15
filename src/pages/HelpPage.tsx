@@ -17,7 +17,7 @@ export default function HelpPage() {
   const [tab, setTab] = useTabParam(TABS, "compras");
   const faqs = { compras: h.faqs.purchases, seguranca: h.faqs.security, organizadores: h.faqs.organizers };
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-3xl">
       <PageTitle title={h.title} subtitle={h.subtitle} />
       <Tabs
         label={h.tabsLabel}

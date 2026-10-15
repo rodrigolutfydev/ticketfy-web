@@ -16,7 +16,7 @@ const BARS = [2, 1, 3, 1, 2, 1, 1, 3, 2, 1, 2, 1, 3, 1, 2, 1, 1, 3, 2, 1, 2, 1, 
 export default function PaperTicket({ event }: { event: EventSummary }) {
   const { t, locale } = useI18n();
   const h = t.look.home;
-  const dropRef = useHeroDrop<HTMLDivElement>("[data-hero-slot]");
+  const dropRef = useHeroDrop<HTMLDivElement>("[data-hero-slot]", "[data-hero-repel]");
   const floatRef = useFloat<HTMLDivElement>(8, 6500);
   const tiltRef = useTilt<HTMLAnchorElement>(7);
   const { day, month } = dateParts(event.startsAt, locale);
