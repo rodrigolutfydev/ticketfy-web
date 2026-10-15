@@ -709,25 +709,33 @@
     will-change: transform, opacity;
   }
 
-  /* Busca do topo: se recolhe enquanto o ingresso passa por ela (--repel de 0
-     a 1, vindo do useHeroDrop). Encolhe e recua para o lado oposto ao
-     ingresso (data-repel-side); no celular, onde ele passa pelo meio, só
-     encolhe e afunda. Sem JS ou com menos movimento, --repel fica 0. */
+  /* Busca do topo: o ingresso, ao descer, a empurra para fora. Ela se
+     recolhe da direita para a esquerda até sumir (--repel de 0 a 1, vindo do
+     useHeroDrop) e reabre se a página subir. A mesma busca reaparece em
+     "Todos os eventos" (.tf-search-reveal) abrindo da esquerda para a
+     direita conforme entra na tela (--scroll, do useScrollShift).
+     Sem JS ou com menos movimento, as duas ficam abertas e paradas; com foco
+     de teclado também abrem inteiras (nunca um campo invisível). */
+  .tf-hero-search,
+  .tf-search-reveal {
+    --closed: 0;
+    clip-path: inset(-4px calc(var(--closed) * 100%) -4px -4px round 20px);
+    transform: translate3d(calc(var(--closed) * -28px), 0, 0);
+    opacity: calc(1 - var(--closed) * 0.35);
+  }
   .tf-hero-search {
     --repel: 0;
-    --repel-x: -32px;
+    --closed: var(--repel);
     z-index: 1;
-    transform-origin: left center;
-    transform: translate3d(calc(var(--repel) * var(--repel-x)), calc(var(--repel) * 6px), 0) scale(calc(1 - var(--repel) * 0.1));
-    opacity: calc(1 - var(--repel) * 0.6);
   }
-  .tf-hero-search[data-repel-side="right"] {
-    --repel-x: 32px;
-    transform-origin: right center;
+  .tf-search-reveal {
+    /* Abre entre a borda de baixo da tela e ~35% da subida. */
+    --scroll: 1;
+    --closed: calc(1 - clamp(0, var(--scroll) * 3, 1));
   }
-  .tf-hero-search[data-repel-side="center"] {
-    --repel-x: 0px;
-    transform-origin: center top;
+  .tf-hero-search:focus-within,
+  .tf-search-reveal:focus-within {
+    --closed: 0;
   }
 
   /* Topo da home: foto do palco em laranja, escurecida para o texto ler bem. */

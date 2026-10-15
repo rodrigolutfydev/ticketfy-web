@@ -4,7 +4,6 @@ import {
   heroDropFrame,
   heroDropTravel,
   heroRepel,
-  heroRepelSide,
   motionEnabled,
   scrollProgress,
   tiltAngles,
@@ -67,33 +66,26 @@ describe("hover do CSS segue o ponteiro de verdade", () => {
   });
 });
 
-describe("busca do topo se recolhe quando o ingresso passa", () => {
-  // Busca de 100px de altura entre 1000 e 1100; ingresso de 500px.
+describe("busca do topo se recolhe quando o ingresso desce", () => {
+  // Busca de 100px de altura entre 1000 e 1100; o que importa é a base do ingresso.
   const bar = [1000, 1100] as const;
 
-  it("parada enquanto o ingresso está longe", () => {
-    expect(heroRepel(300, 800, ...bar)).toBe(0);
+  it("aberta enquanto o ingresso está longe", () => {
+    expect(heroRepel(800, ...bar)).toBe(0);
   });
 
   it("começa a recolher antes de encostar", () => {
-    const value = heroRepel(450, 950, ...bar);
+    const value = heroRepel(950, ...bar);
     expect(value).toBeGreaterThan(0);
     expect(value).toBeLessThan(1);
   });
 
-  it("toda recolhida com o ingresso por cima dela", () => {
-    expect(heroRepel(700, 1200, ...bar)).toBe(1);
+  it("some de vez quando a base do ingresso passa dela", () => {
+    expect(heroRepel(1100, ...bar)).toBe(1);
   });
 
-  it("volta ao normal depois que o ingresso passou", () => {
-    expect(heroRepel(1200, 1700, ...bar)).toBe(0);
-    expect(heroRepel(1150, 1650, ...bar)).toBeGreaterThan(0);
-  });
-
-  it("recua para longe do ingresso; no meio, só encolhe", () => {
-    expect(heroRepelSide(1100, 40, 1360)).toBe(-1);
-    expect(heroRepelSide(100, 40, 1360)).toBe(1);
-    expect(heroRepelSide(195, 16, 358)).toBe(0);
+  it("continua recolhida depois que o ingresso passou", () => {
+    expect(heroRepel(1700, ...bar)).toBe(1);
   });
 });
 

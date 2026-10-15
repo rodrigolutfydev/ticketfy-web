@@ -261,24 +261,14 @@ export function heroDropFrame(drop: number, layout: HeroDropLayout, viewportWidt
   };
 }
 
-// Quanto a busca do topo se recolhe (0 a 1) enquanto o ingresso passa por
-// ela: começa `lead` px antes de a base do ingresso encostar, chega a 1
-// quando a base passa da busca inteira e volta a 0 conforme o topo do
-// ingresso sai por baixo dela.
-export function heroRepel(ticketTop: number, ticketBottom: number, barTop: number, barBottom: number, lead = 80) {
+// Quanto a busca do topo já se recolheu (0 a 1) com o ingresso descendo
+// sobre ela: começa `lead` px antes de a base do ingresso encostar e chega a
+// 1 (sumiu) quando a base passa da busca inteira. Depois fica recolhida; só
+// reabre se a página subir de novo (o ingresso volta para cima dela).
+export function heroRepel(ticketBottom: number, barTop: number, barBottom: number, lead = 60) {
   const span = barBottom - barTop + lead;
-  if (span <= 0 || ticketBottom <= ticketTop) return 0;
-  const entering = clamp((ticketBottom + lead - barTop) / span, 0, 1);
-  const leaving = clamp((barBottom + lead - ticketTop) / span, 0, 1);
-  return Math.round(smoothstep(Math.min(entering, leaving)) * 1000) / 1000;
-}
-
-// Para que lado a busca recua: para longe do ingresso (-1 esquerda, 1
-// direita) ou 0 quando ele passa pelo meio dela (celular).
-export function heroRepelSide(ticketCenterX: number, barLeft: number, barWidth: number) {
-  const offset = ticketCenterX - (barLeft + barWidth / 2);
-  if (Math.abs(offset) < barWidth * 0.12) return 0;
-  return offset > 0 ? -1 : 1;
+  if (span <= 0) return 0;
+  return Math.round(smoothstep(clamp((ticketBottom + lead - barTop) / span, 0, 1)) * 1000) / 1000;
 }
 
 // Folga do corte na fenda: o ingresso vai inclinado e flutuando, então as
@@ -288,8 +278,8 @@ const CUT_SLACK = 28;
 // Liga o percurso: o elemento desce com a rolagem até o elemento `slot` (as
 // fitas). Escreve --drop, --sway, --tks e --tko e corta a parte que já entrou
 // na fenda (clip-path). Suavizado com inércia, igual em 60 ou 120 Hz.
-// Se `repelSelector` existir (a busca), ela ganha --repel (0 a 1) e
-// data-repel-side (left/right/center) para recuar enquanto o ingresso passa.
+// Se `repelSelector` existir (a busca), ela ganha --repel (0 a 1) para se
+// recolher conforme o ingresso desce sobre ela.
 export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSelector?: string): RefObject<T | null> {
   const ref = useRef<T>(null);
   const enabled = motionEnabled(useMotionPreference());
@@ -324,8 +314,6 @@ export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSe
       if (bar) {
         const barRect = restingRect(bar);
         barBox = { top: barRect.top + window.scrollY, bottom: barRect.bottom + window.scrollY };
-        const side = heroRepelSide(rect.left + rect.width / 2, barRect.left, barRect.width);
-        bar.dataset.repelSide = side < 0 ? "left" : side > 0 ? "right" : "center";
       }
     };
     const target = () => clamp(window.scrollY * 0.9, 0, heroDropTravel(layout));
@@ -340,9 +328,8 @@ export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSe
       // Já entrou toda na fenda: some de vez (nada de ponta aparecendo lá embaixo).
       element.style.visibility = f.opacity <= 0.001 ? "hidden" : "";
       if (bar) {
-        const top = layout.center + f.drop - layout.height / 2;
-        const repel = heroRepel(top, top + layout.height, barBox.top, barBox.bottom) * f.opacity;
-        bar.style.setProperty("--repel", repel.toFixed(3));
+        const bottom = layout.center + f.drop + layout.height / 2;
+        bar.style.setProperty("--repel", heroRepel(bottom, barBox.top, barBox.bottom).toFixed(3));
       }
     };
     const tick = (now: number) => {
@@ -384,7 +371,6 @@ export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSe
       element.style.clipPath = "";
       element.style.visibility = "";
       bar?.style.removeProperty("--repel");
-      if (bar) delete bar.dataset.repelSide;
     };
   }, [enabled, slotSelector, repelSelector]);
 

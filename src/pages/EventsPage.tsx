@@ -27,7 +27,7 @@ import { Button, ButtonLink } from "../components/ui";
 import { isPast } from "../utils/format";
 import { safeImageUrl } from "../utils/security";
 import { upcomingForRail } from "../utils/rail";
-import { useReveal } from "../hooks/motion";
+import { useReveal, useScrollShift } from "../hooks/motion";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 export default function EventsPage() {
@@ -136,6 +136,16 @@ export default function EventsPage() {
               </Button>
             ) : undefined
           }
+        />
+
+        <SearchBar
+          variant="section"
+          className="mb-8"
+          qInput={qInput}
+          cityInput={cityInput}
+          setQInput={setQInput}
+          setCityInput={setCityInput}
+          onSubmit={applyFilters}
         />
 
         {categoriesQuery.data && <CategoryFilter counts={categoriesQuery.data} selected={category} onSelect={selectCategory} />}
@@ -314,53 +324,90 @@ function Hero({ heroEvent, qInput, cityInput, setQInput, setCityInput, onSubmit 
           {heroEvent && <PaperTicket event={heroEvent} />}
         </div>
 
-        {/* Busca em forma de ingresso: recortes nas laterais e o botão no "canhoto". */}
-        <form
-          role="search"
+        {/* Recolhe da direita para a esquerda quando o ingresso desce por cima dela. */}
+        <SearchBar
+          variant="hero"
+          className="mb-16 mt-20 md:mt-24"
+          qInput={qInput}
+          cityInput={cityInput}
+          setQInput={setQInput}
+          setCityInput={setCityInput}
           onSubmit={onSubmit}
-          data-hero-repel
-          className="tf-hero-search tf-cut-y relative mb-16 mt-20 flex flex-col overflow-hidden rounded-[20px] bg-surface shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)] [--cut-y:calc(100%-86px)] [--r:15px] md:mt-24 md:flex-row md:[--cut-y:50%]"
-        >
-          <label className="relative flex flex-[1.5] cursor-text items-center gap-3.5 px-6 py-[18px] transition-colors focus-within:bg-ink/[0.035] hover:bg-ink/[0.035] md:py-4 md:pl-10">
-            <Search size={22} className="shrink-0 text-accent-text" aria-hidden />
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-[13px] font-semibold uppercase tracking-[0.14em] text-muted">{t.storefront.eventName}</span>
-              <input
-                type="search"
-                value={qInput}
-                onChange={(e) => setQInput(e.target.value)}
-                maxLength={100}
-                enterKeyHint="search"
-                autoComplete="off"
-                placeholder={t.storefront.eventNamePlaceholder}
-                className="w-full bg-transparent text-lg font-medium text-ink outline-none placeholder:text-ink/70 focus:placeholder:text-ink/40"
-              />
-            </span>
-          </label>
-          <span className="mx-6 h-px bg-line md:mx-0 md:my-6 md:h-auto md:w-px" aria-hidden />
-          <label className="relative flex flex-1 cursor-text items-center gap-3.5 px-6 py-[18px] transition-colors focus-within:bg-ink/[0.035] hover:bg-ink/[0.035] md:px-7 md:py-4">
-            <MapPin size={20} className="shrink-0 text-accent-text" aria-hidden />
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-[13px] font-semibold uppercase tracking-[0.14em] text-muted">{t.storefront.city}</span>
-              <input
-                value={cityInput}
-                onChange={(e) => setCityInput(e.target.value)}
-                maxLength={100}
-                enterKeyHint="search"
-                autoComplete="address-level2"
-                placeholder={t.storefront.cityPlaceholder}
-                className="w-full bg-transparent text-lg font-medium text-ink outline-none placeholder:text-ink/70 focus:placeholder:text-ink/40"
-              />
-            </span>
-          </label>
-          <div className="flex h-[86px] items-center border-t-2 border-dashed border-line px-4 md:h-auto md:border-l-2 md:border-t-0 md:py-5 md:pl-6 md:pr-7">
-            <Button type="submit" size="lg" className="w-full md:w-auto">
-              {t.storefront.search} <ArrowRight size={16} aria-hidden />
-            </Button>
-          </div>
-        </form>
+        />
       </div>
     </section>
+  );
+}
+
+interface SearchBarProps {
+  variant: "hero" | "section";
+  className?: string;
+  qInput: string;
+  cityInput: string;
+  setQInput: (v: string) => void;
+  setCityInput: (v: string) => void;
+  onSubmit: (e: FormEvent) => void;
+}
+
+// Busca em forma de ingresso: recortes nas laterais e o botão no "canhoto".
+// Aparece duas vezes, com os mesmos campos:
+// - "hero" (no palco): o ingresso do topo, ao descer, a empurra para fora; ela
+//   se recolhe da direita para a esquerda (--repel, escrito pelo useHeroDrop
+//   do PaperTicket) e reabre ao subir a página;
+// - "section" (em Todos os eventos): abre da esquerda para a direita conforme
+//   entra na tela (--scroll, do useScrollShift).
+// Com foco de teclado, qualquer uma das duas abre inteira.
+function SearchBar({ variant, className = "", qInput, cityInput, setQInput, setCityInput, onSubmit }: SearchBarProps) {
+  const { t } = useI18n();
+  const revealRef = useScrollShift<HTMLFormElement>(0);
+  const hero = variant === "hero";
+  return (
+    <form
+      ref={hero ? undefined : revealRef}
+      role="search"
+      aria-label={t.storefront.search}
+      onSubmit={onSubmit}
+      data-hero-repel={hero ? "" : undefined}
+      className={`${hero ? "tf-hero-search" : "tf-search-reveal"} tf-cut-y relative flex flex-col overflow-hidden rounded-[20px] bg-surface shadow-[inset_0_0_0_1px_var(--card-ring)] [--cut-y:calc(100%-86px)] [--r:15px] md:flex-row md:[--cut-y:50%] ${className}`}
+    >
+      <label className="relative flex flex-[1.5] cursor-text items-center gap-3.5 px-6 py-[18px] transition-colors focus-within:bg-ink/[0.035] hover:bg-ink/[0.035] md:py-4 md:pl-10">
+        <Search size={22} className="shrink-0 text-accent-text" aria-hidden />
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="text-[13px] font-semibold uppercase tracking-[0.14em] text-muted">{t.storefront.eventName}</span>
+          <input
+            type="search"
+            value={qInput}
+            onChange={(e) => setQInput(e.target.value)}
+            maxLength={100}
+            enterKeyHint="search"
+            autoComplete="off"
+            placeholder={t.storefront.eventNamePlaceholder}
+            className="w-full bg-transparent text-lg font-medium text-ink outline-none placeholder:text-ink/70 focus:placeholder:text-ink/40"
+          />
+        </span>
+      </label>
+      <span className="mx-6 h-px bg-line md:mx-0 md:my-6 md:h-auto md:w-px" aria-hidden />
+      <label className="relative flex flex-1 cursor-text items-center gap-3.5 px-6 py-[18px] transition-colors focus-within:bg-ink/[0.035] hover:bg-ink/[0.035] md:px-7 md:py-4">
+        <MapPin size={20} className="shrink-0 text-accent-text" aria-hidden />
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="text-[13px] font-semibold uppercase tracking-[0.14em] text-muted">{t.storefront.city}</span>
+          <input
+            value={cityInput}
+            onChange={(e) => setCityInput(e.target.value)}
+            maxLength={100}
+            enterKeyHint="search"
+            autoComplete="address-level2"
+            placeholder={t.storefront.cityPlaceholder}
+            className="w-full bg-transparent text-lg font-medium text-ink outline-none placeholder:text-ink/70 focus:placeholder:text-ink/40"
+          />
+        </span>
+      </label>
+      <div className="flex h-[86px] items-center border-t-2 border-dashed border-line px-4 md:h-auto md:border-l-2 md:border-t-0 md:py-5 md:pl-6 md:pr-7">
+        <Button type="submit" size="lg" className="w-full md:w-auto">
+          {t.storefront.search} <ArrowRight size={16} aria-hidden />
+        </Button>
+      </div>
+    </form>
   );
 }
 
