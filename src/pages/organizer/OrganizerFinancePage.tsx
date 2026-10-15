@@ -12,7 +12,7 @@ import PayoutAccountSection from "./finance/PayoutAccountSection";
 import PayoutDialog from "./finance/PayoutDialog";
 import PayoutHistory from "./finance/PayoutHistory";
 import { payoutBlockedReason } from "./finance/payoutMeta";
-import { formatDate, formatPrice, formatTime, shortId } from "../../utils/format";
+import { formatDay, formatPrice, formatTime, shortId } from "../../utils/format";
 import { errorMessage } from "../../api/client";
 import { useI18n } from "../../i18n/LocaleContext";
 import { usePageTitle } from "../../hooks/usePageTitle";
@@ -204,7 +204,7 @@ function Ledger() {
               {data.content.map((entry) => (
                 <li key={entry.id} className="flex flex-wrap items-center gap-4 border-b border-line px-4 py-4 last:border-0 sm:flex-nowrap sm:px-5">
                   <div className="w-28 shrink-0">
-                    <p className="tabular text-sm text-ink">{formatDate(entry.createdAt, locale)}</p>
+                    <p className="tabular text-sm text-ink">{formatDay(entry.createdAt, locale)}</p>
                     <p className="tabular text-xs text-subtle">{formatTime(entry.createdAt, locale)}</p>
                   </div>
                   <div className="min-w-0 flex-1">

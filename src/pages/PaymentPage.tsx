@@ -5,6 +5,7 @@ import { CreditCard, Lock, QrCode } from "lucide-react";
 import { errorMessage } from "../api/client";
 import { cancelOrder, getOrder, payOrder } from "../api/endpoints";
 import CheckoutSummary from "../components/CheckoutSummary";
+import MobileActionBar from "../components/MobileActionBar";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { ReservationTimer } from "../components/Countdown";
 import { ErrorMessage, Loading } from "../components/StateMessage";
@@ -68,7 +69,7 @@ export default function PaymentPage() {
   const busy = pay.isPending || cancel.isPending;
 
   return (
-    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-12">
+    <div className="grid items-start gap-8 pb-28 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-12 lg:pb-0">
       <div>
         <BackLink to="/orders">{t.payment.myOrders}</BackLink>
         <h1 className="mt-6 text-[clamp(1.875rem,3.4vw,2.75rem)] font-extrabold leading-[1.05] tracking-[-0.045em] text-ink">{t.payment.title}</h1>
@@ -117,9 +118,11 @@ export default function PaymentPage() {
         />
         {(pay.error || cancel.error) && <Alert>{errorMessage(pay.error ?? cancel.error)}</Alert>}
         {/* Desabilitado enquanto qualquer ação roda: evita pagar e cancelar ao mesmo tempo. */}
-        <Button size="lg" className="w-full" loading={pay.isPending} disabled={busy} onClick={() => pay.mutate()}>
-          <Lock size={16} aria-hidden /> {t.payment.pay(formatPrice(o.totalAmount, locale))}
-        </Button>
+        <div className="hidden lg:block">
+          <Button size="lg" className="w-full" loading={pay.isPending} disabled={busy} onClick={() => pay.mutate()}>
+            <Lock size={16} aria-hidden /> {t.payment.pay(formatPrice(o.totalAmount, locale))}
+          </Button>
+        </div>
         <div className="flex items-center justify-between">
           <Link to="/orders" className="text-sm font-semibold text-accent-text hover:underline">
             {t.payment.payLater}
@@ -129,6 +132,12 @@ export default function PaymentPage() {
           </Button>
         </div>
       </div>
+
+      <MobileActionBar label={t.checkout.barTotal} total={formatPrice(o.totalAmount, locale)} message={pay.error || cancel.error ? errorMessage(pay.error ?? cancel.error) : undefined}>
+        <Button size="lg" loading={pay.isPending} disabled={busy} onClick={() => pay.mutate()}>
+          <Lock size={16} aria-hidden /> {t.payment.payShort}
+        </Button>
+      </MobileActionBar>
 
       <ConfirmDialog
         open={confirmCancel}

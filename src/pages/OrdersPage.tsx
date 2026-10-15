@@ -8,7 +8,8 @@ import StatusBadge from "../components/StatusBadge";
 import { Empty, ErrorMessage } from "../components/StateMessage";
 import { TabPanel, Tabs, useTabParam } from "../components/Tabs";
 import { ButtonLink, PageTitle, Skeleton } from "../components/ui";
-import { formatPrice, formatShortDate, shortId } from "../utils/format";
+import { formatDate, formatPrice, formatShortDate, shortId } from "../utils/format";
+import { orderEvent } from "../utils/orders";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { errorMessage } from "../api/client";
 import { useI18n } from "../i18n/LocaleContext";
@@ -82,16 +83,35 @@ export default function OrdersPage() {
         )}
         {orders.length > 0 && (
           <ul className="tf-panel overflow-hidden">
-            {orders.map((order) => (
-              <li key={order.id} className="border-b border-line last:border-0">
-                <Link to={`/orders/${order.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-raised">
-                  <div className="flex items-center gap-4">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-raised text-accent-text">
+            {orders.map((order) => {
+              const event = orderEvent(order);
+              return (
+                // O link do pedido cobre a linha toda (after:inset-0); o do evento fica por cima (z-10).
+                <li key={order.id} className="relative flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4 last:border-0 hover:bg-raised">
+                  <div className="flex min-w-0 items-center gap-4">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-raised text-accent-text">
                       <Receipt size={18} aria-hidden />
                     </span>
-                    <div>
-                      <p className="font-bold text-ink">{o.order(shortId(order.id))}</p>
-                      {order.createdAt && <p className="text-sm text-muted">{formatShortDate(order.createdAt, locale)}</p>}
+                    <div className="min-w-0">
+                      {event && (
+                        <Link
+                          to={`/events/${event.id}`}
+                          aria-label={o.seeEvent(event.name)}
+                          className="relative z-10 block truncate font-bold text-ink underline-offset-4 hover:text-accent-text hover:underline"
+                          data-testid="order-event"
+                        >
+                          {event.name}
+                        </Link>
+                      )}
+                      {event?.startsAt && (
+                        <p className="tabular text-sm text-ink/80">
+                          <time dateTime={event.startsAt}>{formatDate(event.startsAt, locale)}</time>
+                        </p>
+                      )}
+                      <Link to={`/orders/${order.id}`} className={`${event ? "text-sm text-muted" : "font-bold text-ink"} after:absolute after:inset-0`}>
+                        {o.order(shortId(order.id))}
+                        {order.createdAt && <span className={event ? "" : "block text-sm font-normal text-muted"}>{event ? " · " : ""}{formatShortDate(order.createdAt, locale)}</span>}
+                      </Link>
                     </div>
                   </div>
                   <div className="ml-auto flex items-center gap-3 sm:gap-4">
@@ -99,9 +119,9 @@ export default function OrdersPage() {
                     <span className="tabular text-right font-bold text-ink sm:w-28">{formatPrice(order.totalAmount, locale)}</span>
                     <ChevronRight size={18} className="text-subtle" aria-hidden />
                   </div>
-                </Link>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
         {data && <Pagination page={data.page.number} totalPages={data.page.totalPages} onChange={goToPage} />}

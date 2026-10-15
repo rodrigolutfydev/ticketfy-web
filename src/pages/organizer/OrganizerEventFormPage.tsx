@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createEvent, getEvent, updateEvent } from "../../api/endpoints";
 import type { EventInput } from "../../api/types";
 import EventForm from "../../components/EventForm";
+import { showFlash } from "../../components/FlashNotice";
 import { ErrorMessage, Loading } from "../../components/StateMessage";
 import { BackLink, Card, PageTitle } from "../../components/ui";
 import { isValidId } from "../../utils/security";
@@ -31,6 +32,7 @@ function CreateEvent() {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["my-events"] });
       // Vai direto para a aba de lotes: o próximo passo natural.
+      showFlash(t.layout.flash.eventCreated, `/organizer/events/${event.id}`);
       navigate(`/organizer/events/${event.id}?tab=lotes`, { replace: true });
     },
   });
@@ -58,6 +60,7 @@ function EditEvent({ id }: { id: string }) {
       queryClient.invalidateQueries({ queryKey: ["event", id] });
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["my-events"] });
+      showFlash(t.layout.flash.eventSaved, `/organizer/events/${id}`);
       navigate(`/organizer/events/${id}`, { replace: true });
     },
   });

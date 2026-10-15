@@ -35,10 +35,10 @@ export default function EventOverview({ eventId }: { eventId: string }) {
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Kpi label={v.ticketsSold} value={formatInt(t.ticketsSold, locale)} hint={v.soldOf(formatPercent(t.percentSold, locale), formatInt(t.capacity, locale))} progress={t.percentSold} />
-        <Kpi label={v.reserved} value={formatInt(t.ticketsReserved, locale)} hint={v.free(formatInt(t.remaining, locale))} />
+        <Kpi label={v.reserved} value={formatInt(t.ticketsReserved, locale)} hint={v.free(t.remaining)} />
         <Kpi label={v.averageOrder} value={formatMaybePrice(t.averageOrderValue, locale)} />
         <Kpi label={v.averageTicket} value={formatMaybePrice(t.averageTicketPrice, locale)} />
-        <Kpi label={v.paidOrders} value={formatInt(t.paidOrders, locale)} hint={v.awaiting(formatInt(d.ordersByStatus.find((r) => r.status === "PENDING")?.orders ?? 0, locale))} />
+        <Kpi label={v.paidOrders} value={formatInt(t.paidOrders, locale)} hint={v.awaiting(d.ordersByStatus.find((r) => r.status === "PENDING")?.orders ?? 0)} />
       </div>
 
       <section className="tf-panel p-5 sm:p-6">
@@ -127,13 +127,7 @@ function LotPerformance({ lots }: { lots: EventDashboard["ticketTypes"] }) {
                 <div className="bg-warning/80" style={{ width: `${pct(lot.reserved)}%` }} />
               </div>
               <p className="tabular mt-1.5 text-xs text-muted">
-                {v.lotLine(
-                  formatInt(lot.sold, locale),
-                  formatInt(lot.reserved, locale),
-                  formatInt(lot.remaining, locale),
-                  formatInt(lot.quantityTotal, locale),
-                  formatPercent(lot.percentSold, locale),
-                )}
+                {v.lotLine(lot.sold, lot.reserved, lot.remaining, lot.quantityTotal, formatPercent(lot.percentSold, locale))}
               </p>
             </li>
           );
@@ -200,7 +194,7 @@ function OrdersByStatus({ rows }: { rows: EventDashboard["ordersByStatus"] }) {
                 </span>
               </td>
               <td className="tabular py-2.5 text-right font-semibold text-ink">{formatInt(row.orders, locale)}</td>
-              <td className="tabular w-28 py-2.5 text-right text-muted">{v.ticketsShort(formatInt(row.tickets, locale))}</td>
+              <td className="tabular w-28 py-2.5 text-right text-muted">{v.ticketsShort(row.tickets)}</td>
             </tr>
           ))}
         </tbody>
@@ -235,7 +229,7 @@ function Attendance({ checkIn }: { checkIn: EventDashboard["checkIn"] }) {
       <div>
         <h2 className="text-lg font-semibold text-ink">{v.attendance}</h2>
         <p className="font-display tabular text-2xl font-extrabold text-ink">{formatPercent(checkIn.attendanceRate, locale)}</p>
-        <p className="text-xs text-muted">{v.attendanceText(formatInt(checkIn.checkedIn, locale), formatInt(checkIn.issued, locale))}</p>
+        <p className="text-xs text-muted">{v.attendanceText(checkIn.checkedIn, checkIn.issued)}</p>
       </div>
     </section>
   );

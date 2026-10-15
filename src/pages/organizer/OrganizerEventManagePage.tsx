@@ -4,15 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChartColumn, ExternalLink, Layers, Pencil, Plus, Receipt, Settings, TicketPercent, Users, X } from "lucide-react";
 import { ApiError, errorMessage, fieldError, hasUnmappedError } from "../../api/client";
 import {
-  cancelEvent, createTicketType, deactivateTicketType, deleteEvent, getEvent, getEventDashboard, listManagedTicketTypes, reactivateTicketType,
+  cancelEvent, createTicketType, getCancellationPreview, deactivateTicketType, deleteEvent, getEvent, listManagedTicketTypes, reactivateTicketType,
   updateTicketType,
 } from "../../api/endpoints";
 import type { EventCancellationResult, EventDetails, TicketTypeDetails, TicketTypeUpdate } from "../../api/types";
-import { ConfirmButton } from "../../components/ConfirmDialog";
+import ConfirmDialog, { ConfirmButton } from "../../components/ConfirmDialog";
 import EventCover from "../../components/EventCover";
 import { ErrorMessage, Loading } from "../../components/StateMessage";
 import { TabPanel, Tabs, useTabParam } from "../../components/Tabs";
-import { Alert, BackLink, Button, ButtonLink, Card, Field, Input, Textarea } from "../../components/ui";
+import { Alert, BackLink, Button, ButtonLink, Card, Field, Form, Input, Textarea } from "../../components/ui";
 import FeaturedToggle from "../../components/FeaturedToggle";
 import CouponsTab from "./CouponsTab";
 import EventOrders from "./dashboard/EventOrders";
@@ -21,6 +21,7 @@ import EventOverview from "./dashboard/EventOverview";
 import { eventStamp, formatInt, formatPrice, formatShortDate, isPast } from "../../utils/format";
 import { useI18n } from "../../i18n/LocaleContext";
 import { maxPerBuyerChange, suggestedMaxPerBuyer } from "../../utils/lots";
+import { previewLines, resultLines } from "../../utils/cancellation";
 import { lotToggleCopy } from "../../utils/participants";
 import { isValidId } from "../../utils/security";
 import NotFoundPage from "../NotFoundPage";
@@ -187,7 +188,55 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
           <p className="p-5 text-sm text-muted">{l.empty}</p>
         )}
         {lots.length > 0 && (
-          <div className="overflow-x-auto">
+          <ul className="divide-y divide-line md:hidden">
+            {lots.map((lot) => (
+              <li key={lot.id} className="space-y-3 px-5 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink">{lot.name}</p>
+                    {lot.description && <p className="line-clamp-2 text-xs text-muted">{lot.description}</p>}
+                  </div>
+                  <p className="tabular shrink-0 font-semibold text-ink">{formatPrice(lot.price, locale)}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${lot.active ? "bg-success/12 text-success" : "bg-raised text-muted"}`}>
+                    {lot.active ? l.onSale : l.inactive}
+                  </span>
+                  {lot.available === 0 && <span className="rounded bg-raised px-1.5 py-0.5 text-[10px] font-bold text-muted">{l.soldOut}</span>}
+                </div>
+                <div>
+                  <div className="flex items-center justify-between text-xs text-muted">
+                    <span>{l.soldReserved}</span>
+                    <span className="tabular">
+                      {formatInt(lot.quantitySold, locale)} / {formatInt(lot.quantityTotal, locale)}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden>
+                    <div className="h-full bg-accent" style={{ width: `${lot.quantityTotal ? (lot.quantitySold / lot.quantityTotal) * 100 : 0}%` }} />
+                  </div>
+                </div>
+                <dl className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <dt className="text-muted">{l.maxPerOrder}</dt>
+                    <dd className="tabular font-semibold text-ink">{lot.maxPerOrder ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">{l.maxPerBuyer}</dt>
+                    <dd className="tabular font-semibold text-ink">{lot.maxPerBuyer ?? "—"}</dd>
+                  </div>
+                </dl>
+                <div className="grid grid-cols-2 gap-2 [&>button]:w-full [&>div]:items-stretch [&>div>button]:w-full">
+                  <Button variant="secondary" onClick={() => setEditing(lot)}>
+                    <Pencil size={15} aria-hidden /> {l.edit}
+                  </Button>
+                  <LotToggle eventId={eventId} lot={lot} lots={lots} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {lots.length > 0 && (
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[880px] text-sm">
               <thead>
                 <tr className="border-b border-line text-left text-xs text-muted">
@@ -253,7 +302,7 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
       {creating && (
       <Card>
         <h2 className="mb-4 text-lg font-semibold text-ink">{l.newLot}</h2>
-        <form onSubmit={submit} className="space-y-4">
+        <Form onSubmit={submit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={l.name}>
               <Input required maxLength={100} value={form.name} onChange={set("name")} placeholder={l.namePlaceholder} />
@@ -281,7 +330,7 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
           <Button type="submit" loading={mutation.isPending}>
             {l.create}
           </Button>
-        </form>
+        </Form>
       </Card>
       )}
     </div>
@@ -332,24 +381,26 @@ function CancelEventSection({ event }: { event: EventDetails }) {
   const s = t.organizer.settings;
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const [result, setResult] = useState<EventCancellationResult | null>(null);
   const ended = isPast(event.endsAt ?? event.startsAt);
-  const dashboardQuery = useQuery({
-    queryKey: ["event-dashboard", event.id],
-    queryFn: () => getEventDashboard(event.id),
-    enabled: !event.cancelledAt && !ended,
+  // A prévia é pedida ao abrir a confirmação (staleTime 0): os números são do momento da consulta.
+  const previewQuery = useQuery({
+    queryKey: ["cancellation-preview", event.id],
+    queryFn: () => getCancellationPreview(event.id),
+    enabled: confirming && !event.cancelledAt && !ended,
+    staleTime: 0,
   });
-  const ordersWith = (status: string) => dashboardQuery.data?.ordersByStatus.find((row) => row.status === status)?.orders ?? 0;
-  const paidOrders = ordersWith("PAID");
-  const pendingOrders = ordersWith("PENDING");
 
   const mutation = useMutation({
     mutationFn: () => cancelEvent(event.id, reason),
     onSuccess: (data) => {
       setResult(data);
+      setConfirming(false);
       queryClient.invalidateQueries({ queryKey: ["event", event.id] });
       queryClient.invalidateQueries({ queryKey: ["event-dashboard", event.id] });
       queryClient.invalidateQueries({ queryKey: ["event-orders", event.id] });
+      queryClient.invalidateQueries({ queryKey: ["cancellation-preview", event.id] });
       queryClient.invalidateQueries({ queryKey: ["ticket-types", event.id] });
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["my-events"] });
@@ -373,6 +424,8 @@ function CancelEventSection({ event }: { event: EventDetails }) {
 
   if (ended) return null;
 
+  const lines = previewQuery.data ? previewLines(previewQuery.data) : [];
+
   return (
     <div className="rounded-2xl border border-danger/35 p-6">
       <h2 className="text-lg font-extrabold text-ink">{s.cancelTitle}</h2>
@@ -383,21 +436,33 @@ function CancelEventSection({ event }: { event: EventDetails }) {
         </div>
       )}
       <div className="mt-5">
-        <ConfirmButton
+        <Button variant="danger" onClick={() => setConfirming(true)} loading={mutation.isPending}>
+          {s.cancelEvent}
+        </Button>
+        <ConfirmDialog
+          open={confirming}
           title={s.cancelConfirmTitle}
           description={
             <div className="space-y-4">
-              {dashboardQuery.isLoading ? (
+              {previewQuery.isFetching && !previewQuery.data ? (
                 <p>{s.counting}</p>
-              ) : dashboardQuery.error ? (
+              ) : previewQuery.error ? (
                 <p>{s.countFailed}</p>
-              ) : (
-                <p>
-                  <strong className="text-ink">{s.paidAffected(paidOrders)}</strong>
-                  {pendingOrders > 0 && s.pendingAffected(pendingOrders)}.
-                  {s.irreversible}
-                </p>
-              )}
+              ) : previewQuery.data ? (
+                <div>
+                  <p className="font-semibold text-ink">{lines.length > 0 ? s.previewTitle : s.previewNone}</p>
+                  {lines.length > 0 && (
+                    <ul className="mt-2 list-disc space-y-1 pl-5" data-testid="cancellation-preview">
+                      {lines.map((line) => (
+                        <li key={line.key} className={line.key === "manual" ? "font-semibold text-danger" : "text-ink"}>
+                          {s.preview[line.key](line.count)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
+              <p>{s.irreversible}</p>
               <Field label={s.reasonLabel} hint={s.reasonHint}>
                 <Textarea rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
               </Field>
@@ -406,10 +471,9 @@ function CancelEventSection({ event }: { event: EventDetails }) {
           confirmLabel={s.cancelEvent}
           danger
           loading={mutation.isPending}
+          onClose={() => setConfirming(false)}
           onConfirm={() => mutation.mutate()}
-        >
-          {s.cancelEvent}
-        </ConfirmButton>
+        />
       </div>
     </div>
   );
@@ -418,9 +482,21 @@ function CancelEventSection({ event }: { event: EventDetails }) {
 function CancellationSummary({ result }: { result: EventCancellationResult }) {
   const { t } = useI18n();
   const s = t.organizer.settings;
+  const lines = resultLines(result);
   return (
     <div className="space-y-3">
-      <Alert type="success">{s.summary(result.refundedOrders, result.cancelledOrders)}</Alert>
+      <Alert type="success">
+        <p className="font-semibold">{s.resultTitle}</p>
+        {lines.length > 0 ? (
+          <ul className="mt-1 list-disc pl-5" data-testid="cancellation-result">
+            {lines.map((line) => (
+              <li key={line.key}>{s.result[line.key](line.count)}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>{s.resultNone}</p>
+        )}
+      </Alert>
       {result.pendingOrders > 0 && <Alert type="info">{s.pendingRefunds(result.pendingOrders)}</Alert>}
       {result.requiresManualAction > 0 && <Alert type="warning">{s.manualRefunds(result.requiresManualAction)}</Alert>}
     </div>
@@ -472,7 +548,7 @@ const LOT_FIELDS = ["name", "quantityTotal", "maxPerBuyer"] as const;
 function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketTypeDetails; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const queryClient = useQueryClient();
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const l = t.organizer.lots;
   const ed = l.editor;
   const [form, setForm] = useState({
@@ -549,7 +625,7 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
       aria-labelledby="editar-lote"
       className="m-0 ml-auto h-full max-h-none w-full max-w-md border-l border-line bg-surface p-0 text-ink"
     >
-      <form onSubmit={submit} noValidate className="flex h-full flex-col">
+      <Form onSubmit={submit} className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b border-line px-6 py-4">
           <h2 id="editar-lote" className="text-lg font-semibold">
             {ed.title}
@@ -568,7 +644,7 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
           <Field label={l.priceLabel} hint={ed.priceHint}>
             <Input required type="number" inputMode="decimal" min="0" max="100000" step="0.01" value={form.price} onChange={set("price")} />
           </Field>
-          <Field label={l.quantityTotal} hint={ed.soldHint(formatInt(lot.quantitySold, locale))} error={quantityError}>
+          <Field label={l.quantityTotal} hint={ed.soldHint(lot.quantitySold)} error={quantityError}>
             <Input required type="number" inputMode="numeric" min={Math.max(1, lot.quantitySold)} max="1000000" step="1" value={form.quantityTotal} onChange={set("quantityTotal")} />
           </Field>
           <Field label={l.maxPerOrderLabel} hint={lot.maxPerOrder === null ? ed.maxPerOrderOptional : ed.maxPerOrderLocked}>
@@ -592,7 +668,7 @@ function LotEditor({ eventId, lot, onClose }: { eventId: string; lot: TicketType
             {ed.save}
           </Button>
         </div>
-      </form>
+      </Form>
     </dialog>
   );
 }

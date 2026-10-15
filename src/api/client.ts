@@ -76,9 +76,33 @@ export function wakeApi(): Promise<void> {
   return waking;
 }
 
+// Acorda a API e renova a sessão ao mesmo tempo: com a API já de pé, o
+// cabeçalho sai do "carregando" sem esperar o health. Só tenta a renovação
+// de novo, depois que a API responder ao health, quando o pedido com certeza
+// não foi processado: erro de rede ou 502/503/504 do Render enquanto ela
+// acordava. Tempo esgotado ou qualquer outra resposta não repete, porque a
+// API pode já ter trocado o token, e uma segunda troca fora da janela de
+// tolerância derruba a sessão.
+const UNREACHED_STATUSES = new Set([502, 503, 504]);
+
+function refreshNeverReachedApi(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return false;
+  return error.clientKey === "network" || (error.clientKey === null && UNREACHED_STATUSES.has(error.status));
+}
+
 export async function resumeSession(): Promise<boolean> {
-  await wakeApi();
-  return session ? true : refreshSession();
+  let awake = false;
+  const woke = wakeApi().then(() => {
+    awake = true;
+  });
+  if (session) return true;
+  try {
+    return await refreshSession();
+  } catch (error) {
+    if (awake || !refreshNeverReachedApi(error)) throw error;
+    await woke;
+    return session ? true : refreshSession();
+  }
 }
 
 export type FieldError = { field: string; message: string; code: string | null; params: Record<string, unknown> };

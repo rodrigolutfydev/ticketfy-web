@@ -1,6 +1,7 @@
 import type { organizer as reference } from "../pt-BR/organizer";
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const int = (n: number) => new Intl.NumberFormat("en").format(n);
+const plural = (n: number, one: string, many: string) => `${int(n)} ${n === 1 ? one : many}`;
 
 export const organizer: typeof reference = {
   layout: {
@@ -141,14 +142,15 @@ export const organizer: typeof reference = {
       quantity: "The total quantity must be a whole number greater than zero.",
       maxPerOrder: "The maximum per order must be a whole number greater than zero.",
       maxPerOrderRemoval: "The per-order limit can't be removed, only changed.",
-      belowSold: (sold: number) => `The total quantity can't be lower than the ${sold} tickets already sold or reserved.`,
+      belowSold: (sold: number) =>
+        `The total quantity can't be lower than the ${plural(sold, "ticket", "tickets")} already sold or reserved.`,
     },
     editor: {
       title: "Edit batch",
       close: "Close",
       descriptionHint: "Leave it blank to remove it.",
       priceHint: "Existing orders keep the price they were bought at.",
-      soldHint: (sold: string) => `${sold} already sold or reserved.`,
+      soldHint: (sold: number) => `${int(sold)} already sold or reserved.`,
       maxPerOrderOptional: "Optional.",
       maxPerOrderLocked: "Can be changed, but not removed.",
       maxPerBuyerHint: "Optional. Leave it blank to remove it. Lowering the limit doesn't cancel existing purchases.",
@@ -171,19 +173,32 @@ export const organizer: typeof reference = {
     cancelledAt: (date: string) => `Cancelled on ${date}.`,
     reason: (reason: string) => `Reason: ${reason}`,
     cancelTitle: "Cancel event",
-    cancelText: "Paid orders are refunded and their tickets cancelled. Orders awaiting payment are cancelled. The event leaves the storefront and stops selling.",
+    cancelText:
+      "Paid orders are refunded and their tickets cancelled. Free orders and orders awaiting payment are cancelled. A paid order with a ticket already used needs a manual refund. The event leaves the storefront and stops selling.",
     cancelConfirmTitle: "Cancel this event?",
     counting: "Counting affected orders...",
-    countFailed: "We couldn't count the affected orders. Every paid order will be refunded.",
-    paidAffected: (n: number) => (n === 1 ? "1 paid order will be refunded" : `${n} paid orders will be refunded`),
-    pendingAffected: (n: number) =>
-      n === 1 ? " and 1 order awaiting payment will be cancelled" : ` and ${n} orders awaiting payment will be cancelled`,
-    irreversible: " This action can't be undone.",
+    countFailed: "We couldn't count the affected orders right now. The cancellation follows the rules above.",
+    previewTitle: "If you cancel:",
+    previewNone: "No orders will be affected.",
+    preview: {
+      refund: (n: number) => `${plural(n, "paid order", "paid orders")} will be refunded`,
+      free: (n: number) => `${plural(n, "free order", "free orders")} will be cancelled, with nothing to refund`,
+      pending: (n: number) => `${plural(n, "order", "orders")} awaiting payment will be cancelled`,
+      manual: (n: number) => `${plural(n, "paid order", "paid orders")} with a used ticket will need a manual refund`,
+      used: (n: number) => `${plural(n, "ticket has", "tickets have")} already been checked in and will stay marked as used`,
+    },
+    irreversible: "This action can't be undone.",
     reasonLabel: "Reason",
     reasonHint: "Optional. Shown on the event page.",
     cancelEvent: "Cancel event",
-    summary: (refunded: number, cancelled: number) =>
-      `${plural(refunded, "order refunded", "orders refunded")} and ${plural(cancelled, "order cancelled", "orders cancelled")}.`,
+    resultTitle: "Event cancelled.",
+    resultNone: "No orders were affected.",
+    result: {
+      refunded: (n: number) => `${plural(n, "order", "orders")} refunded`,
+      cancelledFree: (n: number) => `${plural(n, "free order", "free orders")} cancelled`,
+      cancelled: (n: number) => `${plural(n, "pending order", "pending orders")} cancelled`,
+      used: (n: number) => `${plural(n, "used ticket", "used tickets")} kept as used`,
+    },
     pendingRefunds: (n: number) =>
       n === 1 ? "1 refund is pending and will be retried automatically." : `${n} refunds are pending and will be retried automatically.`,
     manualRefunds: (n: number) =>
@@ -249,7 +264,7 @@ export const organizer: typeof reference = {
       maxUses: "The usage limit must be a whole number greater than zero.",
       maxUsesPerBuyer: "The uses per buyer must be a whole number greater than zero.",
       dates: "The end of the validity period must be after its start.",
-      belowUsed: (n: number) => `The limit can't be lower than the ${n} uses already made.`,
+      belowUsed: (n: number) => `The limit can't be lower than the ${plural(n, "use", "uses")} already made.`,
     },
   },
   overview: {
@@ -264,11 +279,11 @@ export const organizer: typeof reference = {
     ticketsSold: "Tickets sold",
     soldOf: (percent: string, capacity: string) => `${percent} of ${capacity}`,
     reserved: "Held right now",
-    free: (n: string) => `${n} left for sale`,
+    free: (n: number) => `${int(n)} left for sale`,
     averageOrder: "Average order value",
     averageTicket: "Average ticket price",
     paidOrders: "Paid orders",
-    awaiting: (n: string) => `${n} awaiting payment`,
+    awaiting: (n: number) => `${int(n)} awaiting payment`,
     dailyTitle: "Net sales per day",
     dailyText: "Paid orders on the day of payment, excluding refunds.",
     noSales: "No paid sales yet.",
@@ -278,9 +293,9 @@ export const organizer: typeof reference = {
     lotsTitle: "Performance by batch",
     noLots: "No batches yet.",
     lotBar: (sold: number, reserved: number, remaining: number, total: number) =>
-      `${sold} sold, ${reserved} held, ${remaining} left out of ${total}`,
-    lotLine: (sold: string, reserved: string, remaining: string, total: string, percent: string) =>
-      `${sold} sold · ${reserved} held · ${remaining} left out of ${total} (${percent})`,
+      `${int(sold)} sold, ${int(reserved)} held, ${int(remaining)} left out of ${int(total)}`,
+    lotLine: (sold: number, reserved: number, remaining: number, total: number, percent: string) =>
+      `${int(sold)} sold · ${int(reserved)} held · ${int(remaining)} left out of ${int(total)} (${percent})`,
     couponsTitle: "Coupons",
     code: "Code",
     uses: "Uses",
@@ -290,15 +305,16 @@ export const organizer: typeof reference = {
     status: "Status",
     orders: "Orders",
     tickets: "Tickets",
-    ticketsShort: (n: string) => `${n} tix`,
+    ticketsShort: (n: number) => `${int(n)} tix`,
     attendance: "Attendance",
-    attendanceText: (checkedIn: string, issued: string) => `${checkedIn} check-ins out of ${issued} tickets issued`,
+    attendanceText: (checkedIn: number, issued: number) =>
+      `${plural(checkedIn, "check-in", "check-ins")} out of ${plural(issued, "ticket issued", "tickets issued")}`,
   },
   chart: {
     hint: "Hover over a day to see the numbers.",
     label: "Tickets and revenue per day",
-    day: (tickets: string, revenue: string) => `${tickets} tickets · ${revenue}`,
-    bar: (day: string, tickets: number, revenue: string) => `${day}: ${tickets} tickets, ${revenue}`,
+    day: (tickets: number, revenue: string) => `${plural(tickets, "ticket", "tickets")} · ${revenue}`,
+    bar: (day: string, tickets: number, revenue: string) => `${day}: ${plural(tickets, "ticket", "tickets")}, ${revenue}`,
   },
   orders: {
     searchLabel: "Search buyer",
@@ -350,6 +366,8 @@ export const organizer: typeof reference = {
     submit: "Validate entry",
     allowed: "Entry allowed",
     denied: "Entry denied",
+    alreadyAdmitted: "Already checked in",
+    alreadyAdmittedAt: (time: string) => `This ticket was already checked in at ${time}. Don't let it in again.`,
     history: "Latest validations",
     allowedShort: "Allowed",
     deniedShort: "Denied",

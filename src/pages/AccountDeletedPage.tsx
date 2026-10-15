@@ -1,12 +1,24 @@
+import { useEffect } from "react";
+import { useLocation } from "react-router";
 import { UserX } from "lucide-react";
+import { useAuth } from "../auth/AuthContext";
 import { ButtonLink } from "../components/ui";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n/LocaleContext";
 
+// A sessão só é encerrada aqui, depois de a rota já ter trocado: encerrar
+// antes faria a guarda de login da tela de conta mandar para /login.
 export default function AccountDeletedPage() {
   const { t } = useI18n();
   const d = t.buyer.accountDeleted;
   usePageTitle(d.pageTitle);
+  const { isAuthenticated, signOut } = useAuth();
+  const deleted = (useLocation().state as { deleted?: unknown } | null)?.deleted === true;
+
+  useEffect(() => {
+    if (deleted && isAuthenticated) signOut("manual", { notifyServer: false });
+  }, [deleted, isAuthenticated, signOut]);
+
   return (
     <div className="mx-auto max-w-md py-20 text-center">
       <UserX size={48} className="mx-auto text-accent-text" aria-hidden />

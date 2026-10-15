@@ -45,6 +45,10 @@ export const base = {
   ui: {
     showPassword: "Mostrar senha",
     hidePassword: "Ocultar senha",
+    formErrors: (fields: string[]) =>
+      fields.length === 1
+        ? `Corrija o campo ${fields[0]} para continuar.`
+        : `Corrija ${fields.length} campos para continuar: ${new Intl.ListFormat("pt-BR", { type: "conjunction" }).format(fields)}.`,
     confirmBack: "Voltar",
   },
   layout: {
@@ -70,7 +74,14 @@ export const base = {
     signOut: "Sair",
     openMenu: "Abrir menu",
     closeMenu: "Fechar menu",
-    exitCheckout: "Sair",
+    exitCheckout: "Voltar aos eventos",
+    sessionLoading: "Carregando sua sessão…",
+    flash: {
+      welcome: (name: string | null) => (name ? `Conta criada. Boas-vindas ao Ticketfy, ${name}!` : "Conta criada. Boas-vindas ao Ticketfy!"),
+      eventSaved: "Alterações salvas. O evento já está atualizado na página pública.",
+      eventCreated: "Evento criado. Agora cadastre os lotes de ingresso para começar a vender.",
+      dismiss: "Fechar aviso",
+    },
     theme: { label: "Tema claro", toDark: "Usar tema escuro", toLight: "Usar tema claro" },
     footer: {
       tagline: "Eventos que ficam na memória.",
@@ -259,7 +270,7 @@ export const base = {
     },
     noLots: "Nenhum lote à venda ainda.",
     soldOut: "ESGOTADO",
-    lastOnes: (n: number) => `ÚLTIMOS ${n}`,
+    lastOnes: (n: number) => (n === 1 ? "ÚLTIMO INGRESSO" : `ÚLTIMOS ${n}`),
     perPerson: (n: number) => `Até ${n} por pessoa`,
     decrease: (name: string) => `Diminuir ${name}`,
     increase: (name: string) => `Aumentar ${name}`,
@@ -294,6 +305,8 @@ export const base = {
     unavailable: "Algum lote esgotou ou não aceita essa quantidade. Volte e ajuste a seleção.",
     confirmFree: "Confirmar pedido",
     reserve: "Reservar e ir para pagamento",
+    barTotal: "Total",
+    continue: "Continuar",
   },
   payment: {
     pageTitle: "Pagamento",
@@ -303,15 +316,16 @@ export const base = {
     reservedFor: "Seus ingressos estão reservados por",
     methodLabel: "Forma de pagamento",
     pix: "Pix",
-    pixHint: "Aprovação imediata",
+    pixHint: "Simulado, aprovação na hora",
     card: "Cartão",
     cardHint: "Crédito em até 6×",
-    pixTitle: "Pague com Pix",
-    pixSteps: ["Abra o app do seu banco", "Escolha pagar com Pix", "Leia o QR Code ou cole o código"],
+    pixTitle: "Pix de demonstração",
+    pixSteps: ["Confira os ingressos e o total do pedido", "Toque em Pagar para simular o Pix", "Os ingressos chegam na hora na sua conta"],
     cardTitle: "Pague com cartão",
     cardText: "Os dados do cartão seriam digitados numa tela segura do gateway de pagamento, fora do Ticketfy.",
     demo: "Ambiente de demonstração: o pagamento é simulado e nenhum valor é cobrado.",
     pay: (amount: string) => `Pagar ${amount}`,
+    payShort: "Pagar",
     payLater: "Pagar depois",
     cancelOrder: "Cancelar pedido",
     cancelTitle: "Cancelar este pedido?",
@@ -326,7 +340,9 @@ export const base = {
     paidTitle: "Seu lugar está garantido",
     unpaidTitle: "Este pedido não está pago",
     paidText: (n: number) =>
-      `${n} ${n === 1 ? "ingresso emitido" : "ingressos emitidos"}. Eles já estão na sua conta, com QR code para a entrada.`,
+      n === 1
+        ? "1 ingresso emitido. Ele já está na sua conta, com QR code para a entrada."
+        : `${n} ingressos emitidos. Eles já estão na sua conta, com QR code para a entrada.`,
     unpaidText: "Abra o pedido para ver o que aconteceu com ele.",
     orderNumber: "NÚMERO DO PEDIDO",
     seeTickets: "Ver meus ingressos",

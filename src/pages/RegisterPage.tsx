@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { errorMessage, fieldError, hasUnmappedError } from "../api/client";
@@ -6,8 +6,9 @@ import { login, register } from "../api/endpoints";
 import { useAuth } from "../auth/AuthContext";
 import { useI18n } from "../i18n/LocaleContext";
 import AuthShell from "../components/AuthShell";
+import { showFlash } from "../components/FlashNotice";
 import GoogleSignIn from "../components/GoogleSignIn";
-import { Alert, Button, Field, Input, PasswordInput } from "../components/ui";
+import { Alert, Button, Field, Form, Input, PasswordInput } from "../components/ui";
 import { passwordStrength, safeRedirectPath } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -23,6 +24,7 @@ export default function RegisterPage() {
 
   const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [localError, setLocalError] = useState<string | null>(null);
+  const confirmRef = useRef<HTMLInputElement>(null);
 
   // Cadastra e já faz login, para o usuário não digitar a senha duas vezes.
   const mutation = useMutation({
@@ -32,6 +34,7 @@ export default function RegisterPage() {
       return login({ email: data.email, password: data.password });
     },
     onSuccess: (data) => {
+      showFlash(t.layout.flash.welcome(form.name.trim().split(/\s+/)[0] || null), from);
       setForm({ name: "", email: "", password: "", confirm: "" });
       signIn(data);
       navigate(from, { replace: true });
@@ -49,7 +52,7 @@ export default function RegisterPage() {
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    if (form.password !== form.confirm) return setLocalError(t.password.mismatch);
+    if (form.password !== form.confirm) return confirmRef.current?.focus();
     if (strength.score < 2) return setLocalError(t.register.weak);
     mutation.mutate();
   }
@@ -69,7 +72,7 @@ export default function RegisterPage() {
       }
     >
       <GoogleSignIn mode="signUp" from={from} />
-      <form onSubmit={submit} className="space-y-3.5">
+      <Form onSubmit={submit} className="space-y-3.5">
         <Field label={t.register.name} error={fieldError(mutation.error, "name")}>
           <Input required minLength={2} maxLength={100} autoComplete="name" value={form.name} onChange={set("name")} />
         </Field>
@@ -81,7 +84,7 @@ export default function RegisterPage() {
             <PasswordInput required minLength={8} maxLength={72} autoComplete="new-password" value={form.password} onChange={set("password")} />
           </Field>
           <Field label={t.register.confirm} error={form.confirm && form.confirm !== form.password ? t.password.mismatch : undefined}>
-            <PasswordInput required maxLength={72} autoComplete="new-password" value={form.confirm} onChange={set("confirm")} />
+            <PasswordInput ref={confirmRef} required maxLength={72} autoComplete="new-password" value={form.confirm} onChange={set("confirm")} />
           </Field>
         </div>
         {form.password ? <StrengthMeter {...strength} /> : <p className="-mt-2 text-[0.8125rem] text-muted">{t.password.lengthHint}</p>}
@@ -101,7 +104,7 @@ export default function RegisterPage() {
           </Link>
           {t.legal.registerConsent.after}
         </p>
-      </form>
+      </Form>
     </AuthShell>
   );
 }

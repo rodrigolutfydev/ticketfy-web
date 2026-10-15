@@ -15,7 +15,7 @@ import BecomeOrganizer from "../components/BecomeOrganizer";
 import { ConfirmButton } from "../components/ConfirmDialog";
 import { ErrorMessage, Loading } from "../components/StateMessage";
 import { TabPanel, Tabs, useTabParam } from "../components/Tabs";
-import { Alert, Button, ButtonLink, Card, Field, InfoRow, Input, PageTitle, PasswordInput } from "../components/ui";
+import { Alert, Button, ButtonLink, Card, Field, Form, InfoRow, Input, PageTitle, PasswordInput } from "../components/ui";
 import { formatTime } from "../utils/format";
 import { deletionProof, hasNoPassword, needsPasswordSetup, passwordChangeBody, sameEmail } from "../utils/account";
 import { GoogleLogo } from "../components/GoogleSignIn";
@@ -169,7 +169,7 @@ function ProfileTab({ me }: { me: UserProfile }) {
         </div>
       </div>
 
-      <form onSubmit={submit} className="mt-8 space-y-4 border-t border-line pt-8">
+      <Form onSubmit={submit} className="mt-8 space-y-4 border-t border-line pt-8">
         <Field
           label={t.account.photo}
           hint={t.account.photoHint}
@@ -189,7 +189,7 @@ function ProfileTab({ me }: { me: UserProfile }) {
             </Button>
           )}
         </div>
-      </form>
+      </Form>
 
       <dl className="mt-8 grid gap-5 border-t border-line pt-8 sm:grid-cols-2">
         <InfoRow icon={<Mail size={18} />} label={t.account.email}>
@@ -351,7 +351,7 @@ export function PasswordCard() {
     <Card>
       <h2 className="text-lg font-extrabold text-ink">{setting ? p.setTitle : p.title}</h2>
       <p className="mt-1 text-sm text-muted">{setting ? p.setText : p.text}</p>
-      <form onSubmit={submit} className="mt-5 space-y-4">
+      <Form onSubmit={submit} className="mt-5 space-y-4">
         {!setting && (
           <Field label={p.current} error={fieldError(error, "currentPassword")}>
             <PasswordInput required maxLength={100} autoComplete="current-password" value={form.current} onChange={set("current")} />
@@ -384,7 +384,7 @@ export function PasswordCard() {
         <Button type="submit" loading={mutation.isPending} disabled={locked}>
           {locked ? t.common.wait(lockSeconds) : setting ? p.setSubmit : p.submit}
         </Button>
-      </form>
+      </Form>
     </Card>
   );
 }
@@ -411,7 +411,7 @@ function PrivacyTab() {
 export function ExportCard() {
   const { t } = useI18n();
   const p = t.buyer.privacy;
-  const { me } = useMe();
+  const { me, isOrganizer } = useMe();
   const [password, setPassword] = useState("");
   const [lockSeconds, setLockSeconds] = useLockCountdown();
   const mutation = useMutation({
@@ -439,14 +439,14 @@ export function ExportCard() {
       <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
         <Download size={18} className="text-accent-text" aria-hidden /> {p.exportTitle}
       </h2>
-      <p className="mt-1 text-sm text-muted">{p.exportText}</p>
+      <p className="mt-1 text-sm text-muted">{isOrganizer ? p.exportTextOrganizer : p.exportText}</p>
       <p className="mt-1 text-xs text-subtle">{p.exportLimit(3, 24)}</p>
       {needsPasswordSetup(me, error) ? (
         <div className="mt-5">
           <PasswordRequiredNotice />
         </div>
       ) : (
-        <form onSubmit={submit} className="mt-5 space-y-4">
+        <Form onSubmit={submit} className="mt-5 space-y-4">
           <Field label={p.password} error={problemType === "invalid-password" ? errorMessage(error) ?? undefined : fieldError(error, "password")}>
             <PasswordInput required maxLength={100} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </Field>
@@ -462,7 +462,7 @@ export function ExportCard() {
           <Button type="submit" variant="secondary" loading={mutation.isPending} disabled={locked}>
             <Download size={16} aria-hidden /> {locked ? t.common.wait(lockSeconds) : p.exportSubmit}
           </Button>
-        </form>
+        </Form>
       )}
     </Card>
   );
@@ -471,7 +471,6 @@ export function ExportCard() {
 export function DeleteAccountCard() {
   const { t } = useI18n();
   const p = t.buyer.privacy;
-  const { signOut } = useAuth();
   const { me } = useMe();
   const navigate = useNavigate();
   const withEmail = hasNoPassword(me);
@@ -486,8 +485,7 @@ export function DeleteAccountCard() {
   const mutation = useMutation({
     mutationFn: () => deleteAccount(deletionProof(me, { password, email }), confirmation),
     onSuccess: () => {
-      navigate("/account-deleted", { replace: true });
-      signOut("manual", { notifyServer: false });
+      navigate("/account-deleted", { replace: true, state: { deleted: true } });
     },
     onError: (error) => {
       setPassword("");
@@ -516,7 +514,7 @@ export function DeleteAccountCard() {
       </h2>
       <p className="mt-1 text-sm text-muted">{p.deleteText}</p>
       <p className="mt-2 text-sm text-muted">{p.deleteBlockers}</p>
-      <form onSubmit={submit} className="mt-5 space-y-4">
+      <Form onSubmit={submit} className="mt-5 space-y-4">
         {withEmail ? (
           <Field
             label={p.emailLabel}
@@ -572,7 +570,7 @@ export function DeleteAccountCard() {
         <Button type="submit" variant="danger" loading={mutation.isPending} disabled={locked}>
           <Trash2 size={16} aria-hidden /> {locked ? t.common.wait(lockSeconds) : p.deleteSubmit}
         </Button>
-      </form>
+      </Form>
     </Card>
   );
 }

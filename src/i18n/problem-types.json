@@ -213,6 +213,7 @@
     "reasons": [
       "event-cancelled",
       "not-valid",
+      "already-used",
       "transfer-unavailable"
     ]
   },

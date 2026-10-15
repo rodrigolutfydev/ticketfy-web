@@ -29,6 +29,7 @@ const DATE: Intl.DateTimeFormatOptions = {
 };
 const SHORT_DATE: Intl.DateTimeFormatOptions = { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" };
 const TIME: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
+const DAY: Intl.DateTimeFormatOptions = { weekday: "short", day: "2-digit", month: "short", year: "numeric" };
 const LONG_DAY: Intl.DateTimeFormatOptions = { weekday: "long", day: "numeric", month: "long" };
 const FULL_DAY: Intl.DateTimeFormatOptions = { weekday: "long", day: "numeric", month: "long", year: "numeric" };
 const PRICE: Intl.NumberFormatOptions = { style: "currency", currency: "BRL" };
@@ -36,6 +37,7 @@ const PRICE: Intl.NumberFormatOptions = { style: "currency", currency: "BRL" };
 export const formatDate = (iso: string, locale: Locale = getLocale()) => dateFormatter(locale, DATE).format(new Date(iso));
 export const formatShortDate = (iso: string, locale: Locale = getLocale()) => dateFormatter(locale, SHORT_DATE).format(new Date(iso));
 export const formatTime = (iso: string, locale: Locale = getLocale()) => dateFormatter(locale, TIME).format(new Date(iso));
+export const formatDay = (iso: string, locale: Locale = getLocale()) => dateFormatter(locale, DAY).format(new Date(iso));
 export const formatLongDay = (iso: string, locale: Locale = getLocale()) => dateFormatter(locale, LONG_DAY).format(new Date(iso));
 export const formatFullDay = (iso: string, locale: Locale = getLocale()) => dateFormatter(locale, FULL_DAY).format(new Date(iso));
 export const formatPrice = (value: number, locale: Locale = getLocale()) => numberFormatter(locale, PRICE).format(value);

@@ -7,7 +7,7 @@ import { errorMessage } from "../../api/client";
 import { useI18n } from "../../i18n/LocaleContext";
 import { ConfirmButton } from "../../components/ConfirmDialog";
 import { ErrorMessage } from "../../components/StateMessage";
-import { Alert, Button, Card, Field, Input, PageTitle } from "../../components/ui";
+import { Alert, Button, Card, Field, Form, Input, PageTitle } from "../../components/ui";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { suspensionConsequences } from "../../utils/account";
 import { formatDateTime } from "../organizer/finance/payoutMeta";
@@ -35,7 +35,7 @@ export default function AdminUsersPage() {
     <div>
       <PageTitle title={u.title} subtitle={u.subtitle} />
       <Card>
-        <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
+        <Form onSubmit={submit} className="flex flex-wrap items-end gap-3">
           <div className="min-w-0 flex-1">
             <Field label={u.email}>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={150} />
@@ -44,7 +44,7 @@ export default function AdminUsersPage() {
           <Button type="submit" loading={isFetching}>
             {u.search}
           </Button>
-        </form>
+        </Form>
       </Card>
       <div className="mt-6 space-y-6">
         {error && <ErrorMessage message={errorMessage(error) ?? ""} />}

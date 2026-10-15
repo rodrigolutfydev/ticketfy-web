@@ -5,10 +5,15 @@
 // definidas em index.css. Por isso nenhum componente precisa saber se o
 // tema atual é claro ou escuro.
 
-import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import {
+  createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState,
+  type ButtonHTMLAttributes, type FormHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes,
+  type Ref, type SubmitEvent, type TextareaHTMLAttributes,
+} from "react";
 import { Link, type LinkProps } from "react-router";
 import { ArrowLeft, CircleCheck, Eye, EyeOff, Info, TriangleAlert } from "lucide-react";
 import { useI18n } from "../i18n/LocaleContext";
+import { constraintMessage, type ConstraintTarget } from "../i18n/validation";
 
 // ---------------------------------------------------------------------------
 // Botões
@@ -82,20 +87,152 @@ export function BackLink({ to, children }: { to: string; children: ReactNode }) 
 export const fieldClass =
   "w-full rounded-[14px] border-0 bg-field px-4 py-3 text-base text-ink outline-none shadow-[inset_0_0_0_1px_var(--field-border,var(--line))] transition-shadow placeholder:text-subtle hover:shadow-[inset_0_0_0_1px_var(--field-border-hover,var(--line-strong))] focus:shadow-[inset_0_0_0_1.5px_var(--field-focus,var(--accent)),0_0_0_4px_var(--field-ring,var(--accent-soft))] disabled:cursor-not-allowed disabled:opacity-45 aria-[invalid=true]:shadow-[inset_0_0_0_1.5px_var(--danger)]";
 
+// Formulário com validação própria: noValidate desliga os balões do navegador,
+// e cada Field mostra a regra que falhou (required, maxLength, type="email"...)
+// com texto traduzido. Se algo estiver inválido, o envio é barrado e o
+// primeiro campo com erro recebe rolagem e foco.
+type FormContextValue = { invalid: string[] | null; report: () => void };
+const FormContext = createContext<FormContextValue | null>(null);
+const CONTROL = "input:not([type=hidden]), select, textarea";
+
+function invalidControls(form: HTMLFormElement) {
+  return Array.from(form.querySelectorAll<HTMLInputElement>(CONTROL)).filter(
+    (el) => el.getAttribute("aria-invalid") === "true" || (el.willValidate && !el.validity.valid),
+  );
+}
+
+function fieldLabel(control: HTMLElement) {
+  return control.closest("label")?.querySelector("span")?.textContent?.trim() || control.getAttribute("aria-label") || "";
+}
+
+function focusControl(control: HTMLElement | undefined) {
+  if (!control) return;
+  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  control.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+  control.focus({ preventScroll: true });
+}
+
+export function Form({ onSubmit, onInput, onChange, children, ...props }: Omit<FormHTMLAttributes<HTMLFormElement>, "noValidate">) {
+  const ref = useRef<HTMLFormElement>(null);
+  const [invalid, setInvalid] = useState<string[] | null>(null);
+
+  const report = useCallback(() => {
+    requestAnimationFrame(() => {
+      const form = ref.current;
+      if (!form) return;
+      const controls = invalidControls(form);
+      setInvalid(controls.map(fieldLabel).filter(Boolean));
+      focusControl(controls[0]);
+    });
+  }, []);
+
+  const refresh = () => {
+    if (invalid === null) return;
+    requestAnimationFrame(() => ref.current && setInvalid(invalidControls(ref.current).map(fieldLabel).filter(Boolean)));
+  };
+
+  function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
+    if (!e.currentTarget.checkValidity()) {
+      e.preventDefault();
+      report();
+      return;
+    }
+    setInvalid(null);
+    onSubmit?.(e);
+  }
+
+  return (
+    <FormContext.Provider value={{ invalid, report }}>
+      <form
+        {...props}
+        ref={ref}
+        noValidate
+        onSubmit={handleSubmit}
+        onInput={(e) => {
+          refresh();
+          onInput?.(e);
+        }}
+        onChange={(e) => {
+          refresh();
+          onChange?.(e);
+        }}
+      >
+        {children}
+      </form>
+    </FormContext.Provider>
+  );
+}
+
+// Para regras próprias da tela (fim depois do início...) e erros da API:
+// depois de mostrar os erros nos campos, chame report() para rolar até o
+// primeiro e atualizar o resumo.
+export function useFormReport() {
+  return useContext(FormContext)?.report ?? (() => undefined);
+}
+
+// Chama report() sempre que trigger mudar para um valor "verdadeiro".
+export function ReportInvalid({ trigger }: { trigger: unknown }) {
+  const report = useFormReport();
+  useEffect(() => {
+    if (trigger) report();
+  }, [trigger, report]);
+  return null;
+}
+
+// Resumo dos campos com erro, para ficar perto do botão de enviar.
+export function FormErrorSummary() {
+  const context = useContext(FormContext);
+  const { t } = useI18n();
+  if (!context?.invalid || context.invalid.length === 0) return null;
+  return <Alert>{t.ui.formErrors(context.invalid)}</Alert>;
+}
+
 // Bordas e foco leem --field-border, --field-focus etc. quando um contêiner
 // define essas variáveis (as telas de entrada usam tons neutros); sem elas,
 // valem as cores padrão do tema.
 // O <label> envolve o campo: clicar no texto foca o campo, e o leitor de
 // tela anuncia o nome certo, sem precisar de id/htmlFor.
 export function Field({ label, hint, error, children }: { label: string; hint?: ReactNode; error?: string; children: ReactNode }) {
+  const ref = useRef<HTMLLabelElement>(null);
+  const { locale } = useI18n();
+  const [constraintError, setConstraintError] = useState<string>();
+  const shown = error ?? constraintError;
+
+  useEffect(() => {
+    const label = ref.current;
+    if (!label) return;
+    const message = (target: EventTarget | null) => constraintMessage(target as unknown as ConstraintTarget, locale);
+    const onInvalid = (e: Event) => setConstraintError(message(e.target));
+    const onEdit = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      if (!target.matches?.(CONTROL)) return;
+      setConstraintError((current) => (current === undefined || target.validity.valid ? undefined : message(target)));
+    };
+    label.addEventListener("invalid", onInvalid, true);
+    label.addEventListener("input", onEdit);
+    label.addEventListener("change", onEdit);
+    return () => {
+      label.removeEventListener("invalid", onInvalid, true);
+      label.removeEventListener("input", onEdit);
+      label.removeEventListener("change", onEdit);
+    };
+  }, [locale]);
+
+  useLayoutEffect(() => {
+    const control = ref.current?.querySelector(CONTROL);
+    if (!control) return;
+    if (shown) control.setAttribute("aria-invalid", "true");
+    else control.removeAttribute("aria-invalid");
+  }, [shown]);
+
   return (
-    <label className="block">
+    <label ref={ref} className="block">
       <span className="mb-2 block text-sm font-semibold text-ink">{label}</span>
       {children}
-      {error ? (
+      {shown ? (
         <span className="mt-1.5 flex items-center gap-1.5 text-[0.8125rem] text-danger">
           <TriangleAlert size={14} className="shrink-0" aria-hidden />
-          {error}
+          {shown}
         </span>
       ) : (
         hint && <span className="mt-1.5 block text-[0.8125rem] text-muted">{hint}</span>
@@ -109,7 +246,7 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
 }
 
 // Campo de senha com botão de mostrar/ocultar.
-export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, "type">) {
+export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { ref?: Ref<HTMLInputElement> }) {
   const [visible, setVisible] = useState(false);
   const { t } = useI18n();
   return (

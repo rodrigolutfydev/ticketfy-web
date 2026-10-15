@@ -304,14 +304,14 @@ describe("chamadas de autenticação", () => {
   });
 });
 
-type Pending = { url: string; init: RequestInit; resolve: (response: Response) => void };
+type Pending = { url: string; init: RequestInit; resolve: (response: Response) => void; reject: (error: unknown) => void };
 
 function controlledFetch() {
   const pending: Pending[] = [];
   const fetchMock = vi.fn(
     (input: RequestInfo | URL, init: RequestInit = {}) =>
       new Promise<Response>((resolve, reject) => {
-        pending.push({ url: String(input), init, resolve });
+        pending.push({ url: String(input), init, resolve, reject });
         init.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
       })
   );
@@ -502,26 +502,95 @@ describe("aquecimento da API antes do primeiro refresh", () => {
     vi.useRealTimers();
   });
 
-  it("chama GET /actuator/health direto na API, sem cookie nem token, e só então renova", async () => {
+  it("chama GET /actuator/health direto na API, sem cookie nem token, e renova ao mesmo tempo", async () => {
     vi.useFakeTimers();
     clearSession();
     const { find, urls } = controlledFetch();
     const result = await settle(resumeSession());
+    await vi.advanceTimersByTimeAsync(0);
 
-    expect(urls()).toHaveLength(1);
     const health = find("/actuator/health")!;
+    expect(urls()).toEqual([health.url, "/api/auth/refresh"]);
     expect(health.url).toMatch(/^https?:\/\/[^/]+\/actuator\/health$/);
     expect(health.init.method).toBe("GET");
     expect(health.init.credentials).toBe("omit");
     expect((health.init.headers as Record<string, string>)["Authorization"]).toBeUndefined();
 
-    health.resolve(json(200, { status: "UP" }));
-    await vi.advanceTimersByTimeAsync(0);
-    expect(urls()).toEqual([health.url, "/api/auth/refresh"]);
-
     find("/api/auth/refresh")!.resolve(json(200, { token: NEW_TOKEN, expiresIn: 600 }));
     await vi.advanceTimersByTimeAsync(0);
     expect(result.value).toBe(true);
+    expect(getSession()?.token).toBe(NEW_TOKEN);
+
+    health.resolve(json(200, { status: "UP" }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(urls()).toHaveLength(2);
+  });
+
+  const refreshUrls = (urls: () => string[]) => urls().filter((url) => url === "/api/auth/refresh");
+
+  it.each([
+    ["erro de rede", (entry: Pending) => entry.reject(new TypeError("Failed to fetch"))],
+    ["502", (entry: Pending) => entry.resolve(json(502, { title: "Bad Gateway" }))],
+    ["503", (entry: Pending) => entry.resolve(json(503, { title: "Service Unavailable" }))],
+    ["504", (entry: Pending) => entry.resolve(json(504, { title: "Gateway Timeout" }))],
+  ])("renovação que não chegou à API (%s) enquanto ela acorda é repetida depois do health", async (_, fail) => {
+    vi.useFakeTimers();
+    clearSession();
+    const { find, pending, urls } = controlledFetch();
+    const result = await settle(resumeSession());
+    await vi.advanceTimersByTimeAsync(0);
+
+    fail(find("/api/auth/refresh")!);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(result.done).toBe(false);
+    expect(refreshUrls(urls)).toHaveLength(1);
+
+    find("/actuator/health")!.resolve(json(200, { status: "UP" }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(refreshUrls(urls)).toHaveLength(2);
+
+    pending.filter((entry) => entry.url.endsWith("/api/auth/refresh"))[1].resolve(json(200, { token: NEW_TOKEN, expiresIn: 600 }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(result.value).toBe(true);
+    expect(getSession()?.token).toBe(NEW_TOKEN);
+  });
+
+  it.each([
+    ["tempo esgotado", (entry: Pending) => entry.reject(new DOMException("aborted", "AbortError")), { clientKey: "timeout" }],
+    ["500", (entry: Pending) => entry.resolve(json(500, { title: "Internal Server Error" })), { status: 500 }],
+    ["429", (entry: Pending) => entry.resolve(json(429, { title: "Too Many Requests" })), { status: 429 }],
+    ["400", (entry: Pending) => entry.resolve(json(400, { title: "Bad Request" })), { status: 400 }],
+  ])("renovação que pode ter sido processada (%s) nunca é repetida, nem depois do health", async (_, fail, expected) => {
+    vi.useFakeTimers();
+    clearSession();
+    const { find, urls } = controlledFetch();
+    const result = await settle(resumeSession());
+    await vi.advanceTimersByTimeAsync(0);
+
+    fail(find("/api/auth/refresh")!);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(result.error).toMatchObject(expected);
+
+    find("/actuator/health")!.resolve(json(200, { status: "UP" }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(refreshUrls(urls)).toHaveLength(1);
+    expect(onSessionEnded).not.toHaveBeenCalled();
+  });
+
+  it("renovação que falha com 503 depois de a API acordar não é repetida", async () => {
+    vi.useFakeTimers();
+    clearSession();
+    const { find, urls } = controlledFetch();
+    const result = await settle(resumeSession());
+    await vi.advanceTimersByTimeAsync(0);
+
+    find("/actuator/health")!.resolve(json(200, { status: "UP" }));
+    await vi.advanceTimersByTimeAsync(0);
+    find("/api/auth/refresh")!.resolve(json(503, { title: "Service Unavailable" }));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(result.error).toMatchObject({ status: 503 });
+    expect(refreshUrls(urls)).toHaveLength(1);
   });
 
   it("health lento mostra o aviso e espera até 60 s", async () => {
@@ -533,12 +602,12 @@ describe("aquecimento da API antes do primeiro refresh", () => {
     await vi.advanceTimersByTimeAsync(SLOW_REQUEST_MS);
     expect(isWaitingSlowRequest()).toBe(true);
     await vi.advanceTimersByTimeAsync(50_000);
-    expect(urls()).toHaveLength(1);
+    expect(urls()).toHaveLength(2);
+    expect(urls()[1]).toBe("/api/auth/refresh");
 
     find("/actuator/health")!.resolve(json(200, { status: "UP" }));
     await vi.advanceTimersByTimeAsync(0);
     expect(urls()).toHaveLength(2);
-    expect(urls()[1]).toBe("/api/auth/refresh");
 
     find("/api/auth/refresh")!.resolve(json(200, { token: NEW_TOKEN, expiresIn: 600 }));
     await vi.advanceTimersByTimeAsync(0);

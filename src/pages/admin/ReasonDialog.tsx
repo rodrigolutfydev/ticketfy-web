@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Alert, Button, Field, Textarea } from "../../components/ui";
+import { Alert, Button, Field, Form, Textarea } from "../../components/ui";
 import { useI18n } from "../../i18n/LocaleContext";
 
 interface Props {
@@ -38,7 +38,7 @@ export default function ReasonDialog({ open, title, description, confirmLabel, l
       aria-labelledby="reason-title"
       className="tf-panel m-auto w-[min(92vw,480px)] p-0 text-ink shadow-[inset_0_0_0_1px_var(--card-ring),0_30px_80px_rgb(0_0_0/0.6)]"
     >
-      <form onSubmit={submit} className="space-y-4 p-6">
+      <Form onSubmit={submit} className="space-y-4 p-6">
         <div>
           <h2 id="reason-title" className="text-lg font-bold">
             {title}
@@ -57,7 +57,7 @@ export default function ReasonDialog({ open, title, description, confirmLabel, l
             {confirmLabel}
           </Button>
         </div>
-      </form>
+      </Form>
     </dialog>
   );
 }

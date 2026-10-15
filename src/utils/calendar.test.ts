@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_GOOGLE_DESCRIPTION, MAX_GOOGLE_URL, calendarFileUrl, eventLocation, eventPageUrl, googleCalendarUrl, truncateText, utcStamp } from "./calendar";
+import { MAX_GOOGLE_DESCRIPTION, MAX_GOOGLE_URL, calendarFileUrl, eventEndsAt, eventLocation, eventPageUrl, googleCalendarUrl, truncateText, utcStamp, withDefaultEnd } from "./calendar";
 
 const event = {
   id: "3f0b6c1e-8a5d-4f7e-9c2b-1d4e5f6a7b8c",
@@ -36,8 +36,19 @@ describe("calendar links", () => {
     expect(query.get("details")).toBe(`Show ao vivo; traga seu copo.\n\n${pageUrl}`);
   });
 
-  it("uses the start as the end when the event has no end", () => {
-    expect(params(googleCalendarUrl({ ...event, endsAt: null }, pageUrl)).get("dates")).toBe("20261210T230000Z/20261210T230000Z");
+  it("gives an event without an end a 3-hour duration", () => {
+    expect(params(googleCalendarUrl({ ...event, endsAt: null }, pageUrl)).get("dates")).toBe("20261210T230000Z/20261211T020000Z");
+    expect(eventEndsAt({ startsAt: event.startsAt, endsAt: null })).toBe("2026-12-11T02:00:00.000Z");
+    expect(eventEndsAt(event)).toBe(event.endsAt);
+  });
+
+  it("adds DTEND 3 hours after DTSTART to an .ics without an end, keeping CRLF", () => {
+    const ics = ["BEGIN:VCALENDAR", "BEGIN:VEVENT", "DTSTART:20261210T230000Z", "SUMMARY:Show", "END:VEVENT", "END:VCALENDAR", ""].join("\r\n");
+    expect(withDefaultEnd(ics)).toBe(
+      ["BEGIN:VCALENDAR", "BEGIN:VEVENT", "DTSTART:20261210T230000Z", "DTEND:20261211T020000Z", "SUMMARY:Show", "END:VEVENT", "END:VCALENDAR", ""].join("\r\n"),
+    );
+    const withEnd = ics.replace("SUMMARY", "DTEND:20261211T010000Z\r\nSUMMARY");
+    expect(withDefaultEnd(withEnd)).toBe(withEnd);
   });
 
   it("keeps only the event link when there is no description", () => {

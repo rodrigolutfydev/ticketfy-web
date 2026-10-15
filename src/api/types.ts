@@ -85,9 +85,22 @@ export interface EventCancellationResult {
   eventId: string;
   cancelledAt: string;
   refundedOrders: number;
+  cancelledFreeOrders: number;
   cancelledOrders: number;
   pendingOrders: number;
   requiresManualAction: number;
+  usedTickets: number;
+}
+
+// GET /events/{id}/cancellation-preview: as mesmas regras do cancelamento,
+// contadas no momento da consulta, para a tela de confirmação.
+export interface EventCancellationPreview {
+  eventId: string;
+  ordersToRefund: number;
+  freeOrdersToCancel: number;
+  pendingOrdersToCancel: number;
+  ordersRequiringManualAction: number;
+  usedTickets: number;
 }
 
 export interface EventInput {
@@ -190,6 +203,9 @@ export interface OrderDetails {
   items: OrderItem[];
   tickets: OrderTicket[];
   eventCancelled?: boolean;
+  eventId?: string;
+  eventName?: string;
+  eventStartsAt?: string;
 }
 
 export type DiscountType = "PERCENT" | "FIXED";
@@ -249,6 +265,9 @@ export interface OrderSummary {
   totalAmount: number;
   createdAt?: string | null;
   expiresAt?: string;
+  eventId?: string;
+  eventName?: string;
+  eventStartsAt?: string;
 }
 
 export interface PaymentDetails {

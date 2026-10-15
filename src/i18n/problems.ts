@@ -229,6 +229,10 @@ const PT_BR: Catalog = {
     "invalid-ticket-state": {
       "event-cancelled": "O evento deste ingresso foi cancelado.",
       "not-valid": "Este ingresso já foi utilizado ou cancelado.",
+      "already-used": ({ properties }, locale) => {
+        const at = dateTime(properties.usedAt, locale);
+        return at ? `Este ingresso já foi utilizado em ${at}.` : "Este ingresso já foi utilizado.";
+      },
       "transfer-unavailable": "Este ingresso mudou enquanto a transferência era feita. Atualize a página.",
     },
     "invalid-suspension-state": {
@@ -261,8 +265,12 @@ const PT_BR: Catalog = {
       "ticket-not-found": "Este ingresso não pode mais ser transferido.",
     },
     "check-in": {
-      "invalid-ticket-state": ({ properties }) =>
-        properties.reason === "event-cancelled" ? "O evento deste ingresso foi cancelado." : "Ingresso já utilizado ou cancelado.",
+      "invalid-ticket-state": ({ properties }, locale) => {
+        if (properties.reason === "event-cancelled") return "O evento deste ingresso foi cancelado.";
+        if (properties.reason !== "already-used") return "Ingresso já utilizado ou cancelado.";
+        const at = dateTime(properties.usedAt, locale);
+        return at ? `Este ingresso já entrou em ${at}. Não libere de novo.` : "Este ingresso já entrou. Não libere de novo.";
+      },
       "ticket-not-found": "Código não encontrado.",
       "event-access-denied": "Este ingresso é de um evento de outro organizador.",
     },
@@ -483,6 +491,10 @@ const EN: Catalog = {
     "invalid-ticket-state": {
       "event-cancelled": "The event for this ticket was cancelled.",
       "not-valid": "This ticket has already been used or cancelled.",
+      "already-used": ({ properties }, locale) => {
+        const at = dateTime(properties.usedAt, locale);
+        return at ? `This ticket was already used on ${at}.` : "This ticket has already been used.";
+      },
       "transfer-unavailable": "This ticket changed while it was being transferred. Refresh the page.",
     },
     "invalid-suspension-state": {
@@ -515,8 +527,12 @@ const EN: Catalog = {
       "ticket-not-found": "This ticket can no longer be transferred.",
     },
     "check-in": {
-      "invalid-ticket-state": ({ properties }) =>
-        properties.reason === "event-cancelled" ? "The event for this ticket was cancelled." : "Ticket already used or cancelled.",
+      "invalid-ticket-state": ({ properties }, locale) => {
+        if (properties.reason === "event-cancelled") return "The event for this ticket was cancelled.";
+        if (properties.reason !== "already-used") return "Ticket already used or cancelled.";
+        const at = dateTime(properties.usedAt, locale);
+        return at ? `This ticket already got in on ${at}. Don't let it in again.` : "This ticket already got in. Don't let it in again.";
+      },
       "ticket-not-found": "Code not found.",
       "event-access-denied": "This ticket belongs to another organizer's event.",
     },

@@ -1,4 +1,5 @@
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const int = (n: number) => new Intl.NumberFormat("pt-BR").format(n);
+const plural = (n: number, one: string, many: string) => `${int(n)} ${n === 1 ? one : many}`;
 
 export const organizer = {
   layout: {
@@ -139,14 +140,15 @@ export const organizer = {
       quantity: "A quantidade total precisa ser um número inteiro maior que zero.",
       maxPerOrder: "O máximo por pedido precisa ser um número inteiro maior que zero.",
       maxPerOrderRemoval: "O limite por pedido não pode ser removido, só alterado.",
-      belowSold: (sold: number) => `A quantidade total não pode ficar abaixo dos ${sold} ingressos já vendidos ou reservados.`,
+      belowSold: (sold: number) =>
+        `A quantidade total não pode ficar abaixo ${sold === 1 ? "de 1 ingresso já vendido ou reservado" : `dos ${int(sold)} ingressos já vendidos ou reservados`}.`,
     },
     editor: {
       title: "Editar lote",
       close: "Fechar",
       descriptionHint: "Deixe em branco para remover.",
       priceHint: "Pedidos já feitos continuam com o preço da compra.",
-      soldHint: (sold: string) => `${sold} já vendidos ou reservados.`,
+      soldHint: (sold: number) => `${plural(sold, "já vendido ou reservado", "já vendidos ou reservados")}.`,
       maxPerOrderOptional: "Opcional.",
       maxPerOrderLocked: "Pode ser alterado, mas não removido.",
       maxPerBuyerHint: "Opcional. Deixe em branco para remover. Diminuir o limite não cancela compras já feitas.",
@@ -169,19 +171,32 @@ export const organizer = {
     cancelledAt: (date: string) => `Cancelado em ${date}.`,
     reason: (reason: string) => `Motivo: ${reason}`,
     cancelTitle: "Cancelar evento",
-    cancelText: "Os pedidos pagos são reembolsados e os ingressos cancelados. Pedidos aguardando pagamento são cancelados. O evento sai da vitrine e para de vender.",
+    cancelText:
+      "Pedidos pagos são reembolsados e os ingressos cancelados. Pedidos gratuitos e pedidos aguardando pagamento são cancelados. Pedido pago com ingresso já usado precisa de reembolso manual. O evento sai da vitrine e para de vender.",
     cancelConfirmTitle: "Cancelar este evento?",
     counting: "Calculando pedidos afetados...",
-    countFailed: "Não foi possível contar os pedidos afetados. Todos os pedidos pagos serão reembolsados.",
-    paidAffected: (n: number) => (n === 1 ? "1 pedido pago será reembolsado" : `${n} pedidos pagos serão reembolsados`),
-    pendingAffected: (n: number) =>
-      n === 1 ? " e 1 pedido aguardando pagamento será cancelado" : ` e ${n} pedidos aguardando pagamento serão cancelados`,
-    irreversible: " Essa ação não pode ser desfeita.",
+    countFailed: "Não foi possível calcular os pedidos afetados agora. O cancelamento segue as regras acima.",
+    previewTitle: "Ao cancelar:",
+    previewNone: "Nenhum pedido será afetado.",
+    preview: {
+      refund: (n: number) => plural(n, "pedido pago será reembolsado", "pedidos pagos serão reembolsados"),
+      free: (n: number) => plural(n, "pedido gratuito será cancelado, sem reembolso", "pedidos gratuitos serão cancelados, sem reembolso"),
+      pending: (n: number) => plural(n, "pedido aguardando pagamento será cancelado", "pedidos aguardando pagamento serão cancelados"),
+      manual: (n: number) => plural(n, "pedido pago com ingresso já usado vai precisar de reembolso manual", "pedidos pagos com ingresso já usado vão precisar de reembolso manual"),
+      used: (n: number) => n === 1 ? "1 ingresso já passou pelo check-in e continua como utilizado" : `${int(n)} ingressos já passaram pelo check-in e continuam como utilizados`,
+    },
+    irreversible: "Essa ação não pode ser desfeita.",
     reasonLabel: "Motivo",
     reasonHint: "Opcional. Aparece na página do evento.",
     cancelEvent: "Cancelar evento",
-    summary: (refunded: number, cancelled: number) =>
-      `${plural(refunded, "pedido reembolsado", "pedidos reembolsados")} e ${plural(cancelled, "pedido cancelado", "pedidos cancelados")}.`,
+    resultTitle: "Evento cancelado.",
+    resultNone: "Nenhum pedido foi afetado.",
+    result: {
+      refunded: (n: number) => plural(n, "pedido reembolsado", "pedidos reembolsados"),
+      cancelledFree: (n: number) => plural(n, "pedido gratuito cancelado", "pedidos gratuitos cancelados"),
+      cancelled: (n: number) => plural(n, "pedido pendente cancelado", "pedidos pendentes cancelados"),
+      used: (n: number) => plural(n, "ingresso já usado mantido como utilizado", "ingressos já usados mantidos como utilizados"),
+    },
     pendingRefunds: (n: number) =>
       n === 1 ? "1 reembolso ficou pendente e será refeito automaticamente." : `${n} reembolsos ficaram pendentes e serão refeitos automaticamente.`,
     manualRefunds: (n: number) =>
@@ -249,7 +264,7 @@ export const organizer = {
       maxUses: "O limite de usos precisa ser um número inteiro maior que zero.",
       maxUsesPerBuyer: "O limite de usos por comprador precisa ser um número inteiro maior que zero.",
       dates: "O fim da validade precisa ser depois do início.",
-      belowUsed: (n: number) => `O limite não pode ficar abaixo dos ${n} usos já feitos.`,
+      belowUsed: (n: number) => `O limite não pode ficar abaixo ${n === 1 ? "de 1 uso já feito" : `dos ${int(n)} usos já feitos`}.`,
     },
   },
   overview: {
@@ -264,11 +279,11 @@ export const organizer = {
     ticketsSold: "Ingressos vendidos",
     soldOf: (percent: string, capacity: string) => `${percent} de ${capacity}`,
     reserved: "Reservados agora",
-    free: (n: string) => `${n} livres para venda`,
+    free: (n: number) => `${plural(n, "livre", "livres")} para venda`,
     averageOrder: "Ticket médio por pedido",
     averageTicket: "Preço médio por ingresso",
     paidOrders: "Pedidos pagos",
-    awaiting: (n: string) => `${n} aguardando pagamento`,
+    awaiting: (n: number) => `${int(n)} aguardando pagamento`,
     dailyTitle: "Vendas líquidas por dia",
     dailyText: "Pedidos pagos no dia do pagamento, sem os reembolsados.",
     noSales: "Nenhuma venda paga ainda.",
@@ -278,9 +293,9 @@ export const organizer = {
     lotsTitle: "Desempenho por lote",
     noLots: "Nenhum lote cadastrado.",
     lotBar: (sold: number, reserved: number, remaining: number, total: number) =>
-      `${sold} vendidos, ${reserved} reservados, ${remaining} livres de ${total}`,
-    lotLine: (sold: string, reserved: string, remaining: string, total: string, percent: string) =>
-      `${sold} vendidos · ${reserved} reservados · ${remaining} livres de ${total} (${percent})`,
+      `${plural(sold, "vendido", "vendidos")}, ${plural(reserved, "reservado", "reservados")}, ${plural(remaining, "livre", "livres")} de ${int(total)}`,
+    lotLine: (sold: number, reserved: number, remaining: number, total: number, percent: string) =>
+      `${plural(sold, "vendido", "vendidos")} · ${plural(reserved, "reservado", "reservados")} · ${plural(remaining, "livre", "livres")} de ${int(total)} (${percent})`,
     couponsTitle: "Cupons",
     code: "Código",
     uses: "Usos",
@@ -290,15 +305,16 @@ export const organizer = {
     status: "Status",
     orders: "Pedidos",
     tickets: "Ingressos",
-    ticketsShort: (n: string) => `${n} ingr.`,
+    ticketsShort: (n: number) => `${int(n)} ingr.`,
     attendance: "Comparecimento",
-    attendanceText: (checkedIn: string, issued: string) => `${checkedIn} check-ins de ${issued} ingressos emitidos`,
+    attendanceText: (checkedIn: number, issued: number) =>
+      `${plural(checkedIn, "check-in", "check-ins")} de ${plural(issued, "ingresso emitido", "ingressos emitidos")}`,
   },
   chart: {
     hint: "Passe o mouse sobre um dia para ver os números.",
     label: "Ingressos e receita por dia",
-    day: (tickets: string, revenue: string) => `${tickets} ingressos · ${revenue}`,
-    bar: (day: string, tickets: number, revenue: string) => `${day}: ${tickets} ingressos, ${revenue}`,
+    day: (tickets: number, revenue: string) => `${plural(tickets, "ingresso", "ingressos")} · ${revenue}`,
+    bar: (day: string, tickets: number, revenue: string) => `${day}: ${plural(tickets, "ingresso", "ingressos")}, ${revenue}`,
   },
   orders: {
     searchLabel: "Buscar comprador",
@@ -350,6 +366,8 @@ export const organizer = {
     submit: "Validar entrada",
     allowed: "Entrada liberada",
     denied: "Entrada negada",
+    alreadyAdmitted: "Já validado",
+    alreadyAdmittedAt: (time: string) => `Este ingresso já foi validado às ${time}. Não libere de novo.`,
     history: "Últimas validações",
     allowedShort: "Liberado",
     deniedShort: "Negado",

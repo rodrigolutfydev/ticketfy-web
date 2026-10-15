@@ -5,7 +5,7 @@ import { listAudit } from "../../api/endpoints";
 import type { AuditEntry, AuditTargetType } from "../../api/types";
 import Pagination from "../../components/Pagination";
 import { Empty, ErrorMessage } from "../../components/StateMessage";
-import { Button, Card, Field, Input, PageTitle, Select, Skeleton } from "../../components/ui";
+import { Button, Card, Field, Form, Input, PageTitle, Select, Skeleton } from "../../components/ui";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { formatDateTime } from "../organizer/finance/payoutMeta";
 import { AUDIT_TARGET_TYPES, UUID_PATTERN } from "./adminMeta";
@@ -55,7 +55,7 @@ export default function AdminAuditPage() {
     <div>
       <PageTitle title={a.title} subtitle={a.subtitle} />
       <Card>
-        <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Form onSubmit={submit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label={a.targetType}>
             <Select value={draft.targetType} onChange={(e) => setDraft({ ...draft, targetType: e.target.value })}>
               <option value="">{a.all}</option>
@@ -81,7 +81,7 @@ export default function AdminAuditPage() {
           <div className="flex items-end">
             <Button type="submit">{a.filter}</Button>
           </div>
-        </form>
+        </Form>
       </Card>
 
       <div className="mt-6">

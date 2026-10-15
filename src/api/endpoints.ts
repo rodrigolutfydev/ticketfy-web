@@ -5,7 +5,7 @@
 import { ApiError, api, apiDownload, authApi } from "./client";
 import { participantsQuery } from "../utils/participants";
 import type {
-  EventCancellationResult, EventCategory, EventCategoryCount, EventDashboard, EventDetails, EventInput, EventOrderRow, EventSummary, OrderDetails, OrderStatus, OrderSummary,
+  EventCancellationPreview, EventCancellationResult, EventCategory, EventCategoryCount, EventDashboard, EventDetails, EventInput, EventOrderRow, EventSummary, OrderDetails, OrderStatus, OrderSummary,
   AdminPayout, AdminUser, AuditEntry, AuditTargetType, Balance, Coupon, CouponInput, CouponPreview, CouponSettings, LedgerEntry, OrganizerDashboard, OrganizerPayoutStatus, Page, Payout,
   Participant, ParticipantFilters, PayoutAccount, PayoutAccountInput, PaymentDetails, TicketDetails, TicketTransferResult, TicketTypeDetails, TicketTypeInput, TicketTypeSummary,
   TicketTypeUpdate, TokenResponse, UserDetails, UserProfile,
@@ -57,6 +57,7 @@ export const getEvent = (id: string) => api.get<EventDetails>(`/events/${seg(id)
 export const createEvent = (data: EventInput) => api.post<EventDetails>("/events", data);
 export const updateEvent = (id: string, data: Partial<EventInput>) => api.put<EventDetails>(`/events/${seg(id)}`, data);
 export const deleteEvent = (id: string) => api.delete<void>(`/events/${seg(id)}`);
+export const getCancellationPreview = (id: string) => api.get<EventCancellationPreview>(`/events/${seg(id)}/cancellation-preview`);
 export const cancelEvent = (id: string, reason: string) =>
   api.post<EventCancellationResult>(`/events/${seg(id)}/cancel`, { reason: reason.trim() || null });
 // Só ADMIN.

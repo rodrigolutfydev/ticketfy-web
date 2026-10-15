@@ -7,7 +7,7 @@ import { useI18n } from "../i18n/LocaleContext";
 import { useMe } from "../auth/useMe";
 import { needsPasswordSetup } from "../utils/account";
 import PasswordRequiredNotice from "./PasswordRequiredNotice";
-import { Alert, Button, Field, Input, PasswordInput } from "./ui";
+import { Alert, Button, Field, Form, Input, PasswordInput } from "./ui";
 
 interface Props {
   ticket: TicketDetails;
@@ -88,7 +88,7 @@ export default function TransferTicketDialog({ ticket, onClose, onTransferred }:
       aria-labelledby="transfer-title"
       className="tf-panel m-auto w-[min(92vw,460px)] p-0 text-ink shadow-[inset_0_0_0_1px_var(--card-ring),0_30px_80px_rgb(0_0_0/0.6)]"
     >
-      <form onSubmit={submit} className="space-y-4 p-6">
+      <Form onSubmit={submit} className="space-y-4 p-6">
         <div>
           <h2 id="transfer-title" className="text-lg font-bold">
             {x.title}
@@ -132,7 +132,7 @@ export default function TransferTicketDialog({ ticket, onClose, onTransferred }:
             {x.submit}
           </Button>
         </div>
-      </form>
+      </Form>
     </dialog>
   );
 }

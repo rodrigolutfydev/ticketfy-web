@@ -121,7 +121,7 @@ Rotas de sessão (`/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/logout-
 
 ## Privacidade (LGPD)
 
-A política de privacidade (`/privacy`) e o rodapé mostram o e-mail de contato do responsável pelos dados, definido em `src/utils/contact.ts`. Por ele o titular pede acesso, correção, exportação e exclusão dos dados, inclusive com a conta suspensa. Os textos da política e dos termos ainda dependem de revisão jurídica.
+A política de privacidade (`/privacy`) e o rodapé mostram o e-mail de contato do responsável pelos dados, definido em `src/utils/contact.ts`. O build (e o `check:dist`) falha se um texto provisório como `SEU-EMAIL-AQUI` chegar ao site. Por ele o titular pede acesso, correção, exportação e exclusão dos dados, inclusive com a conta suspensa. Os textos da política e dos termos ainda dependem de revisão jurídica.
 
 ## Segurança
 
@@ -151,6 +151,24 @@ As duas fotos de fundo ficam em `src/assets` e saem no build com o resto do site
 | `src/assets/neon-sign-orange.jpg` | Placa neon do 404 e da tela de erro | Foto do Unsplash (`images.unsplash.com/photo-1508700115892-45ecd05ae2ad`), [Licença Unsplash](https://unsplash.com/license). Recolorida para o laranja da marca e reduzida para 1800 px. |
 
 As fotos dos eventos continuam vindo da URL https cadastrada pelo organizador.
+
+### Fotos dos eventos de demonstração
+
+Os eventos fictícios criados pelo script `scripts/seed-demo.sh` da API usam fotos servidas pelo próprio site, em `public/demo/` (publicadas em `https://ticketfy-6fd.pages.dev/demo/...`). Como são do mesmo domínio, a CSP (`img-src 'self'`) aceita. Todas vêm do Unsplash, sob a [Licença Unsplash](https://unsplash.com/license): uso livre, inclusive comercial, sem atribuição obrigatória. Foram recortadas em 1200 × 675 px e recomprimidas em JPEG (até 200 KB cada).
+
+| Arquivo | Evento | Origem |
+|---|---|---|
+| `public/demo/festival-praia.jpg` | Festival Maré Alta | `images.unsplash.com/photo-1470229722913-7c0e2dbbafd3` |
+| `public/demo/show-rock.jpg` | Noite Elétrica: Tributo ao Rock Nacional | `images.unsplash.com/photo-1516450360452-9312f5e86fc7` |
+| `public/demo/teatro.jpg` | O Último Ato de Helena | `images.unsplash.com/photo-1503095396549-807759245b35` |
+| `public/demo/stand-up.jpg` | Stand-up: Tô Rindo de Nervoso | `images.unsplash.com/photo-1507676184212-d03ab07a01bf` |
+| `public/demo/festa.jpg` | Baile do Pôr do Sol | `images.unsplash.com/photo-1492684223066-81342ee5ff30` |
+| `public/demo/corrida.jpg` | Corrida Orla Carioca 10K | `images.unsplash.com/photo-1461896836934-ffe607ba8211` |
+| `public/demo/oficina-fotografia.jpg` | Oficina de Fotografia de Rua | `images.unsplash.com/photo-1504609773096-104ff2c73ba4` |
+| `public/demo/conferencia.jpg` | DevSul Conf: Software que Escala | `images.unsplash.com/photo-1540575467063-178a50c2df87` |
+| `public/demo/exposicao.jpg` | Exposição Cores do Cerrado | `images.unsplash.com/photo-1518998053901-5348d3961a04` |
+| `public/demo/gastronomia.jpg` | Festival Sabores do Norte | `images.unsplash.com/photo-1555939594-58d7cb561ad1` |
+| `public/demo/oficina-infantil.jpg` | Oficina Pequenos Artistas | `images.unsplash.com/photo-1560421683-6856ea585c78` |
 
 ## Estrutura
 

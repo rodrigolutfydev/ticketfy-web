@@ -6,7 +6,7 @@ import { requestPayout } from "../../../api/endpoints";
 import type { Balance, PayoutAccount } from "../../../api/types";
 import { useMe } from "../../../auth/useMe";
 import PasswordRequiredNotice from "../../../components/PasswordRequiredNotice";
-import { Alert, Button, Field, Input, PasswordInput } from "../../../components/ui";
+import { Alert, Button, Field, Form, Input, PasswordInput } from "../../../components/ui";
 import { needsPasswordSetup } from "../../../utils/account";
 import { formatPrice } from "../../../utils/format";
 import { newIdempotencyKey } from "../../../utils/idempotency";
@@ -63,7 +63,7 @@ export default function PayoutDialog({ open, balance, account, onClose }: Props)
       aria-labelledby="payout-title"
       className="tf-panel m-auto w-[min(92vw,460px)] p-0 text-ink shadow-[inset_0_0_0_1px_var(--card-ring),0_30px_80px_rgb(0_0_0/0.6)]"
     >
-      <form onSubmit={submit} className="space-y-4 p-6">
+      <Form onSubmit={submit} className="space-y-4 p-6">
         <div>
           <h2 id="payout-title" className="text-lg font-bold">
             {d.title}
@@ -102,7 +102,7 @@ export default function PayoutDialog({ open, balance, account, onClose }: Props)
             {d.submit}
           </Button>
         </div>
-      </form>
+      </Form>
     </dialog>
   );
 }

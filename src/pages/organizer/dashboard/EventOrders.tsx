@@ -6,7 +6,7 @@ import type { OrderStatus } from "../../../api/types";
 import Pagination from "../../../components/Pagination";
 import StatusBadge from "../../../components/StatusBadge";
 import { Empty, ErrorMessage } from "../../../components/StateMessage";
-import { Button, Input, Select, Skeleton } from "../../../components/ui";
+import { Button, Form, Input, Select, Skeleton } from "../../../components/ui";
 import { formatPrice, formatShortDate, shortId } from "../../../utils/format";
 import { errorMessage } from "../../../api/client";
 import { useI18n } from "../../../i18n/LocaleContext";
@@ -39,7 +39,7 @@ export default function EventOrders({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-4">
-      <form onSubmit={search} className="flex flex-col gap-3 sm:flex-row">
+      <Form onSubmit={search} className="flex flex-col gap-3 sm:flex-row">
         <label className="relative flex-1">
           <span className="sr-only">{o.searchLabel}</span>
           <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-subtle" aria-hidden />
@@ -59,7 +59,7 @@ export default function EventOrders({ eventId }: { eventId: string }) {
         <Button type="submit" variant="secondary">
           {o.search}
         </Button>
-      </form>
+      </Form>
 
       {isLoading && <Skeleton className="h-64 rounded-2xl" />}
       {error && <ErrorMessage message={errorMessage(error) ?? ""} />}

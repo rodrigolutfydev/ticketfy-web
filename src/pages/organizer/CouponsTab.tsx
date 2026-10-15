@@ -5,7 +5,7 @@ import { createCoupon, deleteCoupon, listCoupons, updateCoupon } from "../../api
 import type { Coupon, CouponSettings, DiscountType } from "../../api/types";
 import { ConfirmButton } from "../../components/ConfirmDialog";
 import { ErrorMessage, Loading } from "../../components/StateMessage";
-import { Alert, Button, Field, Input, Select } from "../../components/ui";
+import { Alert, Button, Field, Form, Input, Select } from "../../components/ui";
 import { couponManagementError, couponStatus, couponStatusLabel, formatDiscount, normalizeCouponCode } from "../../utils/coupon";
 import { formatInt, formatPrice, formatShortDate, fromInputDateTime, toInputDateTime } from "../../utils/format";
 import { errorMessage } from "../../api/client";
@@ -302,7 +302,7 @@ function CouponCreator({ eventId, onCreated }: { eventId: string; onCreated: () 
   return (
     <section className="tf-panel p-5 sm:p-6">
       <h2 className="mb-4 text-lg font-semibold text-ink">{c.newCoupon}</h2>
-      <form onSubmit={submit} noValidate className="space-y-4">
+      <Form onSubmit={submit} className="space-y-4">
         <Field label={c.code} hint={c.codeHint}>
           <Input
             required
@@ -320,7 +320,7 @@ function CouponCreator({ eventId, onCreated }: { eventId: string; onCreated: () 
         <Button type="submit" loading={mutation.isPending}>
           {c.create}
         </Button>
-      </form>
+      </Form>
     </section>
   );
 }
@@ -377,7 +377,7 @@ function CouponEditor({ eventId, coupon, onSaved, onClose }: { eventId: string; 
       aria-labelledby="editar-cupom"
       className="m-0 ml-auto h-full max-h-none w-full max-w-md border-l border-line bg-surface p-0 text-ink"
     >
-      <form onSubmit={submit} noValidate className="flex h-full flex-col">
+      <Form onSubmit={submit} className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b border-line px-6 py-4">
           <h2 id="editar-cupom" className="text-lg font-semibold">
             {c.editTitle} <span className="font-mono">{coupon.code}</span>
@@ -399,7 +399,7 @@ function CouponEditor({ eventId, coupon, onSaved, onClose }: { eventId: string; 
             {c.save}
           </Button>
         </div>
-      </form>
+      </Form>
     </dialog>
   );
 }

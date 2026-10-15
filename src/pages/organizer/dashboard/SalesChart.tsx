@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { EventDashboard } from "../../../api/types";
-import { formatInt, formatPrice } from "../../../utils/format";
+import { formatPrice } from "../../../utils/format";
 import { useI18n } from "../../../i18n/LocaleContext";
 
 type Day = EventDashboard["dailySales"][number];
@@ -36,7 +36,7 @@ export default function SalesChart({ data }: { data: Day[] }) {
       <div className="mb-2 h-5 text-sm" aria-live="polite">
         {current ? (
           <span className="tabular text-ink">
-            <span className="font-semibold">{dayLabel(current.date)}</span> · {c.day(formatInt(current.tickets, locale), formatPrice(current.revenue, locale))}
+            <span className="font-semibold">{dayLabel(current.date)}</span> · {c.day(current.tickets, formatPrice(current.revenue, locale))}
           </span>
         ) : (
           <span className="text-subtle">{c.hint}</span>

@@ -7,7 +7,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useI18n } from "../i18n/LocaleContext";
 import AuthShell from "../components/AuthShell";
 import GoogleSignIn from "../components/GoogleSignIn";
-import { Alert, Button, Field, Input, PasswordInput } from "../components/ui";
+import { Alert, Button, Field, Form, Input, PasswordInput } from "../components/ui";
 import { accountSuspendedMessage, loginErrorMessage } from "../utils/account";
 import { loginThrottle, safeRedirectPath } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -98,7 +98,7 @@ export default function LoginPage() {
         </div>
       )}
       <GoogleSignIn mode="signIn" from={from} />
-      <form onSubmit={submit} className="space-y-4">
+      <Form onSubmit={submit} className="space-y-4">
         <Field label={t.login.email}>
           <Input type="email" required maxLength={254} autoComplete="email" inputMode="email" placeholder={t.login.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
@@ -114,7 +114,7 @@ export default function LoginPage() {
         <Button type="submit" className="w-full" loading={mutation.isPending} disabled={locked}>
           {locked ? t.common.wait(lockSeconds) : t.login.submit}
         </Button>
-      </form>
+      </Form>
     </AuthShell>
   );
 }

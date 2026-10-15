@@ -16,6 +16,9 @@
 //
 // 3. Checagem da URL da API: o build falha se a API de produção não for
 //    https, para nunca publicar um site que manda senha sem criptografia.
+//
+// 4. Checagem de texto provisório: o build falha se um marcador como
+//    SEU-EMAIL-AQUI chegar ao site (ex.: o contato de privacidade da LGPD).
 
 import { defineConfig, loadEnv, type Plugin, type ProxyOptions } from "vite";
 import react from "@vitejs/plugin-react";
@@ -63,6 +66,7 @@ const DEV_AUTH_ROUTES: Record<string, string> = {
   "/api/auth/logout": "POST",
   "/api/auth/logout-all": "POST",
   "/api/users/me/password": "PATCH",
+  "/api/users/me/deletion": "POST",
 };
 
 const DEV_AUTH_REQUEST_HEADERS = new Set([
@@ -103,6 +107,22 @@ function devAuthProxy(): ProxyOptions {
         }
         proxyRes.headers["cache-control"] = "no-store";
       });
+    },
+  };
+}
+
+const PLACEHOLDER_PATTERN = /SEU-EMAIL-AQUI|YOUR-EMAIL-HERE/;
+
+function placeholderGuard(): Plugin {
+  return {
+    name: "ticketfy-placeholder-guard",
+    apply: "build",
+    generateBundle(_, bundle) {
+      for (const file of Object.values(bundle)) {
+        const text = file.type === "chunk" ? file.code : typeof file.source === "string" ? file.source : "";
+        const found = PLACEHOLDER_PATTERN.exec(text);
+        if (found) this.error(`Texto provisório "${found[0]}" em ${file.fileName}. Troque pelo valor real antes de publicar (veja src/utils/contact.ts).`);
+      }
     },
   };
 }
@@ -151,13 +171,13 @@ export default defineConfig(({ command, mode }) => {
   }
 
   return {
-    plugins: [react(), tailwindcss(), securityPlugin(apiOrigin)],
+    plugins: [react(), tailwindcss(), securityPlugin(apiOrigin), placeholderGuard()],
     // Em dev, só os cabeçalhos que não atrapalham o recarregamento automático.
     server: {
       port: 5173,
       strictPort: true,
       headers: securityHeaders,
-      proxy: { "^/api/(auth|users/me/password)(/|$|\\?)": devAuthProxy() },
+      proxy: { "^/api/(auth|users/me/(password|deletion))(/|$|\\?)": devAuthProxy() },
     },
     // "npm run preview" serve o build igual à produção, com CSP completa.
     preview: {

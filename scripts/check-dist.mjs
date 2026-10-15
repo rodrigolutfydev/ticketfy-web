@@ -12,6 +12,7 @@ const FORBIDDEN = [
   { label: "endereço local (localhost com porta)", pattern: /localhost:\d+/i },
   { label: "endereço local (127.0.0.1)", pattern: /127\.0\.0\.1/ },
   { label: "endereço local (0.0.0.0)", pattern: /\b0\.0\.0\.0:\d+/ },
+  { label: "texto provisório (ex.: e-mail de contato não preenchido)", pattern: /SEU-EMAIL-AQUI|YOUR-EMAIL-HERE/ },
   { label: "comentário de source map", pattern: /sourceMappingURL/ },
   { label: "nome de segredo do proxy", pattern: /PROXY_SHARED_SECRET|X-Proxy-Secret/i },
   { label: "nome de segredo do servidor ou do CI", pattern: /JWT_SECRET|PAYOUT_ENCRYPTION_KEY|CLOUDFLARE_API_TOKEN|SENTRY_AUTH_TOKEN|GOOGLE_CLIENT_SECRET/ },

@@ -48,7 +48,7 @@ export function Tabs<K extends string>({ items, value, onChange, label, idPrefix
     <div
       role="tablist"
       aria-label={label}
-      className="mb-7 flex w-fit max-w-full gap-1 overflow-x-auto rounded-full bg-ink/[0.04] p-[5px] shadow-[inset_0_0_0_1px_var(--card-ring)] [scrollbar-width:none]"
+      className="mb-7 flex w-full flex-wrap gap-1 rounded-[22px] bg-ink/[0.04] p-[5px] shadow-[inset_0_0_0_1px_var(--card-ring)] sm:w-fit sm:max-w-full sm:flex-nowrap sm:overflow-x-auto sm:rounded-full sm:[scrollbar-width:thin]"
     >
       {items.map((item, index) => {
         const selected = item.key === value;
@@ -66,7 +66,7 @@ export function Tabs<K extends string>({ items, value, onChange, label, idPrefix
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(item.key)}
             onKeyDown={(e) => handleKeyDown(e, index)}
-            className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-[18px] py-[9px] text-[0.9375rem] transition-colors ${
+            className={`flex shrink-0 grow items-center justify-center gap-2 whitespace-nowrap rounded-full px-[14px] py-[9px] text-[0.9375rem] transition-colors sm:grow-0 sm:px-[18px] ${
               selected
                 ? "bg-accent/[0.18] font-semibold text-ink shadow-[inset_0_0_0_1px_var(--accent-line)]"
                 : "font-medium text-muted hover:bg-ink/[0.06] hover:text-ink"

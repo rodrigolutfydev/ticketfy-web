@@ -47,9 +47,11 @@ export default function AuthShell({
           <section className="flex min-h-screen flex-col px-5 sm:px-10 lg:min-h-0">
             <header className="flex h-16 shrink-0 items-center justify-between gap-3 sm:h-[72px]">
               <Logo />
-              <div className="flex items-center gap-3 text-sm">
+              <div className="flex min-w-0 items-center gap-3 text-sm">
                 {switchLink}
-                <LanguageSwitcher />
+                <div className="hidden sm:block">
+                  <LanguageSwitcher />
+                </div>
               </div>
             </header>
             <main id="conteudo" className="flex flex-1 flex-col items-center pb-6 pt-2">
@@ -61,6 +63,9 @@ export default function AuthShell({
                   <p className="mt-1.5 text-[0.9375rem] text-muted">{subtitle}</p>
                 </div>
                 {children}
+                <div className="mt-8 flex justify-center sm:hidden">
+                  <LanguageSwitcher />
+                </div>
               </div>
               <div className="flex-[2]" />
             </main>

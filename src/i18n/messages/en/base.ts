@@ -47,6 +47,10 @@ export const base: typeof reference = {
   ui: {
     showPassword: "Show password",
     hidePassword: "Hide password",
+    formErrors: (fields: string[]) =>
+      fields.length === 1
+        ? `Fix the ${fields[0]} field to continue.`
+        : `Fix ${fields.length} fields to continue: ${new Intl.ListFormat("en", { type: "conjunction" }).format(fields)}.`,
     confirmBack: "Back",
   },
   layout: {
@@ -72,7 +76,14 @@ export const base: typeof reference = {
     signOut: "Sign out",
     openMenu: "Open menu",
     closeMenu: "Close menu",
-    exitCheckout: "Exit",
+    exitCheckout: "Back to events",
+    sessionLoading: "Loading your session…",
+    flash: {
+      welcome: (name: string | null) => (name ? `Account created. Welcome to Ticketfy, ${name}!` : "Account created. Welcome to Ticketfy!"),
+      eventSaved: "Changes saved. The event is already updated on its public page.",
+      eventCreated: "Event created. Now add ticket batches to start selling.",
+      dismiss: "Dismiss notice",
+    },
     theme: { label: "Light theme", toDark: "Use dark theme", toLight: "Use light theme" },
     footer: {
       tagline: "Events you'll remember.",
@@ -261,7 +272,7 @@ export const base: typeof reference = {
     },
     noLots: "No ticket batches on sale yet.",
     soldOut: "SOLD OUT",
-    lastOnes: (n: number) => `LAST ${n}`,
+    lastOnes: (n: number) => (n === 1 ? "LAST TICKET" : `LAST ${n}`),
     perPerson: (n: number) => `Up to ${n} per person`,
     decrease: (name: string) => `Decrease ${name}`,
     increase: (name: string) => `Increase ${name}`,
@@ -296,6 +307,8 @@ export const base: typeof reference = {
     unavailable: "A batch sold out or doesn't allow this quantity. Go back and adjust your selection.",
     confirmFree: "Confirm order",
     reserve: "Hold tickets and go to payment",
+    barTotal: "Total",
+    continue: "Continue",
   },
   payment: {
     pageTitle: "Payment",
@@ -305,15 +318,16 @@ export const base: typeof reference = {
     reservedFor: "Your tickets are held for",
     methodLabel: "Payment method",
     pix: "Pix",
-    pixHint: "Instant approval",
+    pixHint: "Simulated, approved instantly",
     card: "Card",
     cardHint: "Credit in up to 6 installments",
-    pixTitle: "Pay with Pix",
-    pixSteps: ["Open your bank app", "Choose to pay with Pix", "Scan the QR code or paste the code"],
+    pixTitle: "Demo Pix",
+    pixSteps: ["Check the tickets and the order total", "Tap Pay to simulate the Pix payment", "Your tickets show up in your account right away"],
     cardTitle: "Pay by card",
     cardText: "Card details would be entered on a secure payment gateway page, outside Ticketfy.",
     demo: "Demo environment: the payment is simulated and nothing is charged.",
     pay: (amount: string) => `Pay ${amount}`,
+    payShort: "Pay",
     payLater: "Pay later",
     cancelOrder: "Cancel order",
     cancelTitle: "Cancel this order?",
@@ -328,7 +342,9 @@ export const base: typeof reference = {
     paidTitle: "Your spot is secured",
     unpaidTitle: "This order isn't paid",
     paidText: (n: number) =>
-      `${n} ${n === 1 ? "ticket issued" : "tickets issued"}. They're already in your account, with a QR code for the entrance.`,
+      n === 1
+        ? "1 ticket issued. It's already in your account, with a QR code for the entrance."
+        : `${n} tickets issued. They're already in your account, with a QR code for the entrance.`,
     unpaidText: "Open the order to see what happened to it.",
     orderNumber: "ORDER NUMBER",
     seeTickets: "See my tickets",

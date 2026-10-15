@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, matchPath, useLocation, useNavigate } from "react-router";
-import { CircleQuestionMark, LogOut, Menu, Moon, ReceiptText, Sun, Ticket, UserRound, X } from "lucide-react";
+import { ArrowLeft, CircleQuestionMark, LogOut, Menu, Moon, ReceiptText, Sun, Ticket, UserRound, X } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
 import { useI18n } from "../i18n/LocaleContext";
@@ -11,6 +11,7 @@ import { useTheme } from "../theme/ThemeContext";
 import Avatar from "./Avatar";
 import CheckoutSteps from "./CheckoutSteps";
 import ErrorBoundary from "./ErrorBoundary";
+import FlashNotice from "./FlashNotice";
 import LanguageSwitcher from "./LanguageSwitcher";
 import Logo, { Wordmark } from "./Logo";
 import { ButtonLink } from "./ui";
@@ -76,13 +77,14 @@ export default function Layout() {
             </div>
             <div className="hidden items-center gap-4 sm:flex">
               <LanguageSwitcher />
-              <Link to="/" className="text-sm font-semibold text-muted transition-colors hover:text-accent-text">
-                {t.layout.exitCheckout}
+              <Link to="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors hover:text-accent-text">
+                <ArrowLeft size={16} aria-hidden /> {t.layout.exitCheckout}
               </Link>
             </div>
           </div>
         </header>
         <main id="conteudo" className="page-container relative flex-1 py-8 sm:py-12">
+          <FlashNotice />
           {page}
         </main>
       </div>
@@ -150,7 +152,9 @@ export default function Layout() {
           <div className="hidden items-center gap-2.5 lg:flex">
             <LanguageSwitcher />
             <ThemeToggle />
-            {isChecking ? null : isAuthenticated ? (
+            {isChecking ? (
+              <SessionPending />
+            ) : isAuthenticated ? (
               <UserMenu name={firstName} fullName={me?.name} avatarUrl={me?.avatarUrl} onSignOut={handleSignOut} />
             ) : (
               <>
@@ -164,14 +168,13 @@ export default function Layout() {
             )}
           </div>
 
-          {/* Celular e tablet: idioma, tema e o botão que abre o menu. */}
-          <div className="flex items-center gap-2 lg:hidden">
-            <LanguageSwitcher />
-            <ThemeToggle />
+          {/* Celular e tablet: só o botão do menu; idioma e tema ficam dentro dele. */}
+          <div className="flex shrink-0 items-center gap-2 lg:hidden">
+            {isChecking && <SessionPending compact />}
             <button
               type="button"
               onClick={() => setMobileOpen((open) => !open)}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-ink text-canvas transition-colors hover:bg-accent hover:text-accent-ink"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-canvas transition-colors hover:bg-accent hover:text-accent-ink"
               aria-expanded={mobileOpen}
               aria-controls="mobile-menu"
               aria-label={mobileOpen ? t.layout.closeMenu : t.layout.openMenu}
@@ -193,7 +196,11 @@ export default function Layout() {
                   {link.label}
                 </NavLink>
               ))}
-              {isChecking ? null : isAuthenticated ? (
+              {isChecking ? (
+                <div className="px-3.5 py-3">
+                  <SessionPending />
+                </div>
+              ) : isAuthenticated ? (
                 <>
                   <NavLink to="/account" className={mobileLinkClass}>
                     {t.layout.myAccount}
@@ -210,6 +217,13 @@ export default function Layout() {
                   <ButtonLink to="/register">{t.layout.signUp}</ButtonLink>
                 </div>
               )}
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-line px-1 pt-3">
+                <LanguageSwitcher />
+                <span className="flex items-center gap-2.5 text-sm font-semibold text-muted">
+                  {t.layout.theme.label}
+                  <ThemeToggle />
+                </span>
+              </div>
             </div>
           </nav>
         )}
@@ -217,11 +231,25 @@ export default function Layout() {
 
       {/* A home desenha o próprio palco de ponta a ponta; as outras telas ficam na largura do conteúdo. */}
       <main id="conteudo" className={isHome ? "relative flex-1" : "page-container relative flex-1 py-8 sm:py-10"}>
+        <FlashNotice className={isHome ? "page-container relative z-10 mb-0 pt-4" : ""} />
         {page}
       </main>
 
       <Footer />
     </div>
+  );
+}
+
+function SessionPending({ compact = false }: { compact?: boolean }) {
+  const { t } = useI18n();
+  return (
+    <span
+      role="status"
+      className={`flex h-10 items-center gap-2.5 rounded-full text-sm font-medium text-muted ${compact ? "w-10 justify-center" : "px-4 shadow-[inset_0_0_0_1px_var(--line)]"}`}
+    >
+      <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+      <span className={compact ? "sr-only" : undefined}>{t.layout.sessionLoading}</span>
+    </span>
   );
 }
 

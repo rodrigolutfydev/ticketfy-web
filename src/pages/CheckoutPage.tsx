@@ -6,8 +6,9 @@ import { errorMessage } from "../api/client";
 import { createOrder, getEvent, listTicketTypes, previewCoupon } from "../api/endpoints";
 import type { CouponPreview } from "../api/types";
 import CheckoutSummary from "../components/CheckoutSummary";
+import MobileActionBar from "../components/MobileActionBar";
 import { Empty, ErrorMessage, Loading } from "../components/StateMessage";
-import { Alert, BackLink, Button, ButtonLink, Field, Input } from "../components/ui";
+import { Alert, BackLink, Button, ButtonLink, Field, Form, Input } from "../components/ui";
 import { decodeItems } from "../utils/cart";
 import { couponErrorMessage, formatDiscount, isCouponError, normalizeCouponCode } from "../utils/coupon";
 import { formatPrice } from "../utils/format";
@@ -108,7 +109,7 @@ export default function CheckoutPage() {
   const orderError = mutation.error && !isCouponError(mutation.error) ? errorMessage(mutation.error) : null;
 
   return (
-    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-12">
+    <div className="grid items-start gap-8 pb-28 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-12 lg:pb-0">
       <div>
         <BackLink to={`/events/${eventId}`}>{t.checkout.backToEvent}</BackLink>
         <h1 className="mt-6 text-[clamp(1.875rem,3.4vw,2.75rem)] font-extrabold leading-[1.05] tracking-[-0.045em] text-ink">{t.checkout.title}</h1>
@@ -167,7 +168,7 @@ export default function CheckoutPage() {
               </Button>
             </div>
           ) : (
-            <form onSubmit={applyCoupon} noValidate className="flex items-end gap-2">
+            <Form onSubmit={applyCoupon} className="flex items-end gap-2">
               <div className="min-w-0 flex-1">
                 <Field label={t.checkout.coupon} error={couponError ?? undefined}>
                   <Input
@@ -184,16 +185,24 @@ export default function CheckoutPage() {
               <Button type="submit" variant="secondary" loading={preview.isPending} disabled={!couponInput.trim() || unavailable}>
                 {t.checkout.applyCoupon}
               </Button>
-            </form>
+            </Form>
           )}
           {applied && couponError && <p className="mt-2 text-sm text-danger">{couponError}</p>}
         </div>
         {unavailable && <Alert>{t.checkout.unavailable}</Alert>}
         {orderError && <Alert>{orderError}</Alert>}
-        <Button size="lg" className="w-full justify-between" disabled={unavailable || preview.isPending} loading={mutation.isPending} onClick={() => mutation.mutate()}>
-          {total === 0 ? t.checkout.confirmFree : t.checkout.reserve} <ArrowRight size={17} aria-hidden />
-        </Button>
+        <div className="hidden lg:block">
+          <Button size="lg" className="w-full justify-between" disabled={unavailable || preview.isPending} loading={mutation.isPending} onClick={() => mutation.mutate()}>
+            {total === 0 ? t.checkout.confirmFree : t.checkout.reserve} <ArrowRight size={17} aria-hidden />
+          </Button>
+        </div>
       </div>
+
+      <MobileActionBar label={t.checkout.barTotal} total={formatPrice(total, locale)} message={unavailable ? t.checkout.unavailable : orderError}>
+        <Button size="lg" disabled={unavailable || preview.isPending} loading={mutation.isPending} onClick={() => mutation.mutate()}>
+          {total === 0 ? t.checkout.confirmFree : t.checkout.continue} <ArrowRight size={17} aria-hidden />
+        </Button>
+      </MobileActionBar>
     </div>
   );
 }

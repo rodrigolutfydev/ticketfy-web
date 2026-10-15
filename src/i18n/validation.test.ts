@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LOCALES } from "./locale";
-import { VALIDATION_CODES, validationMessage } from "./validation";
+import { VALIDATION_CODES, constraintMessage, validationMessage, type ConstraintTarget } from "./validation";
 
 describe.each([...LOCALES])("validation messages in %s", (locale) => {
   it("renders every code with and without params", () => {
@@ -31,5 +31,28 @@ describe("validation messages", () => {
   it("falls back to a generic text for an unknown code", () => {
     expect(validationMessage("brand-new-rule", {}, "pt-BR")).toBe("Valor inválido.");
     expect(validationMessage(null, {}, "en")).toBe("Invalid value.");
+  });
+});
+
+describe("constraint messages", () => {
+  const validity = { valueMissing: false, typeMismatch: false, tooShort: false, tooLong: false, rangeUnderflow: false, rangeOverflow: false, stepMismatch: false, patternMismatch: false, badInput: false };
+  const field = (overrides: Partial<ConstraintTarget> & { flags?: Partial<typeof validity> }) => ({
+    type: "text",
+    tagName: "INPUT",
+    ...overrides,
+    validity: { ...validity, ...overrides.flags },
+  });
+
+  it("explains each browser constraint in both languages", () => {
+    expect(constraintMessage(field({ flags: { valueMissing: true } }), "pt-BR")).toBe("Campo obrigatório.");
+    expect(constraintMessage(field({ flags: { valueMissing: true } }), "en")).toBe("This field is required.");
+    expect(constraintMessage(field({ tagName: "SELECT", type: "select-one", flags: { valueMissing: true } }), "pt-BR")).toBe("Escolha uma opção.");
+    expect(constraintMessage(field({ type: "email", flags: { typeMismatch: true } }), "pt-BR")).toBe("Informe um e-mail válido.");
+    expect(constraintMessage(field({ type: "url", flags: { typeMismatch: true } }), "en")).toBe("Enter a valid address.");
+    expect(constraintMessage(field({ minLength: 8, flags: { tooShort: true } }), "pt-BR")).toBe("Use pelo menos 8 caracteres.");
+    expect(constraintMessage(field({ type: "number", min: "1", flags: { rangeUnderflow: true } }), "pt-BR")).toBe("Informe um valor a partir de 1.");
+    expect(constraintMessage(field({ type: "number", max: "100", flags: { rangeOverflow: true } }), "en")).toBe("Enter a value of 100 or less.");
+    expect(constraintMessage(field({ type: "datetime-local", min: "2026-12-10T20:00", flags: { rangeUnderflow: true } }), "pt-BR")).toBe("Escolha uma data a partir de 10/12/2026, 20:00.");
+    expect(constraintMessage(field({ type: "number", flags: { badInput: true } }), "en")).toBe("Enter a number.");
   });
 });

@@ -7,7 +7,7 @@ import { savePayoutAccount } from "../../../api/endpoints";
 import type { DocumentType, PayoutAccount, PixKeyType } from "../../../api/types";
 import { useMe } from "../../../auth/useMe";
 import PasswordRequiredNotice from "../../../components/PasswordRequiredNotice";
-import { Alert, Button, Card, Field, Input, PasswordInput, Select } from "../../../components/ui";
+import { Alert, Button, Card, Field, Form, Input, PasswordInput, Select } from "../../../components/ui";
 import { needsPasswordSetup } from "../../../utils/account";
 import { PIX_KEY_TYPES, formatDateTime, pixKeyPlaceholder } from "./payoutMeta";
 
@@ -96,7 +96,7 @@ function AccountForm({ account, onDone, onCancel }: { account: PayoutAccount | n
   const noPassword = needsPasswordSetup(me, error);
 
   return (
-    <form onSubmit={submit} className="mt-5 grid gap-4 sm:grid-cols-2">
+    <Form onSubmit={submit} className="mt-5 grid gap-4 sm:grid-cols-2">
       <Field label={a.documentType} error={fieldError(error, "documentType")}>
         <Select value={documentType} onChange={(e) => setDocumentType(e.target.value as DocumentType)}>
           <option value="CPF">{t.labels.documentTypes.CPF}</option>
@@ -165,6 +165,6 @@ function AccountForm({ account, onDone, onCancel }: { account: PayoutAccount | n
           {a.save}
         </Button>
       </div>
-    </form>
+    </Form>
   );
 }

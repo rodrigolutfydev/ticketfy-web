@@ -6,7 +6,7 @@ import { EVENT_CATEGORIES, categoryLabel, isEventCategory } from "../i18n/catego
 import { fromInputDateTime, toInputDateTime, UFS } from "../utils/format";
 import { safeImageUrl } from "../utils/security";
 import EventCover from "./EventCover";
-import { Alert, Button, Field, Input, Select, Textarea } from "./ui";
+import { Alert, Button, Field, Form, FormErrorSummary, Input, ReportInvalid, Select, Textarea } from "./ui";
 
 interface Props {
   initial?: EventDetails;
@@ -22,10 +22,12 @@ const API_FIELDS = ["imageUrl", "startsAt", "endsAt", "category"] as const;
 // Formulário compartilhado por "criar evento" e "editar evento".
 //
 // Validação em duas camadas:
-// 1. Atributos HTML (required, maxLength, type="url"): o navegador bloqueia
-//    o envio e mostra a mensagem dele, sem nenhum código nosso.
+// 1. Atributos HTML (required, maxLength, type="url"): o <Form> barra o
+//    envio e cada campo mostra a mensagem traduzida da regra que falhou.
 // 2. A função validate() abaixo, para regras que o HTML não expressa
 //    (fim depois do início, foto só em https).
+// Em qualquer erro (inclusive da API), a tela rola até o primeiro campo
+// com problema e o resumo aparece perto do botão.
 // A API valida tudo de novo com Bean Validation: isto é só para o usuário
 // descobrir o erro antes de esperar a resposta.
 export default function EventForm({ initial, submitLabel, loading, error, onSubmit }: Props) {
@@ -45,6 +47,7 @@ export default function EventForm({ initial, submitLabel, loading, error, onSubm
     category: initial?.category ?? "",
   });
   const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
+  const [failedAttempts, setFailedAttempts] = useState(0);
 
   // set("name") devolve a função que atualiza só o campo "name".
   const set = (field: keyof typeof form) => (e: { target: { value: string } }) => {
@@ -72,7 +75,10 @@ export default function EventForm({ initial, submitLabel, loading, error, onSubm
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault(); // impede o navegador de recarregar a página (comportamento padrão do <form>)
-    if (!validate()) return;
+    if (!validate()) {
+      setFailedAttempts((n) => n + 1);
+      return;
+    }
     onSubmit({
       name: form.name.trim(),
       description: form.description.trim(),
@@ -91,7 +97,7 @@ export default function EventForm({ initial, submitLabel, loading, error, onSubm
   const previewUrl = safeImageUrl(form.imageUrl);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <Form onSubmit={handleSubmit} className="space-y-8">
       <Section title={f.infoTitle} description={f.infoText}>
         <Field label={f.name}>
           <Input required maxLength={150} value={form.name} onChange={set("name")} placeholder={f.namePlaceholder} />
@@ -171,13 +177,18 @@ export default function EventForm({ initial, submitLabel, loading, error, onSubm
         </div>
       </Section>
 
-      {error && hasUnmappedError(error, API_FIELDS) && <Alert>{errorMessage(error)}</Alert>}
+      <ReportInvalid trigger={failedAttempts} />
+      <ReportInvalid trigger={error} />
+      <div className="space-y-3">
+        <FormErrorSummary />
+        {error && hasUnmappedError(error, API_FIELDS) && <Alert>{errorMessage(error)}</Alert>}
+      </div>
       <div className="flex justify-end border-t border-line pt-6">
         <Button type="submit" size="lg" loading={loading}>
           {submitLabel}
         </Button>
       </div>
-    </form>
+    </Form>
   );
 }
 

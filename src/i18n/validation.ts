@@ -162,3 +162,78 @@ export function validationMessage(code: string | null, params: ValidationParams 
   const catalog = VALIDATION_CATALOGS[locale];
   return isValidationCode(code) ? catalog[code](params, locale) : catalog.invalid(params, locale);
 }
+
+export interface ConstraintTarget {
+  type: string;
+  tagName: string;
+  validity: Pick<ValidityState, "valueMissing" | "typeMismatch" | "tooShort" | "tooLong" | "rangeUnderflow" | "rangeOverflow" | "stepMismatch" | "patternMismatch" | "badInput">;
+  min?: string;
+  max?: string;
+  minLength?: number;
+  maxLength?: number;
+}
+
+const DATE_TYPES = new Set(["date", "datetime-local", "time", "month", "week"]);
+
+function formatBound(value: string, type: string, locale: Locale) {
+  if (type === "datetime-local" || type === "date") {
+    const date = new Date(type === "date" ? `${value}T00:00` : value);
+    if (!Number.isNaN(date.getTime())) {
+      const options: Intl.DateTimeFormatOptions =
+        type === "date" ? { day: "2-digit", month: "2-digit", year: "numeric" } : { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" };
+      return new Intl.DateTimeFormat(locale, options).format(date);
+    }
+  }
+  if (type === "number") {
+    const number = Number(value);
+    if (Number.isFinite(number)) return new Intl.NumberFormat(locale).format(number);
+  }
+  return value;
+}
+
+const CONSTRAINT_TEXT: Record<Locale, { choose: string; number: string; date: string; dateMin: (v: string) => string; dateMax: (v: string) => string; min: (v: string) => string; max: (v: string) => string; step: string }> = {
+  "pt-BR": {
+    choose: "Escolha uma opção.",
+    number: "Informe um número.",
+    date: "Informe uma data completa.",
+    dateMin: (v) => `Escolha uma data a partir de ${v}.`,
+    dateMax: (v) => `Escolha uma data até ${v}.`,
+    min: (v) => `Informe um valor a partir de ${v}.`,
+    max: (v) => `Informe um valor até ${v}.`,
+    step: "Informe um valor válido, sem casas decimais a mais.",
+  },
+  en: {
+    choose: "Choose an option.",
+    number: "Enter a number.",
+    date: "Enter a complete date.",
+    dateMin: (v) => `Choose a date on or after ${v}.`,
+    dateMax: (v) => `Choose a date on or before ${v}.`,
+    min: (v) => `Enter a value of ${v} or more.`,
+    max: (v) => `Enter a value of ${v} or less.`,
+    step: "Enter a valid value, without extra decimal places.",
+  },
+};
+
+export function constraintMessage(target: ConstraintTarget, locale: Locale = getLocale()): string {
+  const { validity, type } = target;
+  const text = CONSTRAINT_TEXT[locale];
+  const isDate = DATE_TYPES.has(type);
+  if (validity.badInput) return type === "number" ? text.number : isDate ? text.date : validationMessage("invalid", {}, locale);
+  if (validity.valueMissing) return target.tagName === "SELECT" ? text.choose : validationMessage("required", {}, locale);
+  if (validity.typeMismatch) return validationMessage(type === "email" ? "email" : type === "url" ? "url" : "invalid", {}, locale);
+  if (validity.tooShort || validity.tooLong) {
+    const min = target.minLength !== undefined && target.minLength > 0 ? target.minLength : undefined;
+    const max = target.maxLength !== undefined && target.maxLength > 0 ? target.maxLength : undefined;
+    return validationMessage("size", validity.tooShort ? { min } : { max }, locale);
+  }
+  if (validity.rangeUnderflow && target.min) {
+    const bound = formatBound(target.min, type, locale);
+    return isDate ? text.dateMin(bound) : text.min(bound);
+  }
+  if (validity.rangeOverflow && target.max) {
+    const bound = formatBound(target.max, type, locale);
+    return isDate ? text.dateMax(bound) : text.max(bound);
+  }
+  if (validity.stepMismatch) return text.step;
+  return validationMessage("invalid", {}, locale);
+}

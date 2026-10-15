@@ -102,6 +102,13 @@ describe("messages with extra data", () => {
     );
   });
 
+  it("tells the gate when a ticket was already used", () => {
+    const used = context({ status: 409, properties: { reason: "already-used", usedAt: "2026-10-14T22:30:00Z" } });
+    expect(problemMessage("invalid-ticket-state", used, "check-in")).toMatch(/^Este ingresso já entrou em \d{2}\/\d{2}\/\d{4}.*Não libere de novo\.$/);
+    expect(problemMessage("invalid-ticket-state", used)).toMatch(/^Este ingresso já foi utilizado em \d{2}\/\d{2}\/\d{4}/);
+    expect(problemMessage("invalid-ticket-state", context({ status: 409, properties: { reason: "not-valid" } }), "check-in")).toBe("Ingresso já utilizado ou cancelado.");
+  });
+
   it("tells how many tickets the buyer can still get from the lot", () => {
     expect(problemMessage("max-per-buyer-exceeded", context({ properties: { maxPerBuyer: 4, remaining: 1 } }))).toBe(
       "Cada pessoa pode comprar no máximo 4 ingressos deste lote. Você ainda pode comprar 1.",

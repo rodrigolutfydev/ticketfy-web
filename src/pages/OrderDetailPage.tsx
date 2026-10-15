@@ -1,13 +1,14 @@
-import { useParams } from "react-router";
-import { Timer } from "lucide-react";
+import { CalendarDays, Timer } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getOrder, cancelOrder, refundOrder } from "../api/endpoints";
 import type { OrderDetails } from "../api/types";
 import { ConfirmButton } from "../components/ConfirmDialog";
 import StatusBadge from "../components/StatusBadge";
 import { ErrorMessage, Loading } from "../components/StateMessage";
+import { Link, useParams } from "react-router";
 import { Alert, BackLink, ButtonLink, Card } from "../components/ui";
-import { formatPrice, formatShortDate, shortId } from "../utils/format";
+import { formatDate, formatPrice, formatShortDate, shortId } from "../utils/format";
+import { cancelledEventNote, orderEvent, orderSteps } from "../utils/orders";
 import { isValidId } from "../utils/security";
 import NotFoundPage from "./NotFoundPage";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -43,6 +44,8 @@ export default function OrderDetailPage() {
   const actionError = cancel.error ?? refund.error;
   const free = o.totalAmount === 0;
   const hasTransferred = (o.tickets ?? []).some((t) => t.transferred);
+  const event = orderEvent(o);
+  const note = cancelledEventNote(o);
 
   return (
     <div>
@@ -69,6 +72,24 @@ export default function OrderDetailPage() {
           <p className="eyebrow">{d.receipt}</p>
           <h1 className="tabular mt-2 text-[clamp(1.875rem,3.4vw,2.75rem)] font-extrabold tracking-[-0.045em] text-ink">{d.title(shortId(o.id))}</h1>
           {o.createdAt && <p className="mt-1 text-muted">{d.createdAt(formatShortDate(o.createdAt, locale))}</p>}
+          {event && (
+            <div className="mt-4 flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-text">
+                <CalendarDays size={18} aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{d.event}</p>
+                <Link to={`/events/${event.id}`} className="font-bold text-ink underline-offset-4 hover:text-accent-text hover:underline" data-testid="order-event">
+                  {event.name}
+                </Link>
+                {event.startsAt && (
+                  <p className="tabular text-sm text-muted">
+                    <time dateTime={event.startsAt}>{formatDate(event.startsAt, locale)}</time>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         <StatusBadge status={o.status} />
       </div>
@@ -77,14 +98,12 @@ export default function OrderDetailPage() {
         <div className="mt-6">
           <Alert type="info">
             {d.eventCancelled}
-            {o.status === "REFUNDED" && d.eventCancelledRefunded}
-            {o.status === "PAID" && d.eventCancelledPaid}
-            {o.status === "CANCELLED" && d.eventCancelledCancelled}
+            {note && d.eventCancelledNotes[note]}
           </Alert>
         </div>
       )}
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_300px]">
+      <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
       <Card>
         {/* overflow-x-auto: no celular, a tabela rola de lado em vez de quebrar a página. */}
         <div className="overflow-x-auto">
@@ -214,32 +233,21 @@ export default function OrderDetailPage() {
   );
 }
 
-// Linha do tempo do pedido: criado -> pago -> (reembolsado), ou o final alternativo.
 // Linha do tempo vertical do pedido: cada etapa com bolinha e traço até a próxima.
 function StatusTrack({ order }: { order: OrderDetails }) {
   const { t, locale } = useI18n();
   const s = t.buyer.orderDetail.steps;
-  type Step = { label: string; done: boolean; tone?: "danger" | "muted" };
-  const created: Step = { label: s.created, done: true };
-  const free = order.totalAmount === 0;
-  const steps: Step[] =
-    order.status === "PENDING"
-      ? [created, { label: s.awaitingPayment, done: false }, { label: s.issued, done: false }]
-      : order.status === "PAID"
-        ? [created, { label: free ? s.confirmed : s.approved, done: true }, { label: s.issued, done: true }]
-        : order.status === "REFUNDED"
-          ? [created, { label: free ? s.confirmed : s.approved, done: true }, { label: free ? s.ticketsCancelled : s.refunded, done: true, tone: "muted" }]
-          : [created, { label: order.status === "EXPIRED" ? s.expired : s.cancelled, done: true, tone: "danger" }];
+  const steps = orderSteps(order);
   return (
     <ol className="mt-5" aria-label={t.buyer.orderDetail.progressLabel}>
       {steps.map((step, index) => {
         const dot = !step.done ? "border-2 border-line-strong bg-surface" : step.tone === "danger" ? "bg-danger" : step.tone === "muted" ? "bg-subtle" : "bg-accent";
         return (
-          <li key={step.label} className="relative flex gap-3 pb-6 last:pb-0">
+          <li key={step.key} className="relative flex gap-3 pb-6 last:pb-0">
             {index < steps.length - 1 && <span className="absolute left-[5px] top-4 h-full w-px bg-line-strong" aria-hidden />}
             <span className={`relative mt-1 h-[11px] w-[11px] shrink-0 rounded-full ${dot}`} aria-hidden />
             <div>
-              <p className={`text-sm font-semibold ${step.done ? "text-ink" : "text-subtle"}`}>{step.label}</p>
+              <p className={`text-sm font-semibold ${step.done ? "text-ink" : "text-subtle"}`}>{s[step.key]}</p>
               {index === 0 && order.createdAt && <p className="text-xs text-muted">{formatShortDate(order.createdAt, locale)}</p>}
             </div>
           </li>
