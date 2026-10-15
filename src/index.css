@@ -1016,39 +1016,6 @@
     }
   }
 
-  /* Arte das telas de entrada (login e cadastro). */
-  .tf-auth-art {
-    position: relative;
-    isolation: isolate;
-    border-radius: 32px;
-    overflow: hidden;
-    color: #f4f1f6;
-    box-shadow: inset 0 0 0 1px var(--accent-line);
-  }
-  .tf-auth-art::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -2;
-    background: #020203 url("./assets/stage-orange.jpg") center / cover;
-  }
-  .tf-auth-art::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background:
-      radial-gradient(70% 60% at 50% 50%, transparent, rgb(2 2 3 / 0.7)),
-      linear-gradient(180deg, rgb(2 2 3 / 0.55), rgb(2 2 3 / 0.15) 40%, rgb(2 2 3 / 0.8));
-  }
-  .tf-auth-tapes {
-    position: absolute;
-    top: 50%;
-    z-index: 1;
-    translate: 0 -38%;
-    opacity: 0.92;
-    pointer-events: none;
-  }
   .tf-auth-ticket {
     box-shadow:
       inset 0 0 0 1.5px var(--accent-line),
@@ -1063,12 +1030,12 @@
     position: relative;
     display: flex;
     width: 100%;
-    height: 52px;
+    height: 44px;
     align-items: center;
     justify-content: center;
     gap: 12px;
     padding-inline: 16px;
-    border-radius: 999px;
+    border-radius: 10px;
     border: 1px solid #8e918f;
     background: #131314;
     color: #e3e3e3;
@@ -1089,7 +1056,7 @@
     align-items: center;
     justify-content: center;
   }
-  [data-theme="light"] .tf-google-btn {
+  [data-theme="light"] .tf-google-btn:not([data-theme="dark"] *) {
     border-color: #747775;
     background: #fff;
     color: #1f1f1f;
@@ -1099,7 +1066,7 @@
       background: #1f1f21;
       border-color: #a3a6a4;
     }
-    [data-theme="light"] .tf-google-btn:hover:not(:disabled) {
+    [data-theme="light"] .tf-google-btn:not([data-theme="dark"] *):hover:not(:disabled) {
       background: #f2f2f2;
     }
   }
@@ -1142,14 +1109,92 @@
     }
   }
 
+  /* Cartão das telas de entrada (referência: painel grafite dividido).
+     Fundo da página com dois véus cinza; à direita, curvas de luz feitas
+     só com gradientes (sem imagem). */
+  .tf-auth-panel {
+    margin: 8px;
+    border-radius: 14px;
+  }
+  /* Cartão em vidro fosco: translúcido, com borda e reflexo finos. */
+  @media (min-width: 64rem) {
+    .tf-auth-card {
+      overflow: hidden;
+      border-radius: 20px;
+      background: rgb(16 16 18 / 0.55);
+      backdrop-filter: blur(28px) saturate(140%);
+      box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.12), 0 30px 80px rgb(0 0 0 / 0.45);
+    }
+    .tf-auth-panel {
+      background: rgb(255 255 255 / 0.035);
+      box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07);
+    }
+  }
+  .tf-auth-tickets {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: rgb(255 255 255 / 0.13);
+    stroke-width: 1.25;
+    pointer-events: none;
+  }
+  .tf-auth-tickets-faint {
+    stroke: rgb(255 255 255 / 0.06);
+  }
+  .tf-auth-perf {
+    stroke: color-mix(in srgb, var(--accent) 35%, transparent);
+    stroke-dasharray: 6 7;
+  }
+  /* Feixe laranja que percorre o contorno (pathLength = 1000). */
+  .tf-auth-trace {
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 120 380;
+    filter: drop-shadow(0 0 4px var(--accent)) drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 60%, transparent));
+    animation: tf-auth-trace 9s linear infinite;
+  }
+  .tf-auth-trace-late {
+    animation-delay: -4.5s;
+    animation-direction: reverse;
+  }
+  @keyframes tf-auth-trace {
+    to {
+      stroke-dashoffset: -1000;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tf-auth-trace {
+      animation: none;
+    }
+  }
+  .tf-auth-glowline {
+    display: block;
+    width: 220px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.45), transparent);
+    box-shadow: 0 0 18px rgb(255 255 255 / 0.25);
+  }
+
   /* Campos neutros nas telas de entrada: sem laranja na borda nem no foco. */
   .tf-auth-form {
-    --color-field: color-mix(in srgb, var(--ink) 4%, transparent);
+    --field: #0b0b0c;
     --field-border: color-mix(in srgb, var(--ink) 20%, transparent);
     --field-border-hover: color-mix(in srgb, var(--ink) 36%, transparent);
     --field-focus: color-mix(in srgb, var(--ink) 82%, transparent);
     --field-ring: color-mix(in srgb, var(--ink) 12%, transparent);
     --focus-ring: color-mix(in srgb, var(--ink) 80%, transparent);
+  }
+  .tf-auth-form ::selection {
+    background: color-mix(in srgb, var(--ink) 28%, transparent);
+  }
+  .tf-auth-form input:-webkit-autofill {
+    -webkit-text-fill-color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--field-border), inset 0 0 0 100px var(--field);
+    caret-color: var(--ink);
   }
 
   /* Selos de status: pílula com bolinha da cor do status. */
@@ -1307,4 +1352,12 @@ dialog::backdrop {
 .tf-reveal[data-revealed="false"] {
   opacity: 0;
   transform: translateY(28px) scale(0.98);
+}
+
+/* Campos mais baixos nas telas de entrada. Fora das camadas de propósito:
+   precisa vencer o py-3 e o rounded-[14px] utilitários do fieldClass. */
+.tf-auth-form input:not([type="checkbox"]) {
+  padding-block: 0.625rem;
+  border-radius: 10px;
+  font-size: 0.9375rem;
 }

@@ -462,6 +462,9 @@ export const base = {
       ticketTitle: "Sua próxima noite começa aqui.",
       stubLabel: "ACESSO",
       stubValue: "LIBERADO",
+      panelTitle: "Seu próximo rolê começa aqui",
+      panelText: "Shows, peças, festas e muito mais. Compre em poucos minutos e entre com o QR Code direto do celular.",
+      panelCategories: "Categorias de eventos",
     },
     tickets: {
       brightness: "Aumente o brilho da tela na entrada",

@@ -37,7 +37,7 @@ export default function GoogleSignIn({ mode, from }: { mode: "signIn" | "signUp"
           <Alert>{t.google.startError}</Alert>
         </div>
       )}
-      <div className="my-7 flex items-center gap-4 text-[13px] font-medium uppercase tracking-[0.14em] text-subtle">
+      <div className="my-5 flex items-center gap-4 text-[13px] font-medium uppercase tracking-[0.14em] text-subtle">
         <span className="h-px flex-1 bg-line" aria-hidden />
         {t.google.or}
         <span className="h-px flex-1 bg-line" aria-hidden />

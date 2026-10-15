@@ -55,45 +55,53 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthShell eyebrow={t.register.eyebrow} title={t.register.title} subtitle={t.register.subtitle}>
+    <AuthShell
+      eyebrow={t.register.eyebrow}
+      title={t.register.title}
+      subtitle={t.register.subtitle}
+      switchLink={
+        <span className="flex items-center gap-2.5 text-muted">
+          <span className="hidden sm:inline">{t.register.haveAccount}</span>
+          <Link to="/login" state={{ from }} className="whitespace-nowrap font-semibold text-ink rounded-lg bg-white/[0.07] px-3 py-1.5 transition-colors hover:bg-white/[0.12]">
+            {t.register.signIn}
+          </Link>
+        </span>
+      }
+    >
       <GoogleSignIn mode="signUp" from={from} />
-      <form onSubmit={submit} className="space-y-5">
+      <form onSubmit={submit} className="space-y-3.5">
         <Field label={t.register.name} error={fieldError(mutation.error, "name")}>
           <Input required minLength={2} maxLength={100} autoComplete="name" value={form.name} onChange={set("name")} />
         </Field>
         <Field label={t.register.email} error={fieldError(mutation.error, "email")}>
           <Input type="email" required maxLength={254} autoComplete="email" inputMode="email" value={form.email} onChange={set("email")} />
         </Field>
-        <Field label={t.register.password} hint={t.password.lengthHint} error={fieldError(mutation.error, "password")}>
-          <PasswordInput required minLength={8} maxLength={72} autoComplete="new-password" value={form.password} onChange={set("password")} />
-        </Field>
-        {form.password && <StrengthMeter {...strength} />}
-        <Field label={t.register.confirm} error={form.confirm && form.confirm !== form.password ? t.password.mismatch : undefined}>
-          <PasswordInput required maxLength={72} autoComplete="new-password" value={form.confirm} onChange={set("confirm")} />
-        </Field>
+        <div className="grid items-start gap-3.5 sm:gap-4 sm:grid-cols-2">
+          <Field label={t.register.password} error={fieldError(mutation.error, "password")}>
+            <PasswordInput required minLength={8} maxLength={72} autoComplete="new-password" value={form.password} onChange={set("password")} />
+          </Field>
+          <Field label={t.register.confirm} error={form.confirm && form.confirm !== form.password ? t.password.mismatch : undefined}>
+            <PasswordInput required maxLength={72} autoComplete="new-password" value={form.confirm} onChange={set("confirm")} />
+          </Field>
+        </div>
+        {form.password ? <StrengthMeter {...strength} /> : <p className="-mt-2 text-[0.8125rem] text-muted">{t.password.lengthHint}</p>}
         {localError && <Alert>{localError}</Alert>}
         {!localError && mutation.error && hasUnmappedError(mutation.error, REGISTER_FIELDS) && <Alert>{errorMessage(mutation.error)}</Alert>}
-        <p className="text-xs text-muted">
+        <Button type="submit" className="w-full" loading={mutation.isPending}>
+          {t.register.submit}
+        </Button>
+        <p className="text-center text-xs leading-relaxed text-subtle">
           {t.legal.registerConsent.before}
-          <Link to="/terms" target="_blank" className="font-semibold text-accent-text hover:underline">
+          <Link to="/terms" target="_blank" className="font-semibold text-ink underline-offset-4 hover:underline">
             {t.legal.registerConsent.terms}
           </Link>
           {t.legal.registerConsent.middle}
-          <Link to="/privacy" target="_blank" className="font-semibold text-accent-text hover:underline">
+          <Link to="/privacy" target="_blank" className="font-semibold text-ink underline-offset-4 hover:underline">
             {t.legal.registerConsent.privacy}
           </Link>
           {t.legal.registerConsent.after}
         </p>
-        <Button type="submit" size="lg" className="w-full" loading={mutation.isPending}>
-          {t.register.submit}
-        </Button>
       </form>
-      <p className="mt-8 text-center text-sm text-muted">
-        {t.register.haveAccount}{" "}
-        <Link to="/login" state={{ from }} className="font-semibold text-accent-text hover:underline">
-          {t.register.signIn}
-        </Link>
-      </p>
     </AuthShell>
   );
 }

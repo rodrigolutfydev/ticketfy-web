@@ -78,7 +78,19 @@ export default function LoginPage() {
         : null;
 
   return (
-    <AuthShell eyebrow={t.login.eyebrow} title={t.login.title} subtitle={t.login.subtitle}>
+    <AuthShell
+      eyebrow={t.login.eyebrow}
+      title={t.login.title}
+      subtitle={t.login.subtitle}
+      switchLink={
+        <span className="flex items-center gap-2.5 text-muted">
+          <span className="hidden sm:inline">{t.login.noAccount}</span>
+          <Link to="/register" state={{ from }} className="whitespace-nowrap font-semibold text-ink rounded-lg bg-white/[0.07] px-3 py-1.5 transition-colors hover:bg-white/[0.12]">
+            {t.login.createAccount}
+          </Link>
+        </span>
+      }
+    >
       {(state?.registered || (signOutMessage && !mutation.error)) && (
         <div className="mb-6 space-y-4">
           {state?.registered && <Alert type="success">{t.login.registered}</Alert>}
@@ -86,7 +98,7 @@ export default function LoginPage() {
         </div>
       )}
       <GoogleSignIn mode="signIn" from={from} />
-      <form onSubmit={submit} className="space-y-5">
+      <form onSubmit={submit} className="space-y-4">
         <Field label={t.login.email}>
           <Input type="email" required maxLength={254} autoComplete="email" inputMode="email" placeholder={t.login.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
@@ -99,16 +111,10 @@ export default function LoginPage() {
             {t.login.lockedBefore} <span className="tabular font-bold">{t.common.seconds(lockSeconds)}</span>.
           </Alert>
         )}
-        <Button type="submit" size="lg" className="w-full" loading={mutation.isPending} disabled={locked}>
+        <Button type="submit" className="w-full" loading={mutation.isPending} disabled={locked}>
           {locked ? t.common.wait(lockSeconds) : t.login.submit}
         </Button>
       </form>
-      <p className="mt-6 text-center text-sm text-muted">
-        {t.login.noAccount}{" "}
-        <Link to="/register" state={{ from }} className="font-semibold text-accent-text hover:underline">
-          {t.login.createAccount}
-        </Link>
-      </p>
     </AuthShell>
   );
 }
