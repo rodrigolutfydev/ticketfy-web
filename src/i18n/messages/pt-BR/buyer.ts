@@ -164,6 +164,9 @@ export const buyer = {
     confirmationMismatch: (word: string) => `Digite ${word}, em letras maiúsculas.`,
     deleteSubmit: "Excluir minha conta",
     irreversible: "Esta ação não pode ser desfeita.",
+    emailLabel: "E-mail da conta",
+    emailHint: "Sua conta não tem senha, então a exclusão é confirmada com o e-mail dela.",
+    emailMismatch: "O e-mail não confere com o da sua conta.",
   },
   accountDeleted: {
     pageTitle: "Conta excluída",

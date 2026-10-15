@@ -11,6 +11,7 @@ import AccountPage from "./pages/AccountPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import EventsPage from "./pages/EventsPage";
+import GoogleCallbackPage from "./pages/GoogleCallbackPage";
 import HelpPage from "./pages/HelpPage";
 import HowItWorksPage from "./pages/HowItWorksPage";
 import LegalPage from "./pages/LegalPage";
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="account-deleted" element={<AccountDeletedPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
+        <Route path="auth/google/callback" element={<GoogleCallbackPage />} />
 
         {/* Compra */}
         <Route path="checkout" element={privateRoute(<CheckoutPage />)} />

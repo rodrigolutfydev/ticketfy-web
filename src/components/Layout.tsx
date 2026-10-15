@@ -24,7 +24,7 @@ export default function Layout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const checkoutStep = getCheckoutStep(location.pathname);
-  const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/register" || location.pathname.startsWith("/auth/");
   const isHome = location.pathname === "/";
   const page = (
     <ErrorBoundary scope="page" resetKey={location.pathname}>

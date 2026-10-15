@@ -15,6 +15,7 @@ concurrency:
 
 env:
   VITE_API_URL: ${{ vars.VITE_API_URL }}
+  VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
   PROBLEM_TYPES_URL: ${{ vars.PROBLEM_TYPES_URL || 'https://raw.githubusercontent.com/rodrigolutfydev/Ticketfy-API/main/docs/problem-types.json' }}
   EVENT_CATEGORIES_URL: ${{ vars.EVENT_CATEGORIES_URL || 'https://raw.githubusercontent.com/rodrigolutfydev/Ticketfy-API/main/docs/event-categories.json' }}
 
@@ -45,6 +46,11 @@ jobs:
           case "$VITE_API_URL" in
             https://*) echo "VITE_API_URL=$VITE_API_URL" ;;
             *) echo "::error::VITE_API_URL precisa ser https: $VITE_API_URL"; exit 1 ;;
+          esac
+          case "$VITE_GOOGLE_CLIENT_ID" in
+            "") echo "::warning::Variável VITE_GOOGLE_CLIENT_ID não cadastrada: o botão Entrar com o Google não vai aparecer." ;;
+            GOCSPX-*) echo "::error::VITE_GOOGLE_CLIENT_ID recebeu o client secret do Google. Cadastre o client ID; o secret fica só na API."; exit 1 ;;
+            *) echo "VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID" ;;
           esac
 
       - name: Instalar dependências

@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../api/client";
-import { accountSuspendedMessage, isAccountSuspendedError, loginErrorMessage, suspensionConsequences } from "./account";
+import {
+  accountSuspendedMessage,
+  deletionProof,
+  hasNoPassword,
+  isAccountSuspendedError,
+  isPasswordNotSetError,
+  loginErrorMessage,
+  needsPasswordSetup,
+  passwordChangeBody,
+  sameEmail,
+  suspensionConsequences,
+} from "./account";
 
 const problem = (status: number, type: string | null, message = "x") => new ApiError(status, message, [], null, type);
 
@@ -55,5 +66,41 @@ describe("suspensionConsequences", () => {
     const items = suspensionConsequences("ORGANIZER", "en");
     expect(items).toHaveLength(5);
     expect(items.join(" ")).toMatch(/Requested withdrawals are held/);
+  });
+});
+
+describe("account without a password", () => {
+  const google = { hasPassword: false };
+  const withPassword = { hasPassword: true };
+
+  it("only treats an explicit hasPassword false as no password", () => {
+    expect(hasNoPassword(google)).toBe(true);
+    expect(hasNoPassword(withPassword)).toBe(false);
+    expect(hasNoPassword({})).toBe(false);
+    expect(hasNoPassword(null)).toBe(false);
+  });
+
+  it("asks to set a password when the profile says so or the API answers password-not-set", () => {
+    expect(isPasswordNotSetError(problem(409, "password-not-set"))).toBe(true);
+    expect(isPasswordNotSetError(problem(403, "invalid-password"))).toBe(false);
+    expect(needsPasswordSetup(google, null)).toBe(true);
+    expect(needsPasswordSetup(withPassword, problem(409, "password-not-set"))).toBe(true);
+    expect(needsPasswordSetup(null, problem(409, "password-not-set"))).toBe(true);
+    expect(needsPasswordSetup(withPassword, problem(403, "invalid-password"))).toBe(false);
+  });
+
+  it("sets the first password without currentPassword", () => {
+    expect(passwordChangeBody(true, "ignored", "outraSenha456")).toEqual({ newPassword: "outraSenha456" });
+    expect(passwordChangeBody(false, "senhaForte123", "outraSenha456")).toEqual({ currentPassword: "senhaForte123", newPassword: "outraSenha456" });
+  });
+
+  it("confirms the deletion with the email when there is no password", () => {
+    expect(deletionProof(google, { password: "", email: "  Ana@Gmail.com " })).toEqual({ email: "Ana@Gmail.com" });
+    expect(deletionProof(withPassword, { password: "senhaForte123", email: "ana@gmail.com" })).toEqual({ password: "senhaForte123" });
+  });
+
+  it("compares the typed email like the API: trimmed and case-insensitive", () => {
+    expect(sameEmail("  ANA@gmail.com ", "ana@gmail.com")).toBe(true);
+    expect(sameEmail("ana@gmail.co", "ana@gmail.com")).toBe(false);
   });
 });

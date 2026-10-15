@@ -166,6 +166,9 @@ export const buyer: typeof reference = {
     confirmationMismatch: (word: string) => `Type ${word}, in capital letters.`,
     deleteSubmit: "Delete my account",
     irreversible: "This action can't be undone.",
+    emailLabel: "Account email",
+    emailHint: "Your account has no password, so deletion is confirmed with its email.",
+    emailMismatch: "The email doesn't match your account's.",
   },
   accountDeleted: {
     pageTitle: "Account deleted",

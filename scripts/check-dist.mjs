@@ -14,7 +14,8 @@ const FORBIDDEN = [
   { label: "endereço local (0.0.0.0)", pattern: /\b0\.0\.0\.0:\d+/ },
   { label: "comentário de source map", pattern: /sourceMappingURL/ },
   { label: "nome de segredo do proxy", pattern: /PROXY_SHARED_SECRET|X-Proxy-Secret/i },
-  { label: "nome de segredo do servidor ou do CI", pattern: /JWT_SECRET|PAYOUT_ENCRYPTION_KEY|CLOUDFLARE_API_TOKEN|SENTRY_AUTH_TOKEN/ },
+  { label: "nome de segredo do servidor ou do CI", pattern: /JWT_SECRET|PAYOUT_ENCRYPTION_KEY|CLOUDFLARE_API_TOKEN|SENTRY_AUTH_TOKEN|GOOGLE_CLIENT_SECRET/ },
+  { label: "client secret do Google", pattern: /GOCSPX-[A-Za-z0-9_-]*/ },
   { label: "chave privada", pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
   { label: "token do GitHub", pattern: /\bgh[pousr]_[A-Za-z0-9]{36,}|\bgithub_pat_[A-Za-z0-9_]{20,}/ },
   { label: "chave da AWS", pattern: /\bAKIA[0-9A-Z]{16}\b/ },
@@ -29,6 +30,7 @@ const FORBIDDEN = [
 ];
 
 const SECRET_ENV_NAME = /SECRET|TOKEN|PASSWORD|PRIVATE|_KEY$/i;
+const GOOGLE_CLIENT_ID = /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/;
 
 const errors = [];
 const fail = (message) => errors.push(message);
@@ -89,6 +91,13 @@ if (!distExists) {
 }
 
 const apiOrigin = expectedApiOrigin();
+
+const googleClientId = (process.env.VITE_GOOGLE_CLIENT_ID ?? "").trim();
+if (googleClientId.startsWith("GOCSPX-")) {
+  fail("VITE_GOOGLE_CLIENT_ID contém um client secret do Google (GOCSPX-...). Use o client ID; o secret fica só na API.");
+} else if (googleClientId && !GOOGLE_CLIENT_ID.test(googleClientId)) {
+  fail(`VITE_GOOGLE_CLIENT_ID não tem o formato de client ID do Google (<números>-<letras>.apps.googleusercontent.com): "${googleClientId.slice(0, 40)}".`);
+}
 const files = await listFiles(dist);
 const relative = (file) => path.relative(dist, file).split(path.sep).join("/");
 

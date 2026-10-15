@@ -168,7 +168,7 @@
   }
   /* Foco visível só para teclado (o mouse não ganha contorno ao clicar). */
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--focus-ring, var(--accent));
     outline-offset: 3px;
     border-radius: 8px;
   }
@@ -1038,8 +1038,118 @@
     inset: 0;
     z-index: -1;
     background:
-      radial-gradient(60% 60% at 50% 45%, transparent, rgb(2 2 3 / 0.75)),
-      linear-gradient(180deg, rgb(2 2 3 / 0.2), rgb(2 2 3 / 0.75));
+      radial-gradient(70% 60% at 50% 50%, transparent, rgb(2 2 3 / 0.7)),
+      linear-gradient(180deg, rgb(2 2 3 / 0.55), rgb(2 2 3 / 0.15) 40%, rgb(2 2 3 / 0.8));
+  }
+  .tf-auth-tapes {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    translate: 0 -38%;
+    opacity: 0.92;
+    pointer-events: none;
+  }
+  .tf-auth-ticket {
+    box-shadow:
+      inset 0 0 0 1.5px var(--accent-line),
+      inset 0 1px 0 rgb(255 255 255 / 0.08),
+      0 30px 70px rgb(0 0 0 / 0.55),
+      0 10px 40px var(--accent-glow);
+  }
+
+  /* Botão do Google no padrão de marca dele: tema escuro (#131314, borda
+     #8E918F, texto #E3E3E3) ou claro (#FFF, borda #747775, texto #1F1F1F). */
+  .tf-google-btn {
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: 52px;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding-inline: 16px;
+    border-radius: 999px;
+    border: 1px solid #8e918f;
+    background: #131314;
+    color: #e3e3e3;
+    font-family: Roboto, var(--font-sans);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+  .tf-google-btn:disabled {
+    cursor: progress;
+    opacity: 0.75;
+  }
+  .tf-google-btn-icon {
+    display: flex;
+    height: 20px;
+    width: 20px;
+    align-items: center;
+    justify-content: center;
+  }
+  [data-theme="light"] .tf-google-btn {
+    border-color: #747775;
+    background: #fff;
+    color: #1f1f1f;
+  }
+  :where(:root[data-hover]) {
+    .tf-google-btn:hover:not(:disabled) {
+      background: #1f1f21;
+      border-color: #a3a6a4;
+    }
+    [data-theme="light"] .tf-google-btn:hover:not(:disabled) {
+      background: #f2f2f2;
+    }
+  }
+
+  /* Ingresso da tela "Entrando..." do login com Google. */
+  .tf-signing-ticket {
+    width: 260px;
+  }
+  .tf-signing-bar {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--accent-soft);
+  }
+  .tf-signing-bar::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    width: 40%;
+    border-radius: inherit;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    animation: tf-signing 1.3s var(--ease-snap) infinite;
+  }
+  @keyframes tf-signing {
+    from {
+      left: -40%;
+    }
+    to {
+      left: 100%;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tf-signing-bar::after {
+      left: 30%;
+      animation: none;
+    }
+  }
+
+  /* Campos neutros nas telas de entrada: sem laranja na borda nem no foco. */
+  .tf-auth-form {
+    --color-field: color-mix(in srgb, var(--ink) 4%, transparent);
+    --field-border: color-mix(in srgb, var(--ink) 20%, transparent);
+    --field-border-hover: color-mix(in srgb, var(--ink) 36%, transparent);
+    --field-focus: color-mix(in srgb, var(--ink) 82%, transparent);
+    --field-ring: color-mix(in srgb, var(--ink) 12%, transparent);
+    --focus-ring: color-mix(in srgb, var(--ink) 80%, transparent);
   }
 
   /* Selos de status: pílula com bolinha da cor do status. */

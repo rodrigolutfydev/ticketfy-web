@@ -80,8 +80,11 @@ export function BackLink({ to, children }: { to: string; children: ReactNode }) 
 // ---------------------------------------------------------------------------
 
 export const fieldClass =
-  "w-full rounded-[14px] border-0 bg-field px-4 py-3 text-base text-ink outline-none shadow-[inset_0_0_0_1px_var(--line)] transition-shadow placeholder:text-subtle hover:shadow-[inset_0_0_0_1px_var(--line-strong)] focus:shadow-[inset_0_0_0_1.5px_var(--accent),0_0_0_4px_var(--accent-soft)] disabled:cursor-not-allowed disabled:opacity-45 aria-[invalid=true]:shadow-[inset_0_0_0_1.5px_var(--danger)]";
+  "w-full rounded-[14px] border-0 bg-field px-4 py-3 text-base text-ink outline-none shadow-[inset_0_0_0_1px_var(--field-border,var(--line))] transition-shadow placeholder:text-subtle hover:shadow-[inset_0_0_0_1px_var(--field-border-hover,var(--line-strong))] focus:shadow-[inset_0_0_0_1.5px_var(--field-focus,var(--accent)),0_0_0_4px_var(--field-ring,var(--accent-soft))] disabled:cursor-not-allowed disabled:opacity-45 aria-[invalid=true]:shadow-[inset_0_0_0_1.5px_var(--danger)]";
 
+// Bordas e foco leem --field-border, --field-focus etc. quando um contêiner
+// define essas variáveis (as telas de entrada usam tons neutros); sem elas,
+// valem as cores padrão do tema.
 // O <label> envolve o campo: clicar no texto foca o campo, e o leitor de
 // tela anuncia o nome certo, sem precisar de id/htmlFor.
 export function Field({ label, hint, error, children }: { label: string; hint?: ReactNode; error?: string; children: ReactNode }) {

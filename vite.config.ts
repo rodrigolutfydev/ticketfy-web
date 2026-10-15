@@ -58,6 +58,7 @@ const DEV_AUTH_TARGET = "http://localhost:8080";
 
 const DEV_AUTH_ROUTES: Record<string, string> = {
   "/api/auth/login": "POST",
+  "/api/auth/google": "POST",
   "/api/auth/refresh": "POST",
   "/api/auth/logout": "POST",
   "/api/auth/logout-all": "POST",
@@ -140,6 +141,9 @@ export default defineConfig(({ command, mode }) => {
     apiOrigin = new URL(apiUrl).origin;
   } catch {
     throw new Error(`VITE_API_URL inválida: "${apiUrl}"`);
+  }
+  if ((env.VITE_GOOGLE_CLIENT_ID ?? "").trim().startsWith("GOCSPX-")) {
+    throw new Error("VITE_GOOGLE_CLIENT_ID recebeu um client secret do Google (GOCSPX-...). Use o client ID; o secret fica só na API.");
   }
   const isLocal = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(apiOrigin);
   if (command === "build" && !apiOrigin.startsWith("https://") && !isLocal) {

@@ -6,6 +6,7 @@ import { login, register } from "../api/endpoints";
 import { useAuth } from "../auth/AuthContext";
 import { useI18n } from "../i18n/LocaleContext";
 import AuthShell from "../components/AuthShell";
+import GoogleSignIn from "../components/GoogleSignIn";
 import { Alert, Button, Field, Input, PasswordInput } from "../components/ui";
 import { passwordStrength, safeRedirectPath } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -55,6 +56,7 @@ export default function RegisterPage() {
 
   return (
     <AuthShell eyebrow={t.register.eyebrow} title={t.register.title} subtitle={t.register.subtitle}>
+      <GoogleSignIn mode="signUp" from={from} />
       <form onSubmit={submit} className="space-y-5">
         <Field label={t.register.name} error={fieldError(mutation.error, "name")}>
           <Input required minLength={2} maxLength={100} autoComplete="name" value={form.name} onChange={set("name")} />

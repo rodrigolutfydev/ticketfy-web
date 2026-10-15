@@ -10,6 +10,7 @@ export interface AuthProxyContext {
 
 export const AUTH_PROXY_ROUTES: Readonly<Record<string, string>> = {
   "/api/auth/login": "POST",
+  "/api/auth/google": "POST",
   "/api/auth/refresh": "POST",
   "/api/auth/logout": "POST",
   "/api/auth/logout-all": "POST",

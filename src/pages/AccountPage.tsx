@@ -17,6 +17,9 @@ import { ErrorMessage, Loading } from "../components/StateMessage";
 import { TabPanel, Tabs, useTabParam } from "../components/Tabs";
 import { Alert, Button, ButtonLink, Card, Field, InfoRow, Input, PageTitle, PasswordInput } from "../components/ui";
 import { formatTime } from "../utils/format";
+import { deletionProof, hasNoPassword, needsPasswordSetup, passwordChangeBody, sameEmail } from "../utils/account";
+import { GoogleLogo } from "../components/GoogleSignIn";
+import PasswordRequiredNotice from "../components/PasswordRequiredNotice";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n/LocaleContext";
 import { LOCALES } from "../i18n/locale";
@@ -195,15 +198,21 @@ function ProfileTab({ me }: { me: UserProfile }) {
         <InfoRow icon={<BadgeCheck size={18} />} label={t.account.role}>
           {t.labels.roles[me.role] ?? me.role}
         </InfoRow>
+        {me.googleLinked !== undefined && (
+          <InfoRow icon={<GoogleLogo />} label={t.account.googleLabel}>
+            {me.googleLinked ? t.account.googleLinked : <span className="font-normal text-muted">{t.account.googleNotLinked}</span>}
+          </InfoRow>
+        )}
       </dl>
     </Card>
   );
 }
 
-function SecurityTab() {
+export function SecurityTab() {
   const { t, locale } = useI18n();
   const s = t.account.security;
   const { signOut, expiresAt } = useAuth();
+  const { me } = useMe();
   const navigate = useNavigate();
   const logoutAllMutation = useMutation({
     mutationFn: logoutAll,
@@ -221,7 +230,10 @@ function SecurityTab() {
       label: s.validityLabel,
       text: expiresAt ? s.validityText(formatTime(new Date(expiresAt).toISOString(), locale)) : s.noSession,
     },
-    { icon: <KeyRound size={18} />, label: s.passwordLabel, text: s.passwordText },
+    { icon: <KeyRound size={18} />, label: s.passwordLabel, text: hasNoPassword(me) ? s.noPasswordText : s.passwordText },
+    ...(me?.googleLinked !== undefined
+      ? [{ icon: <GoogleLogo />, label: s.googleLabel, text: me.googleLinked ? s.googleLinked : s.googleNotLinked }]
+      : []),
   ];
 
   return (
@@ -276,11 +288,13 @@ function SecurityTab() {
 
 const PASSWORD_FIELDS = ["currentPassword", "newPassword"] as const;
 
-function PasswordCard() {
+export function PasswordCard() {
   const { t } = useI18n();
   const p = t.account.passwordCard;
   const { replaceSession } = useAuth();
   const { me } = useMe();
+  const queryClient = useQueryClient();
+  const setting = hasNoPassword(me);
   const [form, setForm] = useState({ current: "", next: "", confirm: "" });
   const [localError, setLocalError] = useState<string | null>(null);
   const [lockSeconds, setLockSeconds] = useState(0);
@@ -292,10 +306,11 @@ function PasswordCard() {
   }, [lockSeconds]);
 
   const mutation = useMutation({
-    mutationFn: () => changePassword({ currentPassword: form.current, newPassword: form.next }),
+    mutationFn: (firstPassword: boolean) => changePassword(passwordChangeBody(firstPassword, form.current, form.next)),
     onSuccess: (data) => {
       replaceSession(data);
       setForm({ current: "", next: "", confirm: "" });
+      queryClient.invalidateQueries({ queryKey: ["me"] });
     },
     onError: (error) => {
       setForm((current) => ({ ...current, current: "" }));
@@ -318,9 +333,9 @@ function PasswordCard() {
     e.preventDefault();
     if (locked) return;
     if (form.next !== form.confirm) return setLocalError(p.newMismatch);
-    if (form.next === form.current) return setLocalError(p.sameAsCurrent);
+    if (!setting && form.next === form.current) return setLocalError(p.sameAsCurrent);
     if (strength.score < 2) return setLocalError(p.weak);
-    mutation.mutate();
+    mutation.mutate(setting);
   }
 
   const errorText =
@@ -334,12 +349,14 @@ function PasswordCard() {
 
   return (
     <Card>
-      <h2 className="text-lg font-extrabold text-ink">{p.title}</h2>
-      <p className="mt-1 text-sm text-muted">{p.text}</p>
+      <h2 className="text-lg font-extrabold text-ink">{setting ? p.setTitle : p.title}</h2>
+      <p className="mt-1 text-sm text-muted">{setting ? p.setText : p.text}</p>
       <form onSubmit={submit} className="mt-5 space-y-4">
-        <Field label={p.current} error={fieldError(error, "currentPassword")}>
-          <PasswordInput required maxLength={100} autoComplete="current-password" value={form.current} onChange={set("current")} />
-        </Field>
+        {!setting && (
+          <Field label={p.current} error={fieldError(error, "currentPassword")}>
+            <PasswordInput required maxLength={100} autoComplete="current-password" value={form.current} onChange={set("current")} />
+          </Field>
+        )}
         <Field
           label={p.next}
           hint={
@@ -363,9 +380,9 @@ function PasswordCard() {
             {p.lockedBefore} <span className="tabular font-bold">{t.common.seconds(lockSeconds)}</span>.
           </Alert>
         )}
-        {mutation.isSuccess && <Alert type="success">{p.success}</Alert>}
+        {mutation.isSuccess && <Alert type="success">{mutation.variables ? p.setSuccess : p.success}</Alert>}
         <Button type="submit" loading={mutation.isPending} disabled={locked}>
-          {locked ? t.common.wait(lockSeconds) : p.submit}
+          {locked ? t.common.wait(lockSeconds) : setting ? p.setSubmit : p.submit}
         </Button>
       </form>
     </Card>
@@ -391,9 +408,10 @@ function PrivacyTab() {
   );
 }
 
-function ExportCard() {
+export function ExportCard() {
   const { t } = useI18n();
   const p = t.buyer.privacy;
+  const { me } = useMe();
   const [password, setPassword] = useState("");
   const [lockSeconds, setLockSeconds] = useLockCountdown();
   const mutation = useMutation({
@@ -423,40 +441,50 @@ function ExportCard() {
       </h2>
       <p className="mt-1 text-sm text-muted">{p.exportText}</p>
       <p className="mt-1 text-xs text-subtle">{p.exportLimit(3, 24)}</p>
-      <form onSubmit={submit} className="mt-5 space-y-4">
-        <Field label={p.password} error={problemType === "invalid-password" ? errorMessage(error) ?? undefined : fieldError(error, "password")}>
-          <PasswordInput required maxLength={100} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </Field>
-        {error && problemType !== "invalid-password" && problemType !== "too-many-password-attempts" && hasUnmappedError(error, ["password"]) && (
-          <Alert>{errorMessage(error)}</Alert>
-        )}
-        {locked && (
-          <Alert type="warning">
-            {p.lockedBefore} <span className="tabular font-bold">{t.common.seconds(lockSeconds)}</span>.
-          </Alert>
-        )}
-        {mutation.isSuccess && <Alert type="success">{p.exported}</Alert>}
-        <Button type="submit" variant="secondary" loading={mutation.isPending} disabled={locked}>
-          <Download size={16} aria-hidden /> {locked ? t.common.wait(lockSeconds) : p.exportSubmit}
-        </Button>
-      </form>
+      {needsPasswordSetup(me, error) ? (
+        <div className="mt-5">
+          <PasswordRequiredNotice />
+        </div>
+      ) : (
+        <form onSubmit={submit} className="mt-5 space-y-4">
+          <Field label={p.password} error={problemType === "invalid-password" ? errorMessage(error) ?? undefined : fieldError(error, "password")}>
+            <PasswordInput required maxLength={100} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Field>
+          {error && problemType !== "invalid-password" && problemType !== "too-many-password-attempts" && hasUnmappedError(error, ["password"]) && (
+            <Alert>{errorMessage(error)}</Alert>
+          )}
+          {locked && (
+            <Alert type="warning">
+              {p.lockedBefore} <span className="tabular font-bold">{t.common.seconds(lockSeconds)}</span>.
+            </Alert>
+          )}
+          {mutation.isSuccess && <Alert type="success">{p.exported}</Alert>}
+          <Button type="submit" variant="secondary" loading={mutation.isPending} disabled={locked}>
+            <Download size={16} aria-hidden /> {locked ? t.common.wait(lockSeconds) : p.exportSubmit}
+          </Button>
+        </form>
+      )}
     </Card>
   );
 }
 
-function DeleteAccountCard() {
+export function DeleteAccountCard() {
   const { t } = useI18n();
   const p = t.buyer.privacy;
   const { signOut } = useAuth();
+  const { me } = useMe();
   const navigate = useNavigate();
+  const withEmail = hasNoPassword(me);
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const [lockSeconds, setLockSeconds] = useLockCountdown();
   const word = p.confirmationWord;
 
   const mutation = useMutation({
-    mutationFn: () => deleteAccount(password, confirmation),
+    mutationFn: () => deleteAccount(deletionProof(me, { password, email }), confirmation),
     onSuccess: () => {
       navigate("/account-deleted", { replace: true });
       signOut("manual", { notifyServer: false });
@@ -473,6 +501,7 @@ function DeleteAccountCard() {
   function submit(e: FormEvent) {
     e.preventDefault();
     if (locked) return;
+    if (withEmail && me && !sameEmail(email, me.email)) return setEmailError(p.emailMismatch);
     if (confirmation !== word) return setLocalError(p.confirmationMismatch(word));
     setLocalError(null);
     mutation.mutate();
@@ -488,9 +517,31 @@ function DeleteAccountCard() {
       <p className="mt-1 text-sm text-muted">{p.deleteText}</p>
       <p className="mt-2 text-sm text-muted">{p.deleteBlockers}</p>
       <form onSubmit={submit} className="mt-5 space-y-4">
-        <Field label={p.password} error={problemType === "invalid-password" ? errorMessage(error) ?? undefined : fieldError(error, "password")}>
-          <PasswordInput required maxLength={100} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </Field>
+        {withEmail ? (
+          <Field
+            label={p.emailLabel}
+            hint={p.emailHint}
+            error={emailError ?? (problemType === "email-confirmation-mismatch" ? errorMessage(error) ?? undefined : fieldError(error, "email"))}
+          >
+            <Input
+              type="email"
+              required
+              maxLength={254}
+              autoComplete="off"
+              inputMode="email"
+              spellCheck={false}
+              value={email}
+              onChange={(e) => {
+                setEmailError(null);
+                setEmail(e.target.value);
+              }}
+            />
+          </Field>
+        ) : (
+          <Field label={p.password} error={problemType === "invalid-password" ? errorMessage(error) ?? undefined : fieldError(error, "password")}>
+            <PasswordInput required maxLength={100} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Field>
+        )}
         <Field label={p.confirmation(word)} error={confirmationError}>
           <Input
             required
@@ -505,7 +556,11 @@ function DeleteAccountCard() {
             }}
           />
         </Field>
-        {error && problemType !== "invalid-password" && problemType !== "too-many-password-attempts" && hasUnmappedError(error, ["password", "confirmation"]) && (
+        {error &&
+          problemType !== "invalid-password" &&
+          problemType !== "email-confirmation-mismatch" &&
+          problemType !== "too-many-password-attempts" &&
+          hasUnmappedError(error, ["password", "email", "confirmation"]) && (
           <Alert>{errorMessage(error)}</Alert>
         )}
         {locked && (

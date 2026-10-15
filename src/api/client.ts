@@ -20,6 +20,7 @@ const JWT_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
 const AUTH_ROUTES: Record<string, string> = {
   "/auth/login": "POST",
+  "/auth/google": "POST",
   "/auth/refresh": "POST",
   "/auth/logout": "POST",
   "/auth/logout-all": "POST",
@@ -29,6 +30,7 @@ const AUTH_ROUTES: Record<string, string> = {
 
 const SESSION_ROUTES: Record<string, string> = {
   "/auth/login": "POST",
+  "/auth/google": "POST",
   "/auth/refresh": "POST",
   "/auth/logout": "POST",
   "/users/me": "GET",

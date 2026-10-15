@@ -4,6 +4,9 @@ import { ApiError, errorMessage, fieldError } from "../api/client";
 import { transferTicket } from "../api/endpoints";
 import type { TicketDetails } from "../api/types";
 import { useI18n } from "../i18n/LocaleContext";
+import { useMe } from "../auth/useMe";
+import { needsPasswordSetup } from "../utils/account";
+import PasswordRequiredNotice from "./PasswordRequiredNotice";
 import { Alert, Button, Field, Input, PasswordInput } from "./ui";
 
 interface Props {
@@ -48,6 +51,7 @@ export default function TransferTicketDialog({ ticket, onClose, onTransferred }:
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [understood, setUnderstood] = useState(false);
+  const { me } = useMe();
 
   const mutation = useMutation({
     mutationFn: () => transferTicket(ticket.id, email.trim(), password),
@@ -73,7 +77,8 @@ export default function TransferTicketDialog({ ticket, onClose, onTransferred }:
     if (understood) mutation.mutate();
   };
 
-  const errors: TransferErrors = mutation.error ? describe(mutation.error) : {};
+  const noPassword = needsPasswordSetup(me, mutation.error);
+  const errors: TransferErrors = mutation.error && !noPassword ? describe(mutation.error) : {};
 
   return (
     <dialog
@@ -101,9 +106,13 @@ export default function TransferTicketDialog({ ticket, onClose, onTransferred }:
             autoFocus
           />
         </Field>
-        <Field label={x.password} error={errors.password ?? undefined}>
-          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" maxLength={100} required />
-        </Field>
+        {noPassword ? (
+          <PasswordRequiredNotice />
+        ) : (
+          <Field label={x.password} error={errors.password ?? undefined}>
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" maxLength={100} required />
+          </Field>
+        )}
         <label className="flex items-start gap-3 rounded-xl border border-accent-line bg-accent-soft p-3 text-sm text-ink">
           <input
             type="checkbox"
@@ -119,7 +128,7 @@ export default function TransferTicketDialog({ ticket, onClose, onTransferred }:
           <Button variant="ghost" onClick={() => ref.current?.close()} disabled={mutation.isPending}>
             {x.back}
           </Button>
-          <Button type="submit" variant="danger" loading={mutation.isPending} disabled={!understood}>
+          <Button type="submit" variant="danger" loading={mutation.isPending} disabled={!understood || noPassword}>
             {x.submit}
           </Button>
         </div>

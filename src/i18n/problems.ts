@@ -174,6 +174,14 @@ const PT_BR: Catalog = {
         ? `Você tem ${tickets === 1 ? "1 ingresso válido" : `${tickets} ingressos válidos`} para eventos futuros. Transfira ou peça o reembolso antes de excluir a conta.`
         : "Você tem ingressos válidos para eventos futuros. Transfira ou peça o reembolso antes de excluir a conta.";
     },
+    "google-login-unavailable": "O login com Google está indisponível no momento. Entre com e-mail e senha.",
+    "google-redirect-uri-not-allowed": "O login com Google não está liberado para este endereço do site. Entre com e-mail e senha.",
+    "google-authorization-failed": "O Google não confirmou o seu login. Tente de novo.",
+    "google-email-not-verified": "O e-mail da sua conta Google ainda não foi verificado. Verifique-o no Google e tente de novo.",
+    "google-account-conflict": "Este e-mail já está ligado a outra conta Google. Entre com a conta Google certa ou com e-mail e senha.",
+    "google-unavailable": "O Google não respondeu. Tente de novo em instantes.",
+    "password-not-set": "Sua conta ainda não tem senha. Defina uma senha na sua conta para confirmar esta ação.",
+    "email-confirmation-mismatch": "O e-mail não confere com o da sua conta.",
   },
   reasons: {
     "invalid-coupon-settings": {
@@ -420,6 +428,14 @@ const EN: Catalog = {
         ? `You have ${tickets === 1 ? "1 valid ticket" : `${tickets} valid tickets`} for upcoming events. Transfer or refund them before deleting your account.`
         : "You have valid tickets for upcoming events. Transfer or refund them before deleting your account.";
     },
+    "google-login-unavailable": "Google sign-in isn't available right now. Sign in with your email and password.",
+    "google-redirect-uri-not-allowed": "Google sign-in isn't enabled for this site address. Sign in with your email and password.",
+    "google-authorization-failed": "Google didn't confirm your sign-in. Try again.",
+    "google-email-not-verified": "Your Google account email isn't verified yet. Verify it with Google and try again.",
+    "google-account-conflict": "This email is already linked to another Google account. Sign in with the right Google account or with your email and password.",
+    "google-unavailable": "Google didn't respond. Try again in a moment.",
+    "password-not-set": "Your account doesn't have a password yet. Set one in your account to confirm this action.",
+    "email-confirmation-mismatch": "The email doesn't match your account's.",
   },
   reasons: {
     "invalid-coupon-settings": {

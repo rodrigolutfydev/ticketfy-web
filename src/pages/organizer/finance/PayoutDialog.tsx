@@ -4,7 +4,10 @@ import { ApiError, errorMessage, fieldError, hasUnmappedError } from "../../../a
 import { useI18n } from "../../../i18n/LocaleContext";
 import { requestPayout } from "../../../api/endpoints";
 import type { Balance, PayoutAccount } from "../../../api/types";
+import { useMe } from "../../../auth/useMe";
+import PasswordRequiredNotice from "../../../components/PasswordRequiredNotice";
 import { Alert, Button, Field, Input, PasswordInput } from "../../../components/ui";
+import { needsPasswordSetup } from "../../../utils/account";
 import { formatPrice } from "../../../utils/format";
 import { newIdempotencyKey } from "../../../utils/idempotency";
 
@@ -23,6 +26,7 @@ export default function PayoutDialog({ open, balance, account, onClose }: Props)
   const [amount, setAmount] = useState("");
   const [password, setPassword] = useState("");
   const [idempotencyKey] = useState(newIdempotencyKey);
+  const { me } = useMe();
 
   const mutation = useMutation({
     mutationFn: () => requestPayout(Number(amount), password, idempotencyKey),
@@ -49,6 +53,7 @@ export default function PayoutDialog({ open, balance, account, onClose }: Props)
 
   const error = mutation.error;
   const wrongPassword = error instanceof ApiError && error.problemType === "invalid-password";
+  const noPassword = needsPasswordSetup(me, error);
 
   return (
     <dialog
@@ -81,15 +86,19 @@ export default function PayoutDialog({ open, balance, account, onClose }: Props)
             autoFocus
           />
         </Field>
-        <Field label={d.password} error={wrongPassword ? d.wrongPassword : fieldError(error, "password")}>
-          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" maxLength={100} required />
-        </Field>
-        {error && !wrongPassword && hasUnmappedError(error, ["amount", "password"]) && <Alert>{errorMessage(error)}</Alert>}
+        {noPassword ? (
+          <PasswordRequiredNotice />
+        ) : (
+          <Field label={d.password} error={wrongPassword ? d.wrongPassword : fieldError(error, "password")}>
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" maxLength={100} required />
+          </Field>
+        )}
+        {error && !wrongPassword && !noPassword && hasUnmappedError(error, ["amount", "password"]) && <Alert>{errorMessage(error)}</Alert>}
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={mutation.isPending}>
             {d.back}
           </Button>
-          <Button type="submit" loading={mutation.isPending}>
+          <Button type="submit" loading={mutation.isPending} disabled={noPassword}>
             {d.submit}
           </Button>
         </div>

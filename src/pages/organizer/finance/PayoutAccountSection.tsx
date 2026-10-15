@@ -5,7 +5,10 @@ import { ApiError, errorMessage, fieldError, hasUnmappedError } from "../../../a
 import { useI18n } from "../../../i18n/LocaleContext";
 import { savePayoutAccount } from "../../../api/endpoints";
 import type { DocumentType, PayoutAccount, PixKeyType } from "../../../api/types";
+import { useMe } from "../../../auth/useMe";
+import PasswordRequiredNotice from "../../../components/PasswordRequiredNotice";
 import { Alert, Button, Card, Field, Input, PasswordInput, Select } from "../../../components/ui";
+import { needsPasswordSetup } from "../../../utils/account";
 import { PIX_KEY_TYPES, formatDateTime, pixKeyPlaceholder } from "./payoutMeta";
 
 const FIELDS = ["documentType", "document", "holderName", "pixKeyType", "pixKey", "password"] as const;
@@ -71,6 +74,7 @@ function AccountForm({ account, onDone, onCancel }: { account: PayoutAccount | n
   const [pixKeyType, setPixKeyType] = useState<PixKeyType>(account?.pixKeyType ?? "CPF");
   const [pixKey, setPixKey] = useState("");
   const [password, setPassword] = useState("");
+  const { me } = useMe();
 
   const mutation = useMutation({
     mutationFn: () => savePayoutAccount({ documentType, document, holderName, pixKeyType, pixKey, password }),
@@ -89,6 +93,7 @@ function AccountForm({ account, onDone, onCancel }: { account: PayoutAccount | n
 
   const error = mutation.error;
   const wrongPassword = error instanceof ApiError && error.problemType === "invalid-password";
+  const noPassword = needsPasswordSetup(me, error);
 
   return (
     <form onSubmit={submit} className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -133,15 +138,19 @@ function AccountForm({ account, onDone, onCancel }: { account: PayoutAccount | n
         />
       </Field>
       <div className="sm:col-span-2">
-        <Field
-          label={a.password}
-          error={wrongPassword ? a.wrongPassword : fieldError(error, "password")}
-          hint={account ? a.keyChangeHint : undefined}
-        >
-          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" maxLength={100} required />
-        </Field>
+        {noPassword ? (
+          <PasswordRequiredNotice />
+        ) : (
+          <Field
+            label={a.password}
+            error={wrongPassword ? a.wrongPassword : fieldError(error, "password")}
+            hint={account ? a.keyChangeHint : undefined}
+          >
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" maxLength={100} required />
+          </Field>
+        )}
       </div>
-      {error && !wrongPassword && hasUnmappedError(error, FIELDS) && (
+      {error && !wrongPassword && !noPassword && hasUnmappedError(error, FIELDS) && (
         <div className="sm:col-span-2">
           <Alert>{errorMessage(error)}</Alert>
         </div>
@@ -152,7 +161,7 @@ function AccountForm({ account, onDone, onCancel }: { account: PayoutAccount | n
             {a.cancel}
           </Button>
         )}
-        <Button type="submit" loading={mutation.isPending}>
+        <Button type="submit" loading={mutation.isPending} disabled={noPassword}>
           {a.save}
         </Button>
       </div>

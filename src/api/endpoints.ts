@@ -20,8 +20,11 @@ const seg = (value: string) => encodeURIComponent(value);
 export const register = (data: { name: string; email: string; password: string; language?: string }) =>
   api.post<UserDetails>("/users", data);
 export const login = (data: { email: string; password: string }) => authApi.post<TokenResponse>("/auth/login", data);
+export const loginWithGoogle = (data: { code: string; codeVerifier: string; redirectUri: string }) =>
+  authApi.post<TokenResponse>("/auth/google", data);
 export const logoutAll = () => authApi.post<void>("/auth/logout-all", undefined, { authenticated: true });
-export const changePassword = (data: { currentPassword: string; newPassword: string }) =>
+// Sem currentPassword: define a primeira senha de uma conta criada pelo Google.
+export const changePassword = (data: { currentPassword?: string; newPassword: string }) =>
   authApi.patch<TokenResponse>("/users/me/password", data, { authenticated: true });
 export const becomeOrganizer = () => api.post<void>("/users/me/organizer");
 export const getMe = () => api.get<UserProfile>("/users/me");
@@ -30,8 +33,9 @@ export const updateAvatar = (avatarUrl: string) => api.patch<UserProfile>("/user
 export const updateLanguage = (language: string) => api.patch<UserProfile>("/users/me/language", { language });
 export const exportMyData = (password: string) =>
   apiDownload("/users/me/data-export", { method: "POST", body: { password }, accept: "application/json, application/problem+json" });
-export const deleteAccount = (password: string, confirmation: string) =>
-  authApi.post<void>("/users/me/deletion", { password, confirmation }, { authenticated: true });
+// Conta com senha confirma com { password }; conta sem senha, com { email }.
+export const deleteAccount = (proof: { password: string } | { email: string }, confirmation: string) =>
+  authApi.post<void>("/users/me/deletion", { ...proof, confirmation }, { authenticated: true });
 
 // Eventos
 export function listEvents({

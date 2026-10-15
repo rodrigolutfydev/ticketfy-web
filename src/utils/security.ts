@@ -52,7 +52,7 @@ export function safeRedirectPath(value: unknown, fallback = "/"): string {
   return value;
 }
 
-const isAuthPath = (path: string) => path.startsWith("/login") || path.startsWith("/register");
+const isAuthPath = (path: string) => path.startsWith("/login") || path.startsWith("/register") || path.startsWith("/auth/");
 
 // ---------------------------------------------------------------------------
 // Imagens de evento

@@ -30,6 +30,9 @@ export interface UserProfile {
   // Foto de perfil (https). null quando o usuário não tem foto.
   avatarUrl?: string | null;
   language?: string;
+  // false: conta criada pelo Google que ainda não definiu senha.
+  hasPassword?: boolean;
+  googleLinked?: boolean;
 }
 
 export type EventCategory =

@@ -75,6 +75,30 @@ describe("proxy de autenticação", () => {
     expect(String(fetchMock.mock.calls[0][0])).toBe("https://api.example.com/users/me/deletion");
   });
 
+  it("repassa o login com Google em POST, com corpo e cookie da sessão nova", async () => {
+    const fetchMock = upstream(
+      new Response('{"token":"t","expiresIn":600}', {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Set-Cookie": "__Host-ticketfy_rt=new; Path=/; HttpOnly" },
+      }),
+    );
+    const body = JSON.stringify({ code: "4/0AQ", codeVerifier: "v".repeat(64), redirectUri: `${SITE}/auth/google/callback` });
+
+    expect((await proxyAuth({ request: request("/api/auth/google", { method: "GET" }), env })).status).toBe(405);
+    const response = await proxyAuth({
+      request: request("/api/auth/google", { body, headers: { "Content-Type": "application/json", "CF-Connecting-IP": "203.0.113.7" } }),
+      env,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.getSetCookie()).toEqual(["__Host-ticketfy_rt=new; Path=/; HttpOnly"]);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.example.com/auth/google");
+    expect(new TextDecoder().decode(init?.body as ArrayBuffer)).toBe(body);
+    expect((init?.headers as Headers).get("X-Client-IP")).toBe("203.0.113.7");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("recusa Origin diferente, configuração ausente e corpo grande sem chamar a API", async () => {
     const fetchMock = upstream(new Response(null, { status: 204 }));
 

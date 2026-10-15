@@ -16,7 +16,7 @@ npm run build     # gera a versão de produção em dist/
 npm run preview   # serve o dist/ com os cabeçalhos de segurança, em http://localhost:4173
 ```
 
-Em `npm run dev`, as rotas de sessão (`/api/auth/*` e a troca de senha) passam pelo proxy do Vite até `http://localhost:8080`, fazendo o papel da Function da Cloudflare.
+Em `npm run dev`, as rotas de sessão (`/api/auth/*`, inclusive `/api/auth/google`, e a troca de senha) passam pelo proxy do Vite até `http://localhost:8080`, fazendo o papel da Function da Cloudflare.
 
 **Publicação:** o site publicado sai só do build do CI (veja [Publicação](#publicação)). Não suba o `dist/` gerado na sua máquina: com um `.env.local` apontando para `localhost`, a CSP e o bundle ficam apontando para a API local.
 
@@ -51,6 +51,7 @@ Configuração no GitHub (Settings → Secrets and variables → Actions):
 | Nome | Tipo | Onde | Valor |
 |---|---|---|---|
 | `VITE_API_URL` | Variable | Repositório | URL https da API de produção |
+| `VITE_GOOGLE_CLIENT_ID` | Variable | Repositório | Client ID OAuth do Google (`<números>-<letras>.apps.googleusercontent.com`). Sem ele, o CI avisa e o botão do Google não aparece; com um `GOCSPX-...` (client secret), o CI falha |
 | `CLOUDFLARE_ACCOUNT_ID` | Variable | Repositório | Id da conta da Cloudflare |
 | `CF_PAGES_PROJECT` | Variable | Repositório | Nome do projeto na Pages |
 | `CLOUDFLARE_API_TOKEN` | Secret | Environment `production` | Token com só "Account → Cloudflare Pages → Edit" |
@@ -72,11 +73,16 @@ Para rodar o teste rápido à mão: `SITE_URL=https://... VITE_API_URL=https://.
 
 Depois de voltar, corrija na `main`: o próximo push publica de novo por cima do rollback.
 
+## Login com Google
+
+Fluxo authorization code + PKCE (`src/auth/google.ts`). O botão gera `state` e `code_verifier` aleatórios, guarda os dois (e a página para onde a pessoa ia, passada por `safeRedirectPath`) no `sessionStorage` e manda para o Google com o `code_challenge` S256. A volta cai em `/auth/google/callback`, que confere o `state`, apaga o que estava guardado, tira o `code` da URL e chama `POST /api/auth/google` pela mesma Function de sessão do login com senha. O `redirectUri` é a origem atual + `/auth/google/callback` e precisa estar, igual, nas **Authorized redirect URIs** do client no Google Cloud e em `GOOGLE_REDIRECT_URIS` na API. A CSP não muda: a ida ao Google é uma navegação de página, não um `fetch`.
+
 ## Variáveis de ambiente
 
 | Variável | Onde | Para quê |
 |---|---|---|
 | `VITE_API_URL` | `.env` (versionado, valor de produção) ou `.env.local` (só na sua máquina, fora do Git) | Endereço da API. Vai embutido no bundle e no `connect-src` da CSP. O build falha se não for https (exceto `localhost`) |
+| `VITE_GOOGLE_CLIENT_ID` | `.env.local` (sua máquina) ou Variable do repositório (CI) | Client ID do login com Google. É público e vai no bundle. O client secret (`GOCSPX-...`) fica só na API: o build e o `check:dist` falham se ele aparecer |
 | `API_ORIGIN` | Cloudflare Pages → Settings → Variables (Functions) | Origem https da API para a qual a Function repassa as rotas de sessão |
 | `PROXY_SHARED_SECRET` | Cloudflare Pages (tipo *Secret*, só Production) e Render, com o mesmo valor | Segredo que a Function envia à API. Nunca vai para o Git nem para variáveis `VITE_` |
 | `PROBLEM_TYPES_URL`, `EVENT_CATEGORIES_URL` | CI (opcional; o workflow já usa a `main` da API no GitHub) | Fonte dos contratos para o `check:problems` quando a pasta da API não está disponível |

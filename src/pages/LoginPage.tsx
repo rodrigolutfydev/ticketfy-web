@@ -6,6 +6,7 @@ import { login } from "../api/endpoints";
 import { useAuth } from "../auth/AuthContext";
 import { useI18n } from "../i18n/LocaleContext";
 import AuthShell from "../components/AuthShell";
+import GoogleSignIn from "../components/GoogleSignIn";
 import { Alert, Button, Field, Input, PasswordInput } from "../components/ui";
 import { accountSuspendedMessage, loginErrorMessage } from "../utils/account";
 import { loginThrottle, safeRedirectPath } from "../utils/security";
@@ -78,11 +79,14 @@ export default function LoginPage() {
 
   return (
     <AuthShell eyebrow={t.login.eyebrow} title={t.login.title} subtitle={t.login.subtitle}>
-      <div className="space-y-4">
-        {state?.registered && <Alert type="success">{t.login.registered}</Alert>}
-        {signOutMessage && !mutation.error && <Alert type="info">{signOutMessage}</Alert>}
-      </div>
-      <form onSubmit={submit} className="mt-4 space-y-5">
+      {(state?.registered || (signOutMessage && !mutation.error)) && (
+        <div className="mb-6 space-y-4">
+          {state?.registered && <Alert type="success">{t.login.registered}</Alert>}
+          {signOutMessage && !mutation.error && <Alert type="info">{signOutMessage}</Alert>}
+        </div>
+      )}
+      <GoogleSignIn mode="signIn" from={from} />
+      <form onSubmit={submit} className="space-y-5">
         <Field label={t.login.email}>
           <Input type="email" required maxLength={254} autoComplete="email" inputMode="email" placeholder={t.login.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
