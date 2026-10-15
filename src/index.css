@@ -28,6 +28,20 @@
 */
 @custom-variant hover (&:where(:root[data-hover] *):hover);
 
+/* Variáveis do efeito da busca registradas como número: assim dá para
+   animá-las com transition (o amortecimento da rolagem). Valores iniciais:
+   busca do topo aberta (--repel 0) e busca da seção aberta (--scroll 1). */
+@property --repel {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --scroll {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+
 @theme inline {
   --font-sans: "Inter Tight Variable", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Unbounded Variable", "Inter Tight Variable", ui-sans-serif, sans-serif;
@@ -709,29 +723,54 @@
     will-change: transform, opacity;
   }
 
-  /* Busca do topo: o ingresso, ao descer, a empurra para fora. Ela se
-     recolhe da direita para a esquerda até sumir (--repel de 0 a 1, vindo do
-     useHeroDrop) e reabre se a página subir. A mesma busca reaparece em
-     "Todos os eventos" (.tf-search-reveal) abrindo da esquerda para a
-     direita conforme entra na tela (--scroll, do useScrollShift).
+  /* Busca do topo: o ingresso, ao descer, a empurra para fora, em duas
+     etapas (--closed de 0 a 1):
+       --a (0 a 0,5)   a Cidade se recolhe da direita para a esquerda e o
+                       Buscar desliza para junto do nome;
+       pausa curta     fica só "nome + Buscar";
+       --b (0,55 a 1)  o resto se recolhe da direita para a esquerda e some.
+     No topo, --closed vem de --repel (useHeroDrop) e a busca reabre se a
+     página subir. A mesma busca reaparece em "Todos os eventos"
+     (.tf-search-reveal) fazendo o caminho inverso conforme entra na tela
+     (--scroll, do useScrollShift). --city-w/--city-h (useSearchBarMetrics)
+     dizem o tamanho da parte Cidade: largura lado a lado, altura empilhada.
+     As transições em --repel/--scroll suavizam a rolagem (amortecimento).
      Sem JS ou com menos movimento, as duas ficam abertas e paradas; com foco
      de teclado também abrem inteiras (nunca um campo invisível). */
   .tf-hero-search,
   .tf-search-reveal {
     --closed: 0;
-    clip-path: inset(-4px calc(var(--closed) * 100%) -4px -4px round 20px);
-    transform: translate3d(calc(var(--closed) * -28px), 0, 0);
-    opacity: calc(1 - var(--closed) * 0.35);
+    --a: clamp(0, var(--closed) * 2, 1);
+    --b: clamp(0, (var(--closed) - 0.55) / 0.45, 1);
+    --cut-y: calc(100% - 86px - var(--a) * var(--city-h, 0px));
+    clip-path: inset(
+      -4px calc(var(--a) * var(--city-w, 0px) + var(--b) * (100% - var(--city-w, 0px) + 4px) - 4px) calc(var(--a) * var(--city-h, 0px) - 4px) -4px
+      round 20px
+    );
+    transform: translate3d(calc(var(--b) * -28px), 0, 0);
+    opacity: calc(1 - var(--b) * 0.35);
+  }
+  @media (min-width: 48rem) {
+    .tf-hero-search,
+    .tf-search-reveal {
+      --cut-y: 50%;
+    }
   }
   .tf-hero-search {
-    --repel: 0;
     --closed: var(--repel);
     z-index: 1;
+    transition: --repel 0.5s var(--ease-snap);
   }
   .tf-search-reveal {
-    /* Abre entre a borda de baixo da tela e ~35% da subida. */
-    --scroll: 1;
-    --closed: calc(1 - clamp(0, var(--scroll) * 3, 1));
+    --closed: calc(1 - clamp(0, var(--scroll) * 2.4, 1));
+    transition: --scroll 0.5s var(--ease-snap);
+  }
+  .tf-search-city {
+    clip-path: inset(0 calc(var(--a) * 100%) 0 0);
+    opacity: calc(1 - var(--a));
+  }
+  .tf-search-go {
+    transform: translate3d(calc(var(--a) * var(--city-w, 0px) * -1), calc(var(--a) * var(--city-h, 0px) * -1), 0);
   }
   .tf-hero-search:focus-within,
   .tf-search-reveal:focus-within {

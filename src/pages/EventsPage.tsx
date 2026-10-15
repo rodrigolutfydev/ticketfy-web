@@ -356,21 +356,27 @@ interface SearchBarProps {
 //   do PaperTicket) e reabre ao subir a página;
 // - "section" (em Todos os eventos): abre da esquerda para a direita conforme
 //   entra na tela (--scroll, do useScrollShift).
-// Com foco de teclado, qualquer uma das duas abre inteira.
+// O recolhimento tem duas etapas: primeiro sai a Cidade (o Buscar desliza
+// para junto do nome), depois sai o resto. Com foco de teclado, qualquer uma
+// das duas abre inteira.
 function SearchBar({ variant, className = "", qInput, cityInput, setQInput, setCityInput, onSubmit }: SearchBarProps) {
   const { t } = useI18n();
   const revealRef = useScrollShift<HTMLFormElement>(0);
+  const { formRef, nameRef, goRef } = useSearchBarMetrics();
   const hero = variant === "hero";
   return (
     <form
-      ref={hero ? undefined : revealRef}
+      ref={(element) => {
+        formRef.current = element;
+        if (!hero) revealRef.current = element;
+      }}
       role="search"
       aria-label={t.storefront.search}
       onSubmit={onSubmit}
       data-hero-repel={hero ? "" : undefined}
-      className={`${hero ? "tf-hero-search" : "tf-search-reveal"} tf-cut-y relative flex flex-col overflow-hidden rounded-[20px] bg-surface shadow-[inset_0_0_0_1px_var(--card-ring)] [--cut-y:calc(100%-86px)] [--r:15px] md:flex-row md:[--cut-y:50%] ${className}`}
+      className={`${hero ? "tf-hero-search" : "tf-search-reveal"} tf-cut-y relative flex flex-col overflow-hidden rounded-[20px] bg-surface shadow-[inset_0_0_0_1px_var(--card-ring)] [--r:15px] md:flex-row ${className}`}
     >
-      <label className="relative flex flex-[1.5] cursor-text items-center gap-3.5 px-6 py-[18px] transition-colors focus-within:bg-ink/[0.035] hover:bg-ink/[0.035] md:py-4 md:pl-10">
+      <label ref={nameRef} className="relative flex flex-[1.5] cursor-text items-center gap-3.5 px-6 py-[18px] transition-colors focus-within:bg-ink/[0.035] hover:bg-ink/[0.035] md:py-4 md:pl-10">
         <Search size={22} className="shrink-0 text-accent-text" aria-hidden />
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="text-[13px] font-semibold uppercase tracking-[0.14em] text-muted">{t.storefront.eventName}</span>
@@ -386,8 +392,8 @@ function SearchBar({ variant, className = "", qInput, cityInput, setQInput, setC
           />
         </span>
       </label>
-      <span className="mx-6 h-px bg-line md:mx-0 md:my-6 md:h-auto md:w-px" aria-hidden />
-      <label className="relative flex flex-1 cursor-text items-center gap-3.5 px-6 py-[18px] transition-colors focus-within:bg-ink/[0.035] hover:bg-ink/[0.035] md:px-7 md:py-4">
+      <span className="tf-search-city mx-6 h-px bg-line md:mx-0 md:my-6 md:h-auto md:w-px" aria-hidden />
+      <label className="tf-search-city relative flex flex-1 cursor-text items-center gap-3.5 px-6 py-[18px] transition-colors focus-within:bg-ink/[0.035] hover:bg-ink/[0.035] md:px-7 md:py-4">
         <MapPin size={20} className="shrink-0 text-accent-text" aria-hidden />
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="text-[13px] font-semibold uppercase tracking-[0.14em] text-muted">{t.storefront.city}</span>
@@ -402,13 +408,43 @@ function SearchBar({ variant, className = "", qInput, cityInput, setQInput, setC
           />
         </span>
       </label>
-      <div className="flex h-[86px] items-center border-t-2 border-dashed border-line px-4 md:h-auto md:border-l-2 md:border-t-0 md:py-5 md:pl-6 md:pr-7">
+      <div ref={goRef} className="tf-search-go flex h-[86px] items-center border-t-2 border-dashed border-line px-4 md:h-auto md:border-l-2 md:border-t-0 md:py-5 md:pl-6 md:pr-7">
         <Button type="submit" size="lg" className="w-full md:w-auto">
           {t.storefront.search} <ArrowRight size={16} aria-hidden />
         </Button>
       </div>
     </form>
   );
+}
+
+// Mede o espaço da parte "Cidade" (divisória + campo) na busca: a largura,
+// quando os campos estão lado a lado, ou a altura, quando estão empilhados
+// (celular). O CSS usa --city-w/--city-h para recolher só essa parte primeiro.
+// offsetLeft/offsetTop ignoram os transforms do efeito: a medida é sempre a
+// da busca aberta.
+function useSearchBarMetrics() {
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const nameRef = useRef<HTMLLabelElement>(null);
+  const goRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const form = formRef.current;
+    const name = nameRef.current;
+    const go = goRef.current;
+    if (!form || !name || !go) return;
+    const measure = () => {
+      const nameRight = name.offsetLeft + name.offsetWidth;
+      const nameBottom = name.offsetTop + name.offsetHeight;
+      const stacked = go.offsetTop >= nameBottom - 1;
+      form.style.setProperty("--city-w", `${stacked ? 0 : Math.max(0, go.offsetLeft - nameRight)}px`);
+      form.style.setProperty("--city-h", `${stacked ? Math.max(0, go.offsetTop - nameBottom) : 0}px`);
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(form);
+    return () => observer.disconnect();
+  }, []);
+  return { formRef, nameRef, goRef };
 }
 
 // "Do clique à pista": o que a plataforma faz de verdade.

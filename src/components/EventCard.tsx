@@ -6,7 +6,7 @@
 // Efeitos (só com mouse e sem "menos movimento"): sobe, brilho atrás, zoom
 // na foto, reflexo atravessando e o picote "andando". Tudo em CSS (.tf-tk).
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Link } from "react-router";
 import { ArrowRight, MapPin } from "lucide-react";
 import type { EventSummary } from "../api/types";
@@ -91,10 +91,14 @@ export function EventTicketCard({
             </div>
           </div>
           <div className="mt-auto flex items-end justify-between gap-2.5">
-            <p className="min-w-0">
+            {/* O preço encolhe para caber ao lado do botão: o <p> é um container
+                (cqw = espaço livre) e a fonte é esse espaço dividido pelo número
+                de caracteres (~0,65em cada na Unbounded), até o tamanho normal. */}
+            <p className="@container min-w-0 flex-1">
               {price.prefix && <span className="block text-xs text-muted">{price.prefix}</span>}
               <span
-                className={`tabular block whitespace-nowrap font-display text-xl font-extrabold leading-tight tracking-[-0.035em] ${
+                style={{ "--chars": price.value.length } as CSSProperties}
+                className={`tabular block overflow-hidden text-ellipsis whitespace-nowrap font-display text-[length:clamp(0.625rem,calc(100cqw/(var(--chars)*0.66)),1.25rem)] font-extrabold leading-tight tracking-[-0.035em] ${
                   price.muted ? "text-muted" : "text-ink"
                 }`}
               >

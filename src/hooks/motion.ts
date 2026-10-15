@@ -263,12 +263,24 @@ export function heroDropFrame(drop: number, layout: HeroDropLayout, viewportWidt
 
 // Quanto a busca do topo já se recolheu (0 a 1) com o ingresso descendo
 // sobre ela: começa `lead` px antes de a base do ingresso encostar e chega a
-// 1 (sumiu) quando a base passa da busca inteira. Depois fica recolhida; só
-// reabre se a página subir de novo (o ingresso volta para cima dela).
-export function heroRepel(ticketBottom: number, barTop: number, barBottom: number, lead = 60) {
-  const span = barBottom - barTop + lead;
+// 1 (sumiu) quando a base passa `tail` px da busca. A faixa longa deixa a
+// saída suave e dá espaço para as duas etapas (ver .tf-hero-search no CSS).
+// Depois fica recolhida; só reabre se a página subir de novo.
+export function heroRepel(ticketBottom: number, barTop: number, barBottom: number, lead = 60, tail = 240) {
+  const span = barBottom - barTop + lead + tail;
   if (span <= 0) return 0;
   return Math.round(smoothstep(clamp((ticketBottom + lead - barTop) / span, 0, 1)) * 1000) / 1000;
+}
+
+// No celular a busca fica atrás do ingresso enquanto ele desce e só aparece
+// depois, já acima dele. Lá o recolhimento segue a posição da busca na tela:
+// começa quando ela está toda livre acima do ingresso (`ticketTop`, com 12px
+// de folga) e termina quando o topo dela chega a `endTop` (logo abaixo do
+// cabeçalho). Tudo em coordenadas da tela.
+export function barRiseRepel(barTop: number, barHeight: number, ticketTop: number, endTop = 84) {
+  const startTop = ticketTop - barHeight - 12;
+  if (startTop <= endTop) return barTop <= endTop ? 1 : 0;
+  return Math.round(smoothstep(clamp((startTop - barTop) / (startTop - endTop), 0, 1)) * 1000) / 1000;
 }
 
 // Folga do corte na fenda: o ingresso vai inclinado e flutuando, então as
@@ -279,7 +291,8 @@ const CUT_SLACK = 28;
 // fitas). Escreve --drop, --sway, --tks e --tko e corta a parte que já entrou
 // na fenda (clip-path). Suavizado com inércia, igual em 60 ou 120 Hz.
 // Se `repelSelector` existir (a busca), ela ganha --repel (0 a 1) para se
-// recolher conforme o ingresso desce sobre ela.
+// recolher conforme o ingresso desce sobre ela (heroRepel) ou, no celular,
+// conforme sobe na tela depois de sair de trás dele (barRiseRepel).
 export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSelector?: string): RefObject<T | null> {
   const ref = useRef<T>(null);
   const enabled = motionEnabled(useMotionPreference());
@@ -291,6 +304,8 @@ export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSe
     if (!element || !slotElement || !enabled) return;
     let layout: HeroDropLayout = { center: 0, height: 0, slot: 0 };
     let barBox = { top: 0, bottom: 0 };
+    // Campos empilhados (celular): mesma quebra do md: do Tailwind na busca.
+    const stackedQuery = window.matchMedia("(max-width: 47.99rem)");
     let current = 0;
     let frame = 0;
     let last = 0;
@@ -328,8 +343,11 @@ export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSe
       // Já entrou toda na fenda: some de vez (nada de ponta aparecendo lá embaixo).
       element.style.visibility = f.opacity <= 0.001 ? "hidden" : "";
       if (bar) {
-        const bottom = layout.center + f.drop + layout.height / 2;
-        bar.style.setProperty("--repel", heroRepel(bottom, barBox.top, barBox.bottom).toFixed(3));
+        const ticketTop = layout.center + f.drop - layout.height / 2;
+        const repel = stackedQuery.matches
+          ? barRiseRepel(barBox.top - window.scrollY, barBox.bottom - barBox.top, ticketTop - window.scrollY)
+          : heroRepel(ticketTop + layout.height, barBox.top, barBox.bottom);
+        bar.style.setProperty("--repel", repel.toFixed(3));
       }
     };
     const tick = (now: number) => {

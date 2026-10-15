@@ -4,6 +4,7 @@ import {
   heroDropFrame,
   heroDropTravel,
   heroRepel,
+  barRiseRepel,
   motionEnabled,
   scrollProgress,
   tiltAngles,
@@ -80,12 +81,43 @@ describe("busca do topo se recolhe quando o ingresso desce", () => {
     expect(value).toBeLessThan(1);
   });
 
-  it("some de vez quando a base do ingresso passa dela", () => {
-    expect(heroRepel(1100, ...bar)).toBe(1);
+  it("ainda saindo logo depois de a base passar dela (saída suave)", () => {
+    const value = heroRepel(1100, ...bar);
+    expect(value).toBeGreaterThan(0.3);
+    expect(value).toBeLessThan(1);
+  });
+
+  it("some de vez quando a base do ingresso passa 240px dela", () => {
+    expect(heroRepel(1340, ...bar)).toBe(1);
   });
 
   it("continua recolhida depois que o ingresso passou", () => {
     expect(heroRepel(1700, ...bar)).toBe(1);
+  });
+});
+
+describe("no celular a busca se recolhe ao subir na tela", () => {
+  // Busca de 258px; topo do ingresso na tela em 560px: ela fica livre com o
+  // topo em 290px (560 - 258 - 12) e some ao chegar em 84px.
+  it("aberta enquanto ainda está atrás do ingresso", () => {
+    expect(barRiseRepel(400, 258, 560)).toBe(0);
+    expect(barRiseRepel(290, 258, 560)).toBe(0);
+  });
+
+  it("recolhendo conforme sobe", () => {
+    const value = barRiseRepel(187, 258, 560);
+    expect(value).toBeGreaterThan(0.3);
+    expect(value).toBeLessThan(0.7);
+  });
+
+  it("sumiu ao chegar perto do cabeçalho", () => {
+    expect(barRiseRepel(84, 258, 560)).toBe(1);
+    expect(barRiseRepel(-200, 258, 560)).toBe(1);
+  });
+
+  it("tela baixa demais: some só quando passa do limite", () => {
+    expect(barRiseRepel(200, 258, 300)).toBe(0);
+    expect(barRiseRepel(80, 258, 300)).toBe(1);
   });
 });
 
