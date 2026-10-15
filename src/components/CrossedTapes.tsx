@@ -19,7 +19,7 @@ export default function CrossedTapes({ paper, brand }: { paper: string[]; brand:
   const paperItems = tapeItems(paper);
   const brandItems = tapeItems(brand, 14);
   return (
-    <div ref={ref} className="tf-tapes" aria-hidden>
+    <div ref={ref} className="tf-tapes" data-hero-slot aria-hidden>
       {paperItems.length > 0 && (
         <div className="tf-tape tf-tape-paper">
           {paperItems.map((item, i) => (

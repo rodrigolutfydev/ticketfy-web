@@ -1,16 +1,48 @@
 import { describe, expect, it } from "vitest";
-import { ambientEffectsEnabled, floatOffset, pointerEffectsEnabled, scrollProgress, tiltAngles, tiltTransform } from "./motion";
+import { floatOffset, heroDropFrame, heroDropTravel, motionEnabled, scrollProgress, tiltAngles, tiltTransform, tiltsWithPointer } from "./motion";
 
 describe("quando os efeitos ligam", () => {
-  it("inclinação e reflexo só com mouse e sem pedido de menos movimento", () => {
-    expect(pointerEffectsEnabled({ reducedMotion: false, finePointer: true })).toBe(true);
-    expect(pointerEffectsEnabled({ reducedMotion: false, finePointer: false })).toBe(false); // tela de toque
-    expect(pointerEffectsEnabled({ reducedMotion: true, finePointer: true })).toBe(false);
+  it("desligam só com pedido de menos movimento", () => {
+    expect(motionEnabled({ reducedMotion: false })).toBe(true);
+    expect(motionEnabled({ reducedMotion: true })).toBe(false);
   });
 
-  it("flutuação e rolagem valem no toque, mas não com menos movimento", () => {
-    expect(ambientEffectsEnabled({ reducedMotion: false, finePointer: false })).toBe(true);
-    expect(ambientEffectsEnabled({ reducedMotion: true, finePointer: true })).toBe(false);
+  it("inclinação vale para mouse e caneta, nunca para toque", () => {
+    expect(tiltsWithPointer("mouse")).toBe(true);
+    expect(tiltsWithPointer("pen")).toBe(true);
+    expect(tiltsWithPointer("touch")).toBe(false);
+    expect(tiltsWithPointer("")).toBe(false);
+  });
+});
+
+describe("descida do ingresso do topo", () => {
+  const layout = { center: 400, height: 500, slot: 1000 };
+
+  it("o percurso vai até o ingresso entrar inteiro na fenda das fitas", () => {
+    expect(heroDropTravel(layout)).toBe(850);
+    expect(heroDropTravel({ center: 2000, height: 500, slot: 1000 })).toBe(0);
+  });
+
+  it("parado no topo: sem descida, sem corte, sem balanço", () => {
+    expect(heroDropFrame(0, layout, 1440)).toEqual({ drop: 0, sway: 0, scale: 1, opacity: 1, cut: 0 });
+  });
+
+  it("no meio do caminho balança e começa a entrar na fenda", () => {
+    const frame = heroDropFrame(425, layout, 1440);
+    expect(frame.sway).toBe(-7);
+    expect(frame.cut).toBe(75);
+    expect(frame.opacity).toBe(1);
+  });
+
+  it("no fim está todo dentro da fenda e sumiu", () => {
+    const frame = heroDropFrame(850, layout, 1440);
+    expect(frame.cut).toBe(500);
+    expect(frame.opacity).toBe(0);
+    expect(frame.scale).toBe(0.92);
+  });
+
+  it("balança menos em tela estreita", () => {
+    expect(heroDropFrame(425, layout, 390).sway).toBe(-1.5);
   });
 });
 

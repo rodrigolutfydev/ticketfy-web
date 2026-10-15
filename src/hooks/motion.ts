@@ -3,8 +3,11 @@
 //
 // Regras:
 // - Tudo desliga com prefers-reduced-motion.
-// - Inclinação e reflexo só com mouse (em tela de toque não há "hover", e o
-//   dedo arrastando o card brigaria com a rolagem da página).
+// - Inclinação e reflexo só com mouse ou caneta. O tipo de ponteiro é lido
+//   em cada evento (pointerType), não por media query: o Chromium no Linux
+//   pode responder (hover: none)/(pointer: coarse) em notebook com touchpad,
+//   e aí os efeitos sumiam mesmo com mouse. Toque nunca inclina (o dedo
+//   arrastando o card brigaria com a rolagem da página).
 // - Os hooks escrevem direto no estilo do elemento (via CSSOM), sem
 //   re-renderizar o React a cada quadro. Escrever em element.style é
 //   permitido pela Content-Security-Policy (não é estilo inline no HTML).
@@ -15,13 +18,13 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 
 export interface MotionPreference {
   reducedMotion: boolean;
-  finePointer: boolean;
 }
 
-// Efeitos de ponteiro (inclinar, reflexo seguindo o mouse): só com mouse e sem pedido de menos movimento.
-export const pointerEffectsEnabled = ({ reducedMotion, finePointer }: MotionPreference) => !reducedMotion && finePointer;
-// Efeitos de rolagem e flutuação: valem também no toque, mas não com menos movimento.
-export const ambientEffectsEnabled = ({ reducedMotion }: MotionPreference) => !reducedMotion;
+// Efeitos de movimento (inclinar, flutuar, rolagem): desligam só com pedido de menos movimento.
+export const motionEnabled = ({ reducedMotion }: MotionPreference) => !reducedMotion;
+
+// Ponteiro que inclina o card: mouse ou caneta. Toque ("touch") nunca inclina.
+export const tiltsWithPointer = (pointerType: string) => pointerType === "mouse" || pointerType === "pen";
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -52,58 +55,67 @@ export function floatOffset(timeMs: number, amplitudePx: number, periodMs: numbe
   return Math.round(Math.sin((timeMs / periodMs) * Math.PI * 2) * amplitudePx * 100) / 100;
 }
 
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
 function readPreference(): MotionPreference {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return { reducedMotion: true, finePointer: false };
-  return {
-    reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    finePointer: window.matchMedia("(hover: hover) and (pointer: fine)").matches,
-  };
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return { reducedMotion: true };
+  return { reducedMotion: window.matchMedia(REDUCED_MOTION).matches };
 }
 
-// Preferência atual de movimento e tipo de ponteiro, atualizada se o usuário mudar.
+// Preferência atual de movimento, atualizada se o usuário mudar no sistema.
 export function useMotionPreference(): MotionPreference {
   const [preference, setPreference] = useState(readPreference);
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return;
-    const queries = [window.matchMedia("(prefers-reduced-motion: reduce)"), window.matchMedia("(hover: hover) and (pointer: fine)")];
+    const query = window.matchMedia(REDUCED_MOTION);
     const update = () => setPreference(readPreference());
-    queries.forEach((query) => query.addEventListener("change", update));
-    return () => queries.forEach((query) => query.removeEventListener("change", update));
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
   }, []);
   return preference;
 }
 
 // Inclinação 3D que segue o mouse, com o reflexo (--holo-x/--holo-y) acompanhando.
+// Enquanto inclina, o elemento ganha data-tilting (o CSS acende o reflexo por ele).
 export function useTilt<T extends HTMLElement>(max = 6): RefObject<T | null> {
   const ref = useRef<T>(null);
-  const preference = useMotionPreference();
-  const enabled = pointerEffectsEnabled(preference);
+  const enabled = motionEnabled(useMotionPreference());
 
   useEffect(() => {
     const element = ref.current;
     if (!element || !enabled) return;
     let frame = 0;
+    const reset = () => {
+      cancelAnimationFrame(frame);
+      if (!element.hasAttribute("data-tilting")) return;
+      element.removeAttribute("data-tilting");
+      element.style.transition = "transform .6s cubic-bezier(.2,.8,.2,1)";
+      element.style.transform = "";
+    };
     const onMove = (event: PointerEvent) => {
+      if (!tiltsWithPointer(event.pointerType)) {
+        reset();
+        return;
+      }
       const { rotateX, rotateY, x, y } = tiltAngles(event.clientX, event.clientY, element.getBoundingClientRect(), max);
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
+        element.setAttribute("data-tilting", "");
         element.style.transition = "transform .12s ease-out";
         element.style.transform = tiltTransform(rotateX, rotateY);
         element.style.setProperty("--holo-x", `${Math.round(x * 100)}%`);
         element.style.setProperty("--holo-y", `${Math.round(y * 100)}%`);
       });
     };
-    const onLeave = () => {
-      cancelAnimationFrame(frame);
-      element.style.transition = "transform .6s cubic-bezier(.2,.8,.2,1)";
-      element.style.transform = "";
-    };
     element.addEventListener("pointermove", onMove);
-    element.addEventListener("pointerleave", onLeave);
+    element.addEventListener("pointerleave", reset);
+    element.addEventListener("pointercancel", reset);
     return () => {
       cancelAnimationFrame(frame);
       element.removeEventListener("pointermove", onMove);
-      element.removeEventListener("pointerleave", onLeave);
+      element.removeEventListener("pointerleave", reset);
+      element.removeEventListener("pointercancel", reset);
+      element.removeAttribute("data-tilting");
       element.style.transform = "";
       element.style.transition = "";
     };
@@ -115,7 +127,7 @@ export function useTilt<T extends HTMLElement>(max = 6): RefObject<T | null> {
 // Flutuação contínua e discreta (o ingresso do topo "respira").
 export function useFloat<T extends HTMLElement>(amplitudePx = 8, periodMs = 6000): RefObject<T | null> {
   const ref = useRef<T>(null);
-  const enabled = ambientEffectsEnabled(useMotionPreference());
+  const enabled = motionEnabled(useMotionPreference());
 
   useEffect(() => {
     const element = ref.current;
@@ -142,7 +154,7 @@ export function useFloat<T extends HTMLElement>(amplitudePx = 8, periodMs = 6000
 //   --parallax em px, de 0 a range (para descer devagar ao rolar)
 export function useScrollShift<T extends HTMLElement>(range = 220): RefObject<T | null> {
   const ref = useRef<T>(null);
-  const enabled = ambientEffectsEnabled(useMotionPreference());
+  const enabled = motionEnabled(useMotionPreference());
 
   useEffect(() => {
     const element = ref.current;
@@ -176,7 +188,7 @@ export function useScrollShift<T extends HTMLElement>(range = 220): RefObject<T 
 // Sem IntersectionObserver ou com menos movimento, aparece direto.
 export function useReveal<T extends HTMLElement>(): [RefObject<T | null>, boolean] {
   const ref = useRef<T>(null);
-  const enabled = ambientEffectsEnabled(useMotionPreference());
+  const enabled = motionEnabled(useMotionPreference());
   const [revealed, setRevealed] = useState(!enabled);
 
   useEffect(() => {
@@ -199,4 +211,115 @@ export function useReveal<T extends HTMLElement>(): [RefObject<T | null>, boolea
   }, [enabled]);
 
   return [ref, revealed];
+}
+
+const smoothstep = (t: number) => t * t * (3 - 2 * t);
+
+export interface HeroDropLayout {
+  center: number;
+  height: number;
+  slot: number;
+}
+
+// Percurso do ingresso do topo (como no protótipo): ele acompanha a rolagem
+// até a linha do meio das fitas (a "fenda"), entra nela de baixo para cima e
+// só some de vez no final. Coordenadas da página, medidas com ele parado.
+export function heroDropTravel({ center, height, slot }: HeroDropLayout) {
+  return Math.max(0, slot + height / 2 - center);
+}
+
+export function heroDropFrame(drop: number, layout: HeroDropLayout, viewportWidth: number) {
+  const travel = heroDropTravel(layout);
+  const progress = travel ? clamp(drop / travel, 0, 1) : 0;
+  const cut = clamp(layout.center + drop + layout.height / 2 - layout.slot, 0, layout.height);
+  const fade = layout.height ? smoothstep(clamp((cut / layout.height - 0.65) / 0.35, 0, 1)) : 0;
+  const swayMax = viewportWidth < 600 ? 1.5 : viewportWidth < 960 ? 3.5 : 7;
+  const round = (n: number, digits: number) => Math.round(n * 10 ** digits) / 10 ** digits || 0;
+  return {
+    drop: round(drop, 2),
+    sway: round(-Math.sin(progress * Math.PI) * swayMax, 3),
+    scale: round(1 - fade * 0.08, 4),
+    opacity: round(1 - fade, 4),
+    cut: round(cut, 1),
+  };
+}
+
+// Liga o percurso: o elemento desce com a rolagem até o elemento `slot` (as
+// fitas). Escreve --drop, --sway, --tks e --tko e corta a parte que já entrou
+// na fenda (clip-path). Suavizado com inércia, igual em 60 ou 120 Hz.
+export function useHeroDrop<T extends HTMLElement>(slotSelector: string): RefObject<T | null> {
+  const ref = useRef<T>(null);
+  const enabled = motionEnabled(useMotionPreference());
+
+  useEffect(() => {
+    const element = ref.current;
+    const slotElement = document.querySelector<HTMLElement>(slotSelector);
+    if (!element || !slotElement || !enabled) return;
+    let layout: HeroDropLayout = { center: 0, height: 0, slot: 0 };
+    let current = 0;
+    let frame = 0;
+    let last = 0;
+
+    const measure = () => {
+      const keepTransform = element.style.transform;
+      element.style.transform = "none";
+      const rect = element.getBoundingClientRect();
+      element.style.transform = keepTransform;
+      const slotRect = slotElement.getBoundingClientRect();
+      layout = {
+        center: rect.top + window.scrollY + rect.height / 2,
+        height: rect.height,
+        slot: slotRect.top + window.scrollY + slotRect.height / 2,
+      };
+    };
+    const target = () => clamp(window.scrollY * 0.9, 0, heroDropTravel(layout));
+    const render = () => {
+      const f = heroDropFrame(current, layout, window.innerWidth);
+      element.style.setProperty("--drop", `${f.drop}px`);
+      element.style.setProperty("--sway", `${f.sway}deg`);
+      element.style.setProperty("--tks", String(f.scale));
+      element.style.setProperty("--tko", String(f.opacity));
+      element.style.clipPath = f.cut > 0 ? `inset(-80px -80px ${f.cut}px -80px)` : "";
+    };
+    const tick = (now: number) => {
+      frame = 0;
+      const dt = Math.min(64, now - (last || now));
+      last = now;
+      const goal = target();
+      current += (goal - current) * (1 - Math.pow(1 - 0.12, dt / 16.67));
+      if (Math.abs(goal - current) < 0.05) {
+        current = goal;
+        last = 0;
+        render();
+        return;
+      }
+      render();
+      frame = requestAnimationFrame(tick);
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(tick);
+    };
+    const onResize = () => {
+      measure();
+      schedule();
+    };
+
+    measure();
+    current = target();
+    render();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", onResize);
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(onResize);
+    observer?.observe(document.body);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", onResize);
+      observer?.disconnect();
+      for (const name of ["--drop", "--sway", "--tks", "--tko"]) element.style.removeProperty(name);
+      element.style.clipPath = "";
+    };
+  }, [enabled, slotSelector]);
+
+  return ref;
 }

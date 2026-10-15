@@ -387,7 +387,8 @@
       background-position: 10px 0;
     }
   }
-  @media (hover: hover) {
+  /* any-hover: basta haver um mouse; o ponteiro "principal" pode vir errado no Chromium/Linux. */
+  @media (any-hover: hover) {
     .tf-tk:hover {
       --perf: var(--accent-line);
       translate: 0 -6px;
@@ -512,8 +513,8 @@
     position: relative;
     will-change: transform;
   }
-  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-    .tf-rail-tilt:hover .tf-tk-glare {
+  @media (prefers-reduced-motion: no-preference) {
+    .tf-rail-tilt[data-tilting] .tf-tk-glare {
       opacity: 1;
     }
   }
@@ -682,6 +683,14 @@
     .tf-pulse {
       animation: none;
     }
+  }
+
+  /* Ingresso do topo descendo com a rolagem (useHeroDrop): --drop, --sway,
+     --tks e --tko vêm do JS; sem JS ou com menos movimento, fica parado. */
+  .tf-hero-drop {
+    opacity: var(--tko, 1);
+    transform: translate3d(0, var(--drop, 0px), 0) rotate(var(--sway, 0deg)) scale(var(--tks, 1));
+    will-change: transform, opacity;
   }
 
   /* Topo da home: foto do palco em laranja, escurecida para o texto ler bem. */
