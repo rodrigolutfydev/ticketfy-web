@@ -3,3 +3,6 @@ dist
 # O .env é versionado (só tem o endereço público da API).
 # Configurações pessoais ficam no .env.local, que não vai para o Git.
 *.local
+
+# Arquivos temporários do wrangler (pages dev / functions build)
+.wrangler

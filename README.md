@@ -18,7 +18,7 @@ npm run preview   # serve o dist/ com os cabeçalhos de segurança, em http://lo
 
 Em `npm run dev`, as rotas de sessão (`/api/auth/*` e a troca de senha) passam pelo proxy do Vite até `http://localhost:8080`, fazendo o papel da Function da Cloudflare.
 
-**Publicação:** o site publicado sai só do build do CI. Não suba o `dist/` gerado na sua máquina: com um `.env.local` apontando para `localhost`, a CSP e o bundle ficam apontando para a API local.
+**Publicação:** o site publicado sai só do build do CI (veja [Publicação](#publicação)). Não suba o `dist/` gerado na sua máquina: com um `.env.local` apontando para `localhost`, a CSP e o bundle ficam apontando para a API local.
 
 ## Testes e verificações
 
@@ -27,11 +27,50 @@ npm run typecheck        # TypeScript estrito, sem gerar arquivos
 npm test                 # testes unitários (Vitest, ambiente node)
 npm run check:problems   # confere se os tipos de erro e as categorias estão iguais aos da API
 npm run build            # tsc + build de produção
+npm run check:dist       # confere o dist/ (precisa de VITE_API_URL com a API https esperada)
 ```
 
 Os testes ficam ao lado do código (`src/**/*.test.ts`) e em `tests/` (Function de sessão). Cobrem o client da API (renovação, tempo limite por rota, aviso de servidor lento, aquecimento da API), o Error Boundary, as defesas de `utils/security.ts` (open redirect, injeção em rotas, URL de imagem) e de `utils/cart.ts` (carrinho lido da URL), as traduções e as regras de negócio em `utils/`.
 
 O `check:problems` lê `docs/problem-types.json` e `docs/event-categories.json` da API na pasta `../api` (ou em `API_DIR`). No CI, sem a pasta da API, use `PROBLEM_TYPES_URL` e `EVENT_CATEGORIES_URL` com o endereço desses arquivos. Para atualizar os arquivos locais: `npm run sync:problems`.
+
+## Publicação
+
+O site é publicado na Cloudflare Pages pelo GitHub Actions (`.github/workflows/ci.yml`), em Direct Upload: o arquivo publicado é exatamente o `dist/` que passou nas checagens.
+
+| Quando | Job | O que faz |
+|---|---|---|
+| Pull request e push na `main` | `build` | `npm ci`, typecheck, testes, `check:problems` (contra os JSON da API no GitHub), build com `VITE_API_URL`, `check:dist` e `npm audit --audit-level=high`. Guarda o `dist/` como artefato por 7 dias |
+| Só push na `main`, se o `build` passou | `deploy` | Environment `production`. Baixa o mesmo `dist/`, confere de novo e roda `wrangler pages deploy` da raiz do repositório (é dali que a pasta `functions/` é compilada). Dois pushes seguidos publicam em ordem |
+| Depois do deploy | `smoke` | `scripts/smoke-test.sh` contra `SITE_URL`: acorda a API, espera a versão nova entrar no ar, confere página inicial, cabeçalhos de segurança, fallback de SPA, ausência de source map e a Function de sessão (`POST /api/auth/refresh` precisa responder **401 `session-expired`** vindo da API; 500 indica `API_ORIGIN`/`PROXY_SHARED_SECRET` faltando na Pages, 403 indica `CORS_ALLOWED_ORIGINS` sem a origem do site). Só leitura: não cria nada em produção |
+
+O `check:dist` (`scripts/check-dist.mjs`) falha se o `dist/` tiver `localhost:<porta>`, `127.0.0.1`, arquivos `.map` ou `sourceMappingURL`, nomes ou formatos de segredo (segredo do proxy, JWT, chaves privadas, tokens conhecidos), o valor de alguma variável de ambiente com cara de segredo, se faltar `_headers` ou `_routes.json`, se o `connect-src` da CSP (no `_headers` e no `<meta>`) não for exatamente `'self'` + a origem de `VITE_API_URL`, ou se o JS inicial passar de 220 KB gzip.
+
+Configuração no GitHub (Settings → Secrets and variables → Actions):
+
+| Nome | Tipo | Onde | Valor |
+|---|---|---|---|
+| `VITE_API_URL` | Variable | Repositório | URL https da API de produção |
+| `CLOUDFLARE_ACCOUNT_ID` | Variable | Repositório | Id da conta da Cloudflare |
+| `CF_PAGES_PROJECT` | Variable | Repositório | Nome do projeto na Pages |
+| `CLOUDFLARE_API_TOKEN` | Secret | Environment `production` | Token com só "Account → Cloudflare Pages → Edit" |
+| `SITE_URL` | Variable | Environment `production` | URL publicada do site, sem barra no final |
+| `PROBLEM_TYPES_URL`, `EVENT_CATEGORIES_URL` | Variable (opcional) | Repositório | Só se os JSON da API mudarem de lugar; o padrão é a `main` de `rodrigolutfydev/Ticketfy-API` |
+
+`API_ORIGIN` e `PROXY_SHARED_SECRET` não passam pelo GitHub: ficam nas variáveis da própria Pages (veja a tabela abaixo).
+
+Para rodar o teste rápido à mão: `SITE_URL=https://... VITE_API_URL=https://... bash scripts/smoke-test.sh`.
+
+### Como voltar uma versão
+
+| Situação | O que fazer |
+|---|---|
+| Deploy novo quebrou o site | Painel da Cloudflare → Workers & Pages → projeto → **Deployments** → no deploy anterior, **⋯ → Rollback to this deployment**. É instantâneo e volta os arquivos e as Functions juntos. Não volta variáveis de ambiente |
+| Prefere refazer pelo GitHub | Actions → abra a execução do CI do commit bom na `main` → **Re-run all jobs**. Gera um deployment novo com aquele código. Para listar os deployments: `npx wrangler pages deployment list --project-name=<projeto>` |
+| O problema veio de variável da Pages (`API_ORIGIN`, `PROXY_SHARED_SECRET`) | Corrija no painel e publique de novo (re-run do último CI): variáveis só valem para deployments criados depois da mudança |
+| O problema é na API | Volte a versão no Render; o front não precisa voltar se o contrato não mudou |
+
+Depois de voltar, corrija na `main`: o próximo push publica de novo por cima do rollback.
 
 ## Variáveis de ambiente
 
@@ -40,7 +79,7 @@ O `check:problems` lê `docs/problem-types.json` e `docs/event-categories.json` 
 | `VITE_API_URL` | `.env` (versionado, valor de produção) ou `.env.local` (só na sua máquina, fora do Git) | Endereço da API. Vai embutido no bundle e no `connect-src` da CSP. O build falha se não for https (exceto `localhost`) |
 | `API_ORIGIN` | Cloudflare Pages → Settings → Variables (Functions) | Origem https da API para a qual a Function repassa as rotas de sessão |
 | `PROXY_SHARED_SECRET` | Cloudflare Pages (tipo *Secret*, só Production) e Render, com o mesmo valor | Segredo que a Function envia à API. Nunca vai para o Git nem para variáveis `VITE_` |
-| `PROBLEM_TYPES_URL`, `EVENT_CATEGORIES_URL` | CI | Fonte dos contratos para o `check:problems` quando a pasta da API não está disponível |
+| `PROBLEM_TYPES_URL`, `EVENT_CATEGORIES_URL` | CI (opcional; o workflow já usa a `main` da API no GitHub) | Fonte dos contratos para o `check:problems` quando a pasta da API não está disponível |
 | `API_DIR` | Opcional, local | Pasta da API para o `check:problems` (padrão `../api`) |
 
 Tudo que começa com `VITE_` fica visível para qualquer visitante do site publicado. Nunca coloque senha, token ou chave nessas variáveis.
