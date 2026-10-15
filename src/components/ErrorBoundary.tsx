@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
-import { RefreshCw, TriangleAlert } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import NeonSign from "./NeonSign";
 import { getLocale } from "../i18n/locale";
 import { MESSAGES } from "../i18n/messages";
 import { buttonClass } from "./ui";
@@ -92,24 +93,24 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 }
 
 export function ErrorFallback({ scope, reloading, onRetry }: { scope: ErrorBoundaryScope; reloading: boolean; onRetry: () => void }) {
-  const t = MESSAGES[getLocale()].errorBoundary;
-  const wrapper = scope === "app" ? "flex min-h-screen items-center justify-center bg-canvas px-4 py-16" : "py-16 sm:py-24";
+  const messages = MESSAGES[getLocale()];
+  const t = messages.errorBoundary;
+  const wrapper = scope === "app" ? "flex min-h-screen items-center justify-center bg-canvas px-4 py-16" : "py-6 sm:py-10";
   return (
     <div className={wrapper}>
-      <div role="alert" className="mx-auto max-w-lg text-center">
-        <TriangleAlert size={48} className="mx-auto text-accent-text" aria-hidden />
-        <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-ink">{reloading ? t.reloadingTitle : t.title}</h1>
-        <p className="mt-2 text-muted">{reloading ? t.reloadingHint : t.hint}</p>
-        {!reloading && (
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <button type="button" onClick={onRetry} className={buttonClass("primary")}>
-              <RefreshCw size={17} aria-hidden /> {t.retry}
-            </button>
-            <a href="/" className={buttonClass("secondary")}>
-              {t.backHome}
-            </a>
-          </div>
-        )}
+      <div role="alert" className="mx-auto w-full max-w-[1100px]">
+        <NeonSign word={messages.look.neon.error} title={reloading ? t.reloadingTitle : t.title} hint={reloading ? t.reloadingHint : t.hint}>
+          {!reloading && (
+            <>
+              <button type="button" onClick={onRetry} className={buttonClass("primary", "lg")}>
+                <RefreshCw size={17} aria-hidden /> {t.retry}
+              </button>
+              <a href="/" className={buttonClass("secondary", "lg", "!border-white/40 !text-white hover:!border-white")}>
+                {t.backHome}
+              </a>
+            </>
+          )}
+        </NeonSign>
       </div>
     </div>
   );

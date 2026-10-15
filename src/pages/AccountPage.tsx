@@ -158,7 +158,7 @@ function ProfileTab({ me }: { me: UserProfile }) {
       <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
         <Avatar name={me.name} url={preview ?? (trimmed ? null : me.avatarUrl)} size={112} />
         <div className="text-center sm:text-left">
-          <p className="font-display text-3xl font-semibold tracking-tight text-ink">{me.name}</p>
+          <p className="font-display text-3xl font-bold tracking-[-0.035em] text-ink">{me.name}</p>
           <p className="mt-1 text-muted">{t.labels.roles[me.role] ?? me.role}</p>
         </div>
       </div>

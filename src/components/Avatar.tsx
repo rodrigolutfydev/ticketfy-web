@@ -29,7 +29,11 @@ export default function Avatar({ name, url, size = 32 }: { name?: string; url?: 
     );
   }
   return (
-    <span style={style} className="font-display flex shrink-0 items-center justify-center rounded-full bg-accent font-bold text-accent-ink" aria-hidden>
+    <span
+      style={style}
+      className="font-display flex shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--accent),#ffb27a)] font-bold text-accent-ink"
+      aria-hidden
+    >
       {initials}
     </span>
   );

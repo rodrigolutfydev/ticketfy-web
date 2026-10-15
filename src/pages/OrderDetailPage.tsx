@@ -1,4 +1,5 @@
 import { useParams } from "react-router";
+import { Timer } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getOrder, cancelOrder, refundOrder } from "../api/endpoints";
 import type { OrderDetails } from "../api/types";
@@ -47,10 +48,26 @@ export default function OrderDetailPage() {
     <div className="mx-auto max-w-5xl">
       <BackLink to="/orders">{d.myOrders}</BackLink>
 
+      {o.status === "EXPIRED" && (
+        <section className="flex flex-col items-center gap-[18px] py-10 text-center" aria-labelledby="reserva-expirada">
+          <span className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-accent-soft text-accent-text shadow-[0_0_0_10px_color-mix(in_srgb,var(--accent)_6%,transparent)]">
+            <Timer size={40} strokeWidth={2} aria-hidden />
+          </span>
+          <p className="eyebrow">{t.look.expired.eyebrow}</p>
+          <h2 id="reserva-expirada" className="max-w-[760px] text-[clamp(1.875rem,4vw,3.25rem)] font-extrabold leading-[1.05] tracking-[-0.045em] text-ink">
+            {t.look.expired.title}
+          </h2>
+          <p className="max-w-[520px] text-[1.0625rem] text-muted">{t.look.expired.text}</p>
+          <ButtonLink to="/" size="lg">
+            {t.common.seeEvents}
+          </ButtonLink>
+        </section>
+      )}
+
       <div className="mt-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="eyebrow">{d.receipt}</p>
-          <h1 className="tabular mt-2 text-4xl font-semibold tracking-tight text-ink">{d.title(shortId(o.id))}</h1>
+          <h1 className="tabular mt-2 text-[clamp(1.875rem,3.4vw,2.75rem)] font-extrabold tracking-[-0.045em] text-ink">{d.title(shortId(o.id))}</h1>
           {o.createdAt && <p className="mt-1 text-muted">{d.createdAt(formatShortDate(o.createdAt, locale))}</p>}
         </div>
         <StatusBadge status={o.status} />
@@ -188,7 +205,7 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </Card>
-      <aside className="elevated self-start rounded-2xl border border-line bg-surface p-6">
+      <aside className="tf-panel self-start p-6">
         <h2 className="text-lg font-semibold text-ink">{d.progress}</h2>
         <StatusTrack order={o} />
       </aside>

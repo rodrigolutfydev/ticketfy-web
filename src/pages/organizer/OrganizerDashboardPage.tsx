@@ -62,13 +62,13 @@ export default function OrganizerDashboardPage() {
             <Stat label={d.revenue} value={formatPrice(data.totals.revenue, locale)} accent />
           </div>
 
-          <h2 className="mb-4 mt-10 text-xl font-semibold tracking-tight text-ink">{d.yourEvents}</h2>
+          <h2 className="mb-5 mt-12 text-2xl font-extrabold tracking-[-0.035em] text-ink">{d.yourEvents}</h2>
           {data.events.content.length === 0 ? (
             <Empty icon={<CalendarPlus size={22} />} title={d.emptyTitle} hint={d.emptyHint}>
               <ButtonLink to="/organizer/events/new">{d.newEvent}</ButtonLink>
             </Empty>
           ) : (
-            <ul className="elevated overflow-hidden rounded-2xl border border-line bg-surface">
+            <ul className="tf-panel overflow-hidden">
               {data.events.content.map((event) => (
                 <li key={event.eventId} className="border-b border-line last:border-0">
                   <Link to={`/organizer/events/${event.eventId}`} className="flex flex-wrap items-center gap-4 px-4 py-4 hover:bg-raised sm:flex-nowrap sm:px-5">
@@ -86,8 +86,8 @@ export default function OrganizerDashboardPage() {
                         </span>
                         <span className="tabular">{formatPercent(event.percentSold, locale)}</span>
                       </div>
-                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden>
-                        <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, event.percentSold ?? 0)}%` }} />
+                      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-ink/[0.06]" aria-hidden>
+                        <div className="h-full rounded-full bg-[linear-gradient(90deg,var(--accent-deep),var(--accent))]" style={{ width: `${Math.min(100, event.percentSold ?? 0)}%` }} />
                       </div>
                     </div>
                     <p className="tabular w-28 text-right font-semibold text-ink">{formatPrice(event.revenue, locale)}</p>
@@ -106,9 +106,9 @@ export default function OrganizerDashboardPage() {
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="elevated rounded-2xl border border-line bg-surface p-5">
-      <p className="text-sm text-muted">{label}</p>
-      <p className={`font-display tabular mt-2 text-3xl font-semibold tracking-tight ${accent ? "text-accent-text" : "text-ink"}`}>{value}</p>
+    <div className={`tf-panel rounded-[20px] p-[22px] ${accent ? "bg-[linear-gradient(150deg,color-mix(in_srgb,var(--accent)_22%,var(--surface)),var(--surface)_65%)] shadow-[inset_0_0_0_1px_var(--accent-line)]" : ""}`}>
+      <p className="text-[13px] font-medium text-muted">{label}</p>
+      <p className="font-display tabular mt-2 text-[clamp(1.125rem,1.55vw,1.625rem)] [overflow-wrap:anywhere] font-extrabold leading-tight tracking-[-0.04em] text-ink">{value}</p>
     </div>
   );
 }

@@ -83,7 +83,7 @@ export default function OrganizerEventsPage() {
               <li key={event.id}>
                 <Link
                   to={`/organizer/events/${event.id}`}
-                  className="group flex items-center gap-4 overflow-hidden elevated rounded-2xl border border-line bg-surface p-3 pr-5 hover:border-accent/50"
+                  className="tf-panel group flex items-center gap-4 overflow-hidden p-3 pr-5 hover:border-accent/50"
                 >
                   <div className="aspect-[16/9] w-28 shrink-0 overflow-hidden rounded-xl sm:w-36">
                     <EventCover name={event.name} startsAt={event.startsAt} imageUrl={event.imageUrl} />

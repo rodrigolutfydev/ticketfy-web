@@ -5,8 +5,8 @@ import { Wrench } from "lucide-react";
 // Em vez de mostrar botões que dariam erro, a tela explica o que falta.
 export default function BackendNotice({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="flex gap-3 rounded-2xl border border-warning/35 bg-warning/10 p-5 text-ink">
-      <Wrench size={20} className="mt-0.5 shrink-0 text-warning" aria-hidden />
+    <div className="flex gap-3 rounded-[18px] bg-accent-soft p-5 text-ink shadow-[inset_0_0_0_1px_var(--accent-line)]">
+      <Wrench size={20} className="mt-0.5 shrink-0 text-accent-text" aria-hidden />
       <div>
         <p className="font-semibold">{title}</p>
         <div className="mt-1 space-y-1 text-sm text-muted">{children}</div>

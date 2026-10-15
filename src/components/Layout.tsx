@@ -12,7 +12,7 @@ import Avatar from "./Avatar";
 import CheckoutSteps from "./CheckoutSteps";
 import ErrorBoundary from "./ErrorBoundary";
 import LanguageSwitcher from "./LanguageSwitcher";
-import Logo from "./Logo";
+import Logo, { Wordmark } from "./Logo";
 import { ButtonLink } from "./ui";
 import { PRIVACY_CONTACT_EMAIL, privacyContactHref } from "../utils/contact";
 
@@ -25,11 +25,22 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const checkoutStep = getCheckoutStep(location.pathname);
   const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
+  const isHome = location.pathname === "/";
   const page = (
     <ErrorBoundary scope="page" resetKey={location.pathname}>
       <Outlet />
     </ErrorBoundary>
   );
+
+  // Cabeçalho transparente sobre o palco da home; ganha fundo de vidro ao rolar.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 24);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
+  const glassHeader = !isHome || scrolled || mobileOpen;
 
   // Ao trocar de tela: fecha o menu do celular e volta ao topo.
   useEffect(() => {
@@ -54,8 +65,9 @@ export default function Layout() {
   if (checkoutStep !== null) {
     return (
       <div className="flex min-h-screen flex-col">
-        <header className="border-b border-line bg-surface/60">
-          <div className="page-container flex h-[72px] items-center justify-between gap-4">
+        <header className="relative border-b border-line/70">
+          <div className="tf-topglow pointer-events-none absolute inset-x-0 top-0 h-[320px]" aria-hidden />
+          <div className="page-container relative flex h-[84px] items-center justify-between gap-4">
             <div className="hidden sm:block">
               <Logo />
             </div>
@@ -64,13 +76,13 @@ export default function Layout() {
             </div>
             <div className="hidden items-center gap-4 sm:flex">
               <LanguageSwitcher />
-              <Link to="/" className="text-sm font-semibold text-muted hover:text-ink">
+              <Link to="/" className="text-sm font-semibold text-muted transition-colors hover:text-accent-text">
                 {t.layout.exitCheckout}
               </Link>
             </div>
           </div>
         </header>
-        <main id="conteudo" className="page-container flex-1 py-8 sm:py-12">
+        <main id="conteudo" className="page-container relative flex-1 py-8 sm:py-12">
           {page}
         </main>
       </div>
@@ -90,30 +102,39 @@ export default function Layout() {
     { to: "/help", label: t.layout.nav.help },
   ];
 
-  // Item ativo: texto claro com um traço coral colado na borda de baixo do cabeçalho.
+  // Links num grupo em pílula; o ativo fica aceso em laranja (fundo, fio e brilho).
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `relative flex h-16 items-center px-3 text-sm font-medium transition-colors ${
-      isActive ? "text-ink after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-accent" : "text-muted hover:text-ink"
+    `rounded-full px-4 py-2 text-[0.9375rem] whitespace-nowrap transition-[color,background-color,box-shadow] duration-200 ${
+      isActive
+        ? "bg-accent/[0.18] font-semibold text-ink shadow-[inset_0_0_0_1px_var(--accent-line),0_0_22px_color-mix(in_srgb,var(--accent)_22%,transparent)]"
+        : "font-medium text-muted hover:bg-ink/[0.06] hover:text-ink"
     }`;
   const mobileLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `rounded-lg px-3 py-2.5 text-sm font-semibold ${isActive ? "bg-raised text-ink" : "text-muted hover:text-ink"}`;
+    `rounded-xl px-3.5 py-3 text-base font-semibold transition-colors ${isActive ? "bg-accent-soft text-accent-text" : "text-ink hover:bg-raised"}`;
 
   const firstName = me?.name?.split(" ")[0];
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-clip">
-      {/* Brilho laranja decorativo, só na página inicial. */}
-      {location.pathname === "/" && <div className="hero-glow pointer-events-none absolute inset-x-0 top-0 h-[560px]" aria-hidden />}
+      {/* Brilho laranja e violeta no topo das telas internas (a home tem o próprio palco). */}
+      {!isHome && <div className="tf-topglow pointer-events-none absolute inset-x-0 top-0 h-[520px]" aria-hidden />}
       {/* Link escondido que aparece ao apertar Tab: pula o menu e vai direto ao conteúdo. */}
       <a href="#conteudo" className="sr-only z-50 rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
         {t.layout.skipToContent}
       </a>
 
-      <header className="sticky top-0 z-30 border-b border-line bg-canvas/85 backdrop-blur-md">
-        <div className="page-container flex h-16 items-center justify-between gap-4">
+      <header
+        // Transparente sobre o palco da home (sempre escuro): usa as cores do tema escuro.
+        data-theme={glassHeader ? undefined : "dark"}
+        className={`sticky top-0 z-40 transition-[background-color,backdrop-filter] duration-300 ${glassHeader ? "bg-canvas/85 backdrop-blur-xl" : "bg-transparent"}`}
+      >
+        <div className="page-container flex h-[76px] items-center justify-between gap-4">
           <Logo />
 
-          <nav aria-label={t.layout.mainNav} className="hidden items-center gap-1 md:flex">
+          <nav
+            aria-label={t.layout.mainNav}
+            className="hidden items-center gap-1 rounded-full bg-ink/[0.04] p-[5px] shadow-[inset_0_0_0_1px_var(--card-ring)] lg:flex"
+          >
             {links.map((link) => (
               <NavLink
                 key={link.to}
@@ -126,26 +147,31 @@ export default function Layout() {
             ))}
           </nav>
 
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-2.5 lg:flex">
             <LanguageSwitcher />
             <ThemeToggle />
             {isChecking ? null : isAuthenticated ? (
               <UserMenu name={firstName} fullName={me?.name} avatarUrl={me?.avatarUrl} onSignOut={handleSignOut} />
             ) : (
-              <ButtonLink to="/login" variant="secondary" size="sm" className="h-10 px-4">
-                <UserRound size={17} aria-hidden /> {t.layout.signIn}
-              </ButtonLink>
+              <>
+                <ButtonLink to="/login" variant="secondary" size="sm" className="h-10 rounded-full px-4">
+                  <UserRound size={17} aria-hidden /> {t.layout.signIn}
+                </ButtonLink>
+                <ButtonLink to="/register" size="sm" className="h-10 rounded-full px-4">
+                  {t.layout.signUp}
+                </ButtonLink>
+              </>
             )}
           </div>
 
-          {/* Celular: tema + botão que abre o menu. */}
-          <div className="flex items-center gap-2 md:hidden">
+          {/* Celular e tablet: idioma, tema e o botão que abre o menu. */}
+          <div className="flex items-center gap-2 lg:hidden">
             <LanguageSwitcher />
             <ThemeToggle />
             <button
               type="button"
               onClick={() => setMobileOpen((open) => !open)}
-              className="flex h-10 w-10 items-center justify-center rounded-lg text-ink hover:bg-raised"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-ink text-canvas transition-colors hover:bg-accent hover:text-accent-ink"
               aria-expanded={mobileOpen}
               aria-controls="mobile-menu"
               aria-label={mobileOpen ? t.layout.closeMenu : t.layout.openMenu}
@@ -156,8 +182,12 @@ export default function Layout() {
         </div>
 
         {mobileOpen && (
-          <nav id="mobile-menu" aria-label={t.layout.mainNav} className="border-t border-line bg-canvas px-4 pb-5 pt-3 md:hidden">
-            <div className="flex flex-col">
+          <nav
+            id="mobile-menu"
+            aria-label={t.layout.mainNav}
+            className="absolute inset-x-4 top-[84px] rounded-[20px] bg-surface p-3 shadow-[inset_0_0_0_1px_var(--line),0_30px_80px_rgb(0_0_0/0.6)] lg:hidden"
+          >
+            <div className="flex flex-col gap-1">
               {links.map((link) => (
                 <NavLink key={link.to} to={link.to} end={link.end} className={mobileLinkClass}>
                   {link.label}
@@ -168,12 +198,12 @@ export default function Layout() {
                   <NavLink to="/account" className={mobileLinkClass}>
                     {t.layout.myAccount}
                   </NavLink>
-                  <button type="button" onClick={handleSignOut} className="rounded-lg px-3 py-2 text-left text-sm font-semibold text-danger">
+                  <button type="button" onClick={handleSignOut} className="rounded-xl px-3.5 py-3 text-left text-base font-semibold text-danger hover:bg-raised">
                     {t.layout.signOut}
                   </button>
                 </>
               ) : (
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="mt-2 grid grid-cols-2 gap-2 border-t border-dashed border-line px-1 pt-3">
                   <ButtonLink to="/login" variant="secondary">
                     {t.layout.signIn}
                   </ButtonLink>
@@ -185,7 +215,8 @@ export default function Layout() {
         )}
       </header>
 
-      <main id="conteudo" className="page-container relative flex-1 py-8 sm:py-10">
+      {/* A home desenha o próprio palco de ponta a ponta; as outras telas ficam na largura do conteúdo. */}
+      <main id="conteudo" className={isHome ? "relative flex-1" : "page-container relative flex-1 py-8 sm:py-10"}>
         {page}
       </main>
 
@@ -208,11 +239,11 @@ function ThemeToggle() {
       onClick={toggle}
       aria-label={t.layout.theme.label}
       title={label}
-      className="relative h-7 w-[52px] shrink-0 rounded-full border border-line-strong bg-raised transition-colors"
+      className="relative h-9 w-[60px] shrink-0 rounded-full bg-ink/[0.04] shadow-[inset_0_0_0_1px_var(--card-ring)] transition-colors"
     >
       <span
-        className={`absolute top-0.5 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-surface text-ink shadow transition-transform ${
-          isLight ? "translate-x-[25px]" : "translate-x-0.5"
+        className={`absolute top-[3px] flex h-[30px] w-[30px] items-center justify-center rounded-full bg-accent/[0.18] text-ink shadow-[inset_0_0_0_1px_var(--accent-line)] transition-transform ${
+          isLight ? "translate-x-[27px]" : "translate-x-[3px]"
         }`}
         aria-hidden
       >
@@ -252,7 +283,8 @@ function UserMenu({
     };
   }, [open]);
 
-  const item = "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-ink hover:bg-raised";
+  const item =
+    "flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-left text-[0.9375rem] text-muted transition-colors hover:bg-ink/[0.05] hover:text-ink [&>svg]:text-accent-text";
 
   return (
     <div ref={ref} className="relative ml-1">
@@ -261,13 +293,13 @@ function UserMenu({
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-2 rounded-full border border-line py-1 pl-1 pr-3 text-sm font-semibold text-ink hover:border-accent/60"
+        className="flex items-center gap-2.5 rounded-full py-[5px] pl-[5px] pr-3.5 text-[0.9375rem] font-semibold text-ink shadow-[inset_0_0_0_1px_var(--line)] transition-[box-shadow,background-color] hover:bg-ink/[0.04] hover:shadow-[inset_0_0_0_1px_var(--accent-line)] aria-expanded:shadow-[inset_0_0_0_1px_var(--accent-line)]"
       >
-        <Avatar name={fullName} url={avatarUrl} size={28} />
+        <Avatar name={fullName} url={avatarUrl} size={34} />
         {name ?? t.layout.account}
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 mt-2 w-52 rounded-xl border border-line bg-surface p-1.5 shadow-2xl">
+        <div role="menu" className="absolute right-0 z-50 mt-2.5 w-56 rounded-2xl bg-surface p-2 shadow-[inset_0_0_0_1px_var(--line),0_24px_60px_rgb(0_0_0/0.6)]">
           <Link role="menuitem" to="/account" className={item}>
             <UserRound size={16} aria-hidden /> {t.layout.myAccount}
           </Link>
@@ -280,8 +312,8 @@ function UserMenu({
           <Link role="menuitem" to="/help" className={item}>
             <CircleQuestionMark size={16} aria-hidden /> {t.layout.help}
           </Link>
-          <div className="my-1 border-t border-line" />
-          <button role="menuitem" type="button" onClick={onSignOut} className={`${item} text-danger`}>
+          <div className="mx-1 my-1.5 border-t border-line" />
+          <button role="menuitem" type="button" onClick={onSignOut} className={`${item} !text-danger [&>svg]:!text-danger`}>
             <LogOut size={16} aria-hidden /> {t.layout.signOut}
           </button>
         </div>
@@ -292,35 +324,82 @@ function UserMenu({
 
 function Footer() {
   const { t } = useI18n();
+  const { isAuthenticated } = useAuth();
+  const { isOrganizer } = useMe();
+  const linkClass = "w-fit transition-colors hover:text-accent-text";
   return (
-    <footer className="relative mt-20 border-t border-line">
-      <div className="page-container flex flex-col gap-6 py-10 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+    <footer className="relative mt-24 overflow-hidden">
+      <div className="h-px bg-[linear-gradient(90deg,transparent,var(--line)_25%,var(--line)_75%,transparent)]" aria-hidden />
+      <div className="page-container flex flex-col justify-between gap-12 pb-12 pt-16 lg:flex-row">
+        <div className="max-w-sm">
           <Logo />
-          <p className="text-sm text-muted">{t.layout.footer.tagline}</p>
+          <p className="mt-5 text-muted">{t.look.footer.tagline}</p>
         </div>
-        <nav aria-label={t.layout.footerNav} className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted">
-          <Link to="/how-it-works" className="hover:text-ink">
-            {t.layout.footer.howItWorks}
-          </Link>
-          <Link to="/help" className="hover:text-ink">
-            {t.layout.footer.helpCenter}
-          </Link>
-          <Link to="/help?tab=seguranca" className="hover:text-ink">
-            {t.layout.footer.security}
-          </Link>
-          <Link to="/terms" className="hover:text-ink">
-            {t.legal.footerTerms}
-          </Link>
-          <Link to="/privacy" className="hover:text-ink">
-            {t.legal.footerPrivacy}
-          </Link>
-          <a href={privacyContactHref} className="hover:text-ink">
-            {t.legal.footerContact}: {PRIVACY_CONTACT_EMAIL}
-          </a>
-          <span className="text-subtle">{t.layout.footer.credits(new Date().getFullYear())}</span>
+        <nav aria-label={t.layout.footerNav} className="grid grid-cols-2 gap-x-16 gap-y-10 sm:grid-cols-3 sm:gap-x-24">
+          <div className="flex flex-col gap-3.5">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t.look.footer.navigate}</p>
+            <Link to="/" className={linkClass}>
+              {t.layout.nav.events}
+            </Link>
+            <Link to="/how-it-works" className={linkClass}>
+              {t.layout.footer.howItWorks}
+            </Link>
+            <Link to="/organizer" className={linkClass}>
+              {isOrganizer ? t.layout.nav.organizer : t.layout.nav.forOrganizers}
+            </Link>
+          </div>
+          <div className="flex flex-col gap-3.5">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t.look.footer.account}</p>
+            {isAuthenticated ? (
+              <>
+                <Link to="/tickets" className={linkClass}>
+                  {t.layout.myTickets}
+                </Link>
+                <Link to="/orders" className={linkClass}>
+                  {t.layout.myOrders}
+                </Link>
+                <Link to="/account" className={linkClass}>
+                  {t.layout.myAccount}
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className={linkClass}>
+                  {t.layout.signIn}
+                </Link>
+                <Link to="/register" className={linkClass}>
+                  {t.layout.signUp}
+                </Link>
+              </>
+            )}
+          </div>
+          <div className="flex flex-col gap-3.5">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t.look.footer.help}</p>
+            <Link to="/help" className={linkClass}>
+              {t.layout.footer.helpCenter}
+            </Link>
+            <Link to="/help?tab=seguranca" className={linkClass}>
+              {t.layout.footer.security}
+            </Link>
+            <a href={privacyContactHref} className={`${linkClass} break-words`}>
+              {t.legal.footerContact}: {PRIVACY_CONTACT_EMAIL}
+            </a>
+          </div>
         </nav>
       </div>
+      <div className="page-container flex flex-col justify-between gap-3 pb-2 text-sm text-muted sm:flex-row">
+        <span>{t.layout.footer.credits(new Date().getFullYear())}</span>
+        <span className="flex gap-2">
+          <Link to="/privacy" className="transition-colors hover:text-ink">
+            {t.legal.footerPrivacy}
+          </Link>
+          <span aria-hidden>·</span>
+          <Link to="/terms" className="transition-colors hover:text-ink">
+            {t.legal.footerTerms}
+          </Link>
+        </span>
+      </div>
+      <Wordmark />
     </footer>
   );
 }

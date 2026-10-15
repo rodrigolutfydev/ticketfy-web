@@ -21,7 +21,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // do navegador no celular e o valor salvo.
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0a0c11" : "#f4f5f7");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#020203" : "#f4f2f6");
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {

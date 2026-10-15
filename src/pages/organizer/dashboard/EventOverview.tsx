@@ -41,7 +41,7 @@ export default function EventOverview({ eventId }: { eventId: string }) {
         <Kpi label={v.paidOrders} value={formatInt(t.paidOrders, locale)} hint={v.awaiting(formatInt(d.ordersByStatus.find((r) => r.status === "PENDING")?.orders ?? 0, locale))} />
       </div>
 
-      <section className="elevated rounded-2xl border border-line bg-surface p-5 sm:p-6">
+      <section className="tf-panel p-5 sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-ink">{v.dailyTitle}</h2>
@@ -76,12 +76,12 @@ export default function EventOverview({ eventId }: { eventId: string }) {
 
 function Kpi({ label, value, hint, accent, progress }: { label: string; value: string; hint?: string; accent?: boolean; progress?: number | null }) {
   return (
-    <div className="elevated rounded-2xl border border-line bg-surface p-5">
-      <p className="text-sm text-muted">{label}</p>
-      <p className={`font-display tabular mt-2 text-3xl font-semibold tracking-tight ${accent ? "text-accent-text" : "text-ink"}`}>{value}</p>
+    <div className={`tf-panel rounded-[20px] p-[22px] ${accent ? "bg-[linear-gradient(150deg,color-mix(in_srgb,var(--accent)_22%,var(--surface)),var(--surface)_65%)] shadow-[inset_0_0_0_1px_var(--accent-line)]" : ""}`}>
+      <p className="text-[13px] font-medium text-muted">{label}</p>
+      <p className="font-display tabular mt-2 text-[clamp(1.125rem,1.55vw,1.625rem)] [overflow-wrap:anywhere] font-extrabold leading-tight tracking-[-0.04em] text-ink">{value}</p>
       {progress !== undefined && (
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden>
-          <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, progress ?? 0)}%` }} />
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-ink/[0.06]" aria-hidden>
+          <div className="h-full rounded-full bg-[linear-gradient(90deg,var(--accent-deep),var(--accent))]" style={{ width: `${Math.min(100, progress ?? 0)}%` }} />
         </div>
       )}
       {hint && <p className="mt-2 text-xs text-subtle">{hint}</p>}
@@ -107,7 +107,7 @@ function LotPerformance({ lots }: { lots: EventDashboard["ticketTypes"] }) {
   const { t, locale } = useI18n();
   const v = t.organizer.overview;
   return (
-    <section className="elevated rounded-2xl border border-line bg-surface p-5 sm:p-6">
+    <section className="tf-panel p-5 sm:p-6">
       <h2 className="text-lg font-semibold text-ink">{v.lotsTitle}</h2>
       {lots.length === 0 && <p className="mt-4 text-sm text-muted">{v.noLots}</p>}
       <ul className="mt-5 space-y-5">
@@ -147,7 +147,7 @@ function CouponUsage({ coupons }: { coupons: EventDashboard["coupons"] }) {
   const { t, locale } = useI18n();
   const v = t.organizer.overview;
   return (
-    <section className="elevated rounded-2xl border border-line bg-surface p-5 sm:p-6">
+    <section className="tf-panel p-5 sm:p-6">
       <h2 className="text-lg font-semibold text-ink">{v.couponsTitle}</h2>
       <table className="mt-4 w-full text-sm">
         <thead>
@@ -180,7 +180,7 @@ function OrdersByStatus({ rows }: { rows: EventDashboard["ordersByStatus"] }) {
   const { t, locale } = useI18n();
   const v = t.organizer.overview;
   return (
-    <section className="elevated rounded-2xl border border-line bg-surface p-5 sm:p-6">
+    <section className="tf-panel p-5 sm:p-6">
       <h2 className="text-lg font-semibold text-ink">{v.ordersTitle}</h2>
       <table className="mt-4 w-full text-sm">
         <thead className="sr-only">
@@ -217,7 +217,7 @@ function Attendance({ checkIn }: { checkIn: EventDashboard["checkIn"] }) {
   const circumference = 2 * Math.PI * r;
   const rate = checkIn.attendanceRate ?? 0;
   return (
-    <section className="elevated flex items-center gap-5 rounded-2xl border border-line bg-surface p-5 sm:p-6">
+    <section className="tf-panel flex items-center gap-5 p-5 sm:p-6">
       <svg width="88" height="88" viewBox="0 0 88 88" className="shrink-0 -rotate-90" aria-hidden>
         <circle cx="44" cy="44" r={r} fill="none" strokeWidth="9" className="stroke-raised" />
         <circle
@@ -234,7 +234,7 @@ function Attendance({ checkIn }: { checkIn: EventDashboard["checkIn"] }) {
       </svg>
       <div>
         <h2 className="text-lg font-semibold text-ink">{v.attendance}</h2>
-        <p className="font-display tabular text-2xl font-semibold text-ink">{formatPercent(checkIn.attendanceRate, locale)}</p>
+        <p className="font-display tabular text-2xl font-extrabold text-ink">{formatPercent(checkIn.attendanceRate, locale)}</p>
         <p className="text-xs text-muted">{v.attendanceText(formatInt(checkIn.checkedIn, locale), formatInt(checkIn.issued, locale))}</p>
       </div>
     </section>

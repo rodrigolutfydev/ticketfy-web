@@ -133,11 +133,11 @@ function BalanceCard({ label, value, hint, accent }: { label: string; value: num
   const { locale } = useI18n();
   const negative = value < 0;
   return (
-    <div className="elevated rounded-2xl border border-line bg-surface p-5">
-      <p className="text-sm text-muted">{label}</p>
+    <div className={`tf-panel rounded-[20px] p-[22px] ${accent ? "bg-[linear-gradient(150deg,color-mix(in_srgb,var(--accent)_22%,var(--surface)),var(--surface)_65%)] shadow-[inset_0_0_0_1px_var(--accent-line)]" : ""}`}>
+      <p className="text-[13px] font-medium text-muted">{label}</p>
       <p
-        className={`font-display tabular mt-2 text-3xl font-semibold tracking-tight ${
-          negative ? "text-danger" : accent ? "text-accent-text" : "text-ink"
+        className={`font-display tabular mt-2 text-[clamp(1.125rem,1.55vw,1.625rem)] [overflow-wrap:anywhere] font-extrabold leading-tight tracking-[-0.04em] ${
+          negative ? "text-danger" : "text-ink"
         }`}
       >
         {formatPrice(value, locale)}
@@ -163,7 +163,7 @@ function Ledger() {
   return (
     <section className="mt-10">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <h2 className="text-xl font-semibold tracking-tight text-ink">{f.ledger}</h2>
+        <h2 className="text-xl font-bold tracking-[-0.035em] text-ink">{f.ledger}</h2>
         <div className="flex flex-wrap items-center gap-3">
           <ExportButton eventId={eventId || undefined} onError={setExportError} />
           <label className="flex items-center gap-2 text-sm text-muted">
@@ -200,7 +200,7 @@ function Ledger() {
           <Empty icon={<ReceiptText size={22} />} title={f.emptyLedger} hint={f.emptyLedgerHint} />
         ) : (
           <>
-            <ul className="elevated overflow-hidden rounded-2xl border border-line bg-surface">
+            <ul className="tf-panel overflow-hidden">
               {data.content.map((entry) => (
                 <li key={entry.id} className="flex flex-wrap items-center gap-4 border-b border-line px-4 py-4 last:border-0 sm:flex-nowrap sm:px-5">
                   <div className="w-28 shrink-0">

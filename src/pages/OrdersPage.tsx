@@ -81,7 +81,7 @@ export default function OrdersPage() {
           </Empty>
         )}
         {orders.length > 0 && (
-          <ul className="overflow-hidden elevated rounded-2xl border border-line bg-surface">
+          <ul className="tf-panel overflow-hidden">
             {orders.map((order) => (
               <li key={order.id} className="border-b border-line last:border-0">
                 <Link to={`/orders/${order.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-raised">

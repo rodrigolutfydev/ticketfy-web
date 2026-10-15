@@ -39,7 +39,6 @@ const HAS_LETTER = /\p{L}/u;
 
 const ALLOWED: { file: string; text: string }[] = [
   { file: "components/Logo.tsx", text: "ticketfy" },
-  { file: "pages/EventsPage.tsx", text: "TCK 018" },
   { file: "pages/admin/AdminAuditPage.tsx", text: "UUID" },
   { file: "pages/organizer/CheckInPage.tsx", text: "ABCD1234EFGH5678" },
   { file: "pages/organizer/CouponsTab.tsx", text: "BLACKFRIDAY" },

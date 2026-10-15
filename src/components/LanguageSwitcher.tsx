@@ -10,7 +10,7 @@ export default function LanguageSwitcher({ showError = true }: { showError?: boo
         role="group"
         aria-label={t.language.choose}
         aria-busy={saving || undefined}
-        className="flex h-8 items-center rounded-full border border-line-strong bg-raised p-0.5"
+        className="flex h-9 items-center rounded-full bg-ink/[0.04] p-[3px] shadow-[inset_0_0_0_1px_var(--card-ring)]"
       >
         <Languages size={14} className="mx-1.5 shrink-0 text-subtle" aria-hidden />
         {LOCALES.map((option) => {
@@ -24,8 +24,8 @@ export default function LanguageSwitcher({ showError = true }: { showError?: boo
               title={t.language.names[option]}
               onClick={() => changeLocale(option)}
               disabled={saving}
-              className={`h-[26px] rounded-full px-2 text-xs font-bold transition-colors disabled:cursor-wait ${
-                active ? "bg-surface text-ink shadow" : "text-muted hover:text-ink"
+              className={`h-[30px] rounded-full px-2.5 text-xs font-bold transition-colors disabled:cursor-wait ${
+                active ? "bg-accent/[0.18] text-ink shadow-[inset_0_0_0_1px_var(--accent-line)]" : "text-muted hover:text-ink"
               }`}
             >
               <span aria-hidden>{t.language.short[option]}</span>
@@ -35,7 +35,7 @@ export default function LanguageSwitcher({ showError = true }: { showError?: boo
         })}
       </div>
       {showError && saveError && (
-        <p role="alert" className="absolute right-0 top-full z-40 mt-2 w-56 rounded-lg border border-danger/35 bg-surface px-3 py-2 text-xs text-danger shadow-xl">
+        <p role="alert" className="absolute right-0 top-full z-40 mt-2 w-56 rounded-xl bg-surface px-3 py-2 text-xs text-danger shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--danger)_40%,transparent),0_24px_60px_rgb(0_0_0/0.5)]">
           {t.language.saveError}
         </p>
       )}

@@ -86,12 +86,26 @@ Detalhes, tabela completa e o que precisa estar no backend: [docs/SEGURANCA.md](
 
 ## Visual
 
-- **Temas:** escuro por padrão e claro no botão de sol/lua. As cores são variáveis CSS em `src/index.css` (`--canvas`, `--surface`, `--line-strong`, `--accent`...): mudar uma delas muda o site inteiro. No tema claro, os cartões são brancos com borda e sombra sobre fundo cinza; no escuro, cada camada é um degrau mais clara e as bordas separam as caixas.
-- **Vitrine de destaques:** só as fotos dos eventos, no topo da página inicial, trocando a cada 3 segundos (clicar abre o evento). Prioriza eventos com `featured: true`; sem isso, os próximos eventos que têm foto. Pausa com o mouse em cima, com foco do teclado ou no botão de pausa, e não se move para quem ativou "reduzir movimento".
-- **Convite para organizadores:** aparece para visitantes (leva ao cadastro) e para compradores logados (leva à ativação na conta). Some para quem já é organizador.
-- **Fotos sem corte:** na página do evento e na vitrine, a foto aparece inteira (`object-contain`), com uma cópia desfocada preenchendo as laterais. A altura acompanha a altura da tela, então em tela cheia a foto cresce. O botão "Ver foto inteira" abre a imagem sozinha sobre fundo preto.
-- **Responsivo:** o conteúdo vai de 1 coluna no celular a 4 colunas em monitores grandes (largura máxima maior a partir de 1536px). No celular, a página do evento tem uma barra fixa com o preço e o botão de compra.
-- **Fontes:** Bricolage Grotesque (títulos) e Inter (texto), empacotadas no build pelo Fontsource.
+O visual segue o protótipo "pista" (fundo quase preto, laranja de pirotecnia, ingressos com picote). Todas as telas usam dados da API: nenhum evento, preço ou número é fixo no código.
+
+- **Cores:** variáveis CSS em `src/index.css`. A cor de destaque (`--accent`) fica num lugar só, em `:root`; os tons de apoio (suave, contorno, brilho) saem dela com `color-mix`. Violeta (`--glow`) aparece só em brilhos, e verde-limão (`--lime`) só no selo "últimos ingressos".
+- **Temas:** escuro por padrão e claro no botão de sol/lua. O palco do topo da página inicial é sempre escuro (`data-theme="dark"` só nele), nos dois temas.
+- **Componentes de ingresso:** os recortes do picote são máscaras CSS (`.tf-cut-y`, `.tf-cut-x`), então o fundo aparece de verdade pelo furo. Card de evento (`EventCard`), ingresso do topo (`PaperTicket`), ingresso deitado de Meus ingressos, resumo da compra, convite para organizadores e placa neon (`NeonSign`).
+- **Movimento:** inclinação 3D, reflexo, flutuação e faixas que deslizam com a rolagem ficam em `src/hooks/motion.ts`. A inclinação e o reflexo só ligam com mouse; tudo desliga com "reduzir movimento" no sistema.
+- **Capa sem foto:** quando o evento não tem imagem (ou ela não carrega), a capa é desenhada com as iniciais do evento sobre um gradiente da marca. Nunca uma foto genérica.
+- **Responsivo:** de 1 coluna no celular a 4 colunas no computador. No celular, a página do evento tem uma barra fixa com o preço e o botão de compra.
+- **Fontes:** Unbounded (títulos) e Inter Tight (texto), empacotadas no build pelo Fontsource (licença SIL Open Font License 1.1). Sem Google Fonts, para a CSP continuar com `font-src 'self'`.
+
+### Imagens e licenças
+
+As duas fotos de fundo ficam em `src/assets` e saem no build com o resto do site (nada de imagem externa, a CSP continua igual):
+
+| Arquivo | Uso | Origem e licença |
+|---|---|---|
+| `src/assets/stage-orange.jpg` | Palco da página inicial, convite para organizadores e telas de entrada | Foto do Unsplash (`images.unsplash.com/photo-1501612780327-45045538702b`), [Licença Unsplash](https://unsplash.com/license): uso livre, inclusive comercial, sem atribuição obrigatória. Convertida para tons de laranja e reduzida para 1800 px. |
+| `src/assets/neon-sign-orange.jpg` | Placa neon do 404 e da tela de erro | Foto do Unsplash (`images.unsplash.com/photo-1508700115892-45ecd05ae2ad`), [Licença Unsplash](https://unsplash.com/license). Recolorida para o laranja da marca e reduzida para 1800 px. |
+
+As fotos dos eventos continuam vindo da URL https cadastrada pelo organizador.
 
 ## Estrutura
 
@@ -113,4 +127,4 @@ tests/            # testes da Function
 
 ## Ferramentas
 
-Vite (servidor e build) · React · TypeScript · React Router · TanStack Query (chamadas à API e cache) · Tailwind CSS (visual) · qrcode.react (QR dos ingressos) · lucide-react (ícones) · Fontsource (fontes) · Vitest (testes)
+Vite (servidor e build) · React · TypeScript · React Router · TanStack Query (chamadas à API e cache) · Tailwind CSS (visual) · qrcode.react (QR dos ingressos) · lucide-react (ícones) · Fontsource (fontes Unbounded e Inter Tight) · Vitest (testes)

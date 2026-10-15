@@ -35,7 +35,7 @@ export default function AdminPayoutsPage() {
           <Empty icon={<ClipboardCheck size={22} />} title={p.emptyTitle} hint={p.emptyHint} />
         ) : (
           <>
-            <ul className="elevated overflow-hidden rounded-2xl border border-line bg-surface">
+            <ul className="tf-panel overflow-hidden">
               {data.content.map((payout) => (
                 <PayoutReviewRow key={payout.id} payout={payout} />
               ))}

@@ -18,11 +18,11 @@ export function Loading({ text }: { text?: string }) {
 export function ErrorMessage({ message, action }: { message: string; action?: ReactNode }) {
   const { t } = useI18n();
   return (
-    <div role="alert" className="flex gap-3 rounded-2xl border border-danger/35 bg-danger/10 px-5 py-4 text-danger">
-      <TriangleAlert size={20} className="mt-0.5 shrink-0" aria-hidden />
+    <div role="alert" className="flex gap-3 rounded-[18px] bg-danger/10 px-5 py-4 text-ink shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--danger)_40%,transparent)]">
+      <TriangleAlert size={20} className="mt-0.5 shrink-0 text-danger" aria-hidden />
       <div>
         <p className="font-semibold">{t.common.loadErrorTitle}</p>
-        <p className="text-sm opacity-90">{message}</p>
+        <p className="text-sm text-muted">{message}</p>
         {action && <div className="mt-3">{action}</div>}
       </div>
     </div>
@@ -31,11 +31,11 @@ export function ErrorMessage({ message, action }: { message: string; action?: Re
 
 export function Empty({ title, hint, icon, children }: { title: string; hint?: string; icon?: ReactNode; children?: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-dashed border-line-strong px-5 py-16 text-center">
-      {icon && <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-raised text-accent-text">{icon}</div>}
-      <p className="font-semibold text-ink">{title}</p>
-      {hint && <p className="mx-auto mt-1 max-w-md text-sm text-muted">{hint}</p>}
-      {children && <div className="mt-5">{children}</div>}
+    <div className="flex flex-col items-center gap-3.5 rounded-3xl border-2 border-dashed border-line px-6 py-14 text-center">
+      {icon && <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[22px] bg-accent-soft text-accent-text">{icon}</div>}
+      <p className="font-display text-xl font-bold tracking-[-0.03em] text-ink">{title}</p>
+      {hint && <p className="max-w-md text-muted">{hint}</p>}
+      {children && <div className="mt-2">{children}</div>}
     </div>
   );
 }

@@ -92,7 +92,7 @@ export default function AdminAuditPage() {
             <Empty icon={<ScrollText size={22} />} title={a.emptyTitle} hint={a.emptyHint} />
           ) : (
             <>
-              <ul className="elevated overflow-hidden rounded-2xl border border-line bg-surface">
+              <ul className="tf-panel overflow-hidden">
                 {data.content.map((entry) => (
                   <AuditRow key={entry.id} entry={entry} />
                 ))}

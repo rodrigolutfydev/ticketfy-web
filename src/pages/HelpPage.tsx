@@ -31,7 +31,7 @@ export default function HelpPage() {
         ]}
       />
       <TabPanel idPrefix="ajuda" activeKey={tab}>
-        <div className="divide-y divide-line overflow-hidden elevated rounded-2xl border border-line bg-surface">
+        <div className="tf-panel divide-y divide-line overflow-hidden">
           {faqs[tab].map((item) => (
             <details key={item.q} className="group">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 font-semibold text-ink hover:bg-raised [&::-webkit-details-marker]:hidden">

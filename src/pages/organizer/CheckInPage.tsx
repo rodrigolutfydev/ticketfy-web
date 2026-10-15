@@ -81,7 +81,7 @@ export default function CheckInPage() {
       {history.length > 0 && (
         <section className="mt-8">
           <h2 className="mb-3 font-bold text-ink">{c.history}</h2>
-          <ul className="divide-y divide-line overflow-hidden elevated rounded-2xl border border-line bg-surface text-sm">
+          <ul className="tf-panel divide-y divide-line overflow-hidden text-sm">
             {history.map((entry, index) => (
               <li key={`${entry.at}-${index}`} className="flex items-center gap-3 px-4 py-3">
                 {entry.ok ? <CircleCheck size={18} className="shrink-0 text-success" aria-label={c.allowedShort} /> : <CircleX size={18} className="shrink-0 text-danger" aria-label={c.deniedShort} />}

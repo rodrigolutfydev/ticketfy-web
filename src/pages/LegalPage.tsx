@@ -11,7 +11,7 @@ export default function LegalPage({ document }: { document: "terms" | "privacy" 
   return (
     <article className="mx-auto max-w-3xl">
       <PageTitle title={content.title} subtitle={content.subtitle} />
-      <div role="note" className="mb-8 flex gap-3 rounded-2xl border border-warning/35 bg-warning/10 p-4 text-sm text-ink">
+      <div role="note" className="mb-8 flex gap-3 rounded-2xl border border-accent-line bg-accent-soft p-4 text-sm text-ink">
         <TriangleAlert size={20} className="mt-0.5 shrink-0 text-warning" aria-hidden />
         <div>
           <p className="font-semibold">{t.legal.draftTitle}</p>
@@ -22,7 +22,7 @@ export default function LegalPage({ document }: { document: "terms" | "privacy" 
       <div className="space-y-8">
         {content.sections.map((section) => (
           <section key={section.title}>
-            <h2 className="text-xl font-semibold tracking-tight text-ink">{section.title}</h2>
+            <h2 className="text-xl font-bold tracking-[-0.035em] text-ink">{section.title}</h2>
             <div className="mt-3 space-y-3 leading-relaxed text-muted">
               {section.paragraphs.map((paragraph) => (
                 <p key={paragraph}>{paragraph}</p>
@@ -41,7 +41,7 @@ function PrivacyContact() {
   const contact = t.legal.privacy.contact;
   return (
     <section id="contato">
-      <h2 className="text-xl font-semibold tracking-tight text-ink">{contact.title}</h2>
+      <h2 className="text-xl font-bold tracking-[-0.035em] text-ink">{contact.title}</h2>
       <div className="mt-3 space-y-3 leading-relaxed text-muted">
         {contact.paragraphs.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>

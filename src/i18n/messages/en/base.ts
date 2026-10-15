@@ -96,9 +96,6 @@ export const base: typeof reference = {
     done: " (done)",
   },
   authShell: {
-    eyebrow: "YOUR NEXT MOMENT",
-    headlineTop: "Starts",
-    headlineBottom: "right here.",
     backHome: "Back to home",
   },
   password: {
@@ -173,15 +170,6 @@ export const base: typeof reference = {
   cover: {
     photoAlt: (name: string) => `Photo of the event ${name}`,
     generatedAlt: (name: string) => `Cover of the event ${name}`,
-  },
-  carousel: {
-    label: "Featured events",
-    roleDescription: "carousel",
-    choose: "Choose featured event",
-    slide: (index: number, total: number, name: string) => `Featured ${index} of ${total}: ${name}`,
-    open: (name: string) => `${name}: see event and tickets`,
-    pause: "Pause autoplay",
-    play: "Resume autoplay",
   },
   storefront: {
     featuredHeading: "Featured events",
@@ -384,5 +372,70 @@ export const base: typeof reference = {
     perks: ["Create events with a photo, venue and time", "Set up ticket batches with price and quantity", "Validate tickets at the entrance"],
     noApproval: "Any account can become an organizer account, no approval needed.",
     submit: "Become an organizer",
+  },
+  look: {
+    home: {
+      title: "Your ticket to the show of your life.",
+      subtitle: "Find events near you, buy in a few minutes and get in with the QR code straight from your phone.",
+      seeEvents: "See events",
+      sellTickets: "I want to sell tickets",
+      trust: ["Tickets held while you pay", "QR code right on your phone", "Transfer to a friend"],
+      ticketTop: "ADMIT ONE",
+      ticketAria: (name: string) => `${name}: see tickets`,
+      date: "DATE",
+      city: "CITY",
+      time: "TIME",
+      from: "from",
+      tapeBrand: ["TICKET IN HAND", "HEAD IN THE SHOW", "GET IN WITH A QR CODE", "BRING THE CREW", "THE NIGHT IS YOURS"],
+      featuredTitle: "Top events",
+      allEyebrow: "Schedule",
+      howEyebrow: "How it works",
+      howTitle: "From click to crowd",
+      features: [
+        { title: "Quick checkout", text: "Pick the ticket batch, set the quantity and finish in a few steps." },
+        { title: "Held while you pay", text: "Your tickets are set aside while you complete the payment." },
+        { title: "Transfer to a friend", text: "Can't make it? Pass the ticket to someone else from your account." },
+        { title: "Add to your calendar", text: "Save the event to Google Calendar or your phone's calendar." },
+      ],
+      ctaFeats: ["Ticket batches and coupons", "QR code check-in", "Payouts via Pix"],
+      ctaKicker: "SIGNING UP IS FREE",
+      ctaBig: "Your event live today",
+      prevFeatured: "Previous featured events",
+      nextFeatured: "Next featured events",
+    },
+    card: {
+      soldOut: "Sold out",
+    },
+    footer: {
+      tagline: "Ticket in hand, head in the show. Quick checkout and your ticket right on your phone.",
+      navigate: "Browse",
+      account: "Account",
+      help: "Help",
+    },
+    neon: {
+      notFound: "404",
+      error: "Oops!",
+      notFoundTitle: "This page left the show early.",
+      notFoundHint: "The link may be broken or the content no longer exists.",
+      errorTitle: "The power went out over here.",
+    },
+    auth: {
+      quoteTop: "Ticket in hand,",
+      quoteAccent: "head in the show.",
+    },
+    tickets: {
+      brightness: "Turn up your screen brightness at the entrance",
+      holder: "HOLDER",
+      date: "DATE",
+      time: "TIME",
+    },
+    timer: {
+      left: "Time left on your reservation",
+    },
+    expired: {
+      eyebrow: "Reservation expired",
+      title: "Time ran out and the tickets went back on sale.",
+      text: "Reservations last a few minutes so everyone gets a chance to buy. Nothing was charged. If tickets are still available, just pick them again.",
+    },
   },
 };

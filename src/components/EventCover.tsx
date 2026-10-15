@@ -1,5 +1,7 @@
 // Capa do evento: a foto cadastrada pelo organizador ou, se não houver
-// (ou se ela não carregar), uma capa gerada a partir do nome e da data.
+// (ou se ela não carregar), uma capa desenhada no estilo da marca, com as
+// iniciais do evento sobre um gradiente laranja. Nada de foto genérica:
+// a capa gerada nunca finge ser a foto do evento.
 //
 // Segurança da imagem:
 // - safeImageUrl só aceita https (veja utils/security.ts);
@@ -10,18 +12,12 @@
 
 import { useState } from "react";
 import { safeImageUrl } from "../utils/security";
-import { dateParts } from "../utils/format";
 import { useI18n } from "../i18n/LocaleContext";
 
-// Fundos da capa gerada. A escolha depende do nome do evento, então o
-// mesmo evento sempre tem a mesma capa.
-const PALETTES = [
-  ["#ff5a4e", "#5c140f"],
-  ["#ff7a5c", "#3b1220"],
-  ["#e8475b", "#2a0d1e"],
-  ["#ff5a4e", "#1f2a44"],
-  ["#f5a524", "#4a1d0a"],
-];
+// Tons escuros que o laranja da marca (var(--accent)) encontra no gradiente.
+// A escolha depende do nome, então o mesmo evento sempre tem a mesma capa.
+export const COVER_DEPTHS = ["#3a0f05", "#1d0b33", "#2a0a14", "#0b0a0d", "#331a05"] as const;
+const ANGLES = [0, 18, 32, 50, 68];
 
 function hash(text: string) {
   let h = 0;
@@ -29,33 +25,78 @@ function hash(text: string) {
   return Math.abs(h);
 }
 
+// Iniciais das duas primeiras palavras com letra ou número
+// ("Marina Vale — Turnê Neon" vira "MV"). Sem nome, um "T" da marca.
+export function coverInitials(name: string) {
+  const words = name
+    .normalize("NFC")
+    .split(/\s+/)
+    .map((word) => word.replace(/[^\p{L}\p{N}]/gu, ""))
+    .filter(Boolean);
+  const initials = words
+    .slice(0, 2)
+    .map((word) => word[0]!.toLocaleUpperCase("pt-BR"))
+    .join("");
+  return initials || "T";
+}
+
+// Fundo da capa gerada: laranja da marca no canto, indo para um tom escuro.
+export function coverBackground(name: string) {
+  const h = hash(name);
+  const depth = COVER_DEPTHS[h % COVER_DEPTHS.length];
+  const angle = ANGLES[Math.floor(h / COVER_DEPTHS.length) % ANGLES.length];
+  return `radial-gradient(120% 95% at 100% 0%, var(--accent), ${depth} 72%), linear-gradient(${angle}deg, ${depth}, #020203)`;
+}
+
+// Capa gerada, sem depender do idioma (o texto alternativo vem de fora).
+export function CoverFallback({ name, label, large = false, className = "" }: { name: string; label: string; large?: boolean; className?: string }) {
+  return (
+    <div
+      role="img"
+      aria-label={label}
+      className={`relative flex h-full w-full items-end overflow-hidden ${large ? "p-8" : "p-4"} ${className}`}
+      style={{ background: coverBackground(name) }}
+    >
+      {/* Brilho violeta discreto, como as luzes de palco do layout. */}
+      <span aria-hidden className="pointer-events-none absolute -bottom-1/3 -left-1/4 h-2/3 w-2/3 rounded-full bg-glow/25 blur-3xl" />
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute right-3 top-1 font-display font-extrabold leading-none tracking-[-0.06em] text-white/20 ${
+          large ? "text-[11rem]" : "text-[6.5rem]"
+        }`}
+      >
+        {coverInitials(name)}
+      </span>
+      <span aria-hidden className={`relative line-clamp-2 max-w-[85%] font-display font-bold leading-tight tracking-[-0.03em] text-white/90 ${large ? "text-2xl" : "text-sm"}`}>
+        {name}
+      </span>
+    </div>
+  );
+}
+
 interface Props {
   name: string;
   startsAt: string;
   imageUrl?: string | null;
   className?: string;
-  // Na capa grande (página do evento) a data aparece maior.
+  // Na capa grande (página do evento) as letras aparecem maiores.
   large?: boolean;
   // "cover": preenche a caixa e corta as sobras (cartões pequenos).
-  // "contain": mostra a foto INTEIRA, sem cortar nada. O espaço que sobrar
-  // dos lados fica com o fundo liso do tema.
+  // "contain": mostra a foto INTEIRA, sem cortar nada.
   fit?: "cover" | "contain";
 }
 
-export default function EventCover({ name, startsAt, imageUrl, className = "", large = false, fit = "cover" }: Props) {
-  const { t, locale } = useI18n();
+export default function EventCover({ name, imageUrl, className = "", large = false, fit = "cover" }: Props) {
+  const { t } = useI18n();
   const src = safeImageUrl(imageUrl);
   // Guarda QUAL url falhou: se o organizador trocar a foto, a nova é tentada.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
   if (src && failedSrc !== src && fit === "contain") {
     return (
-      // Fundo liso da cor do tema: as sobras ao redor da foto ficam como uma
-      // moldura limpa, sem efeito de desfoque.
-      <div className={`relative h-full w-full overflow-hidden bg-raised ${className}`}>
+      <div className={`relative h-full w-full overflow-hidden ${className}`}>
         {/* A foto inteira, sem corte (object-contain). Fica "absolute" para
-            nunca empurrar a altura da caixa: quem define o tamanho é o
-            contêiner, e a foto se ajusta dentro dele, seja vertical ou horizontal. */}
+            nunca empurrar a altura da caixa: quem define o tamanho é o contêiner. */}
         <img
           src={src}
           alt={t.cover.photoAlt(name)}
@@ -77,32 +118,11 @@ export default function EventCover({ name, startsAt, imageUrl, className = "", l
         decoding="async"
         referrerPolicy="no-referrer"
         onError={() => setFailedSrc(src)}
-        className={`h-full w-full object-cover ${className}`}
+        // text-transparent: enquanto a foto carrega, o texto alternativo não aparece por cima do card.
+        className={`h-full w-full object-cover text-transparent ${className}`}
       />
     );
   }
 
-  const [from, to] = PALETTES[hash(name) % PALETTES.length];
-  const { day, month } = dateParts(startsAt, locale);
-  return (
-    <div
-      role="img"
-      aria-label={t.cover.generatedAlt(name)}
-      className={`relative flex h-full w-full items-end overflow-hidden p-5 ${className}`}
-      style={{ background: `radial-gradient(120% 90% at 100% 0%, ${from}, ${to} 75%)` }}
-    >
-      {/* Data gigante vazada no canto: dá identidade sem precisar de foto. */}
-      <span
-        aria-hidden
-        className={`pointer-events-none absolute -right-2 -top-4 font-extrabold leading-none tracking-tighter text-white/15 ${
-          large ? "text-[11rem]" : "text-[7rem]"
-        }`}
-      >
-        {day}
-      </span>
-      <span aria-hidden className={`relative font-extrabold uppercase leading-none text-white/85 ${large ? "text-2xl" : "text-sm"}`}>
-        {month}
-      </span>
-    </div>
-  );
+  return <CoverFallback name={name} label={t.cover.generatedAlt(name)} large={large} className={className} />;
 }

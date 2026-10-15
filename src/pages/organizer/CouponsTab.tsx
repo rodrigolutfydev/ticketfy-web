@@ -12,6 +12,7 @@ import { errorMessage } from "../../api/client";
 import { getLocale, type Locale } from "../../i18n/locale";
 import { useI18n } from "../../i18n/LocaleContext";
 import { MESSAGES } from "../../i18n/messages";
+import { STATUS_TONES } from "../../components/StatusBadge";
 
 interface CouponForm {
   code: string;
@@ -37,11 +38,11 @@ const EMPTY_FORM: CouponForm = {
 const CODE_PATTERN = /^[A-Z0-9_-]{3,30}$/;
 
 const STATUS_STYLES = {
-  active: "border-success/30 bg-success/12 text-success",
-  scheduled: "border-line bg-raised text-muted",
-  inactive: "border-line bg-raised text-muted",
-  expired: "border-line bg-raised text-muted",
-  exhausted: "border-warning/35 bg-warning/10 text-warning",
+  active: STATUS_TONES.success,
+  scheduled: STATUS_TONES.info,
+  inactive: STATUS_TONES.muted,
+  expired: STATUS_TONES.muted,
+  exhausted: STATUS_TONES.danger,
 } as const;
 
 function toSettings(form: CouponForm, locale: Locale): CouponSettings | string {
@@ -105,7 +106,7 @@ export default function CouponsTab({ eventId, cancelled }: { eventId: string; ca
 
   return (
     <div className="space-y-6">
-      <section className="elevated overflow-hidden rounded-2xl border border-line bg-surface">
+      <section className="tf-panel overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
           <div>
             <h2 className="text-lg font-semibold text-ink">{c.title}</h2>
@@ -156,7 +157,7 @@ export default function CouponsTab({ eventId, cancelled }: { eventId: string; ca
                       <td className="tabular px-3 py-3.5 text-right text-muted">{formatPrice(coupon.discountTotal, locale)}</td>
                       <td className="px-3 py-3.5 text-muted">{validity(coupon, locale)}</td>
                       <td className="px-3 py-3.5">
-                        <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLES[status]}`}>{couponStatusLabel(status, locale)}</span>
+                        <span className={`tf-status ${STATUS_STYLES[status]}`}>{couponStatusLabel(status, locale)}</span>
                       </td>
                       <td className="px-5 py-3.5">
                         {!cancelled && (
@@ -299,7 +300,7 @@ function CouponCreator({ eventId, onCreated }: { eventId: string; onCreated: () 
   const error = localError ?? couponManagementError(mutation.error);
 
   return (
-    <section className="elevated rounded-2xl border border-line bg-surface p-5 sm:p-6">
+    <section className="tf-panel p-5 sm:p-6">
       <h2 className="mb-4 text-lg font-semibold text-ink">{c.newCoupon}</h2>
       <form onSubmit={submit} noValidate className="space-y-4">
         <Field label={c.code} hint={c.codeHint}>

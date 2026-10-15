@@ -42,7 +42,7 @@ export default function ConfirmDialog({
       // Clique no fundo escuro (fora da caixa) também fecha.
       onClick={(e) => e.target === ref.current && !loading && onClose()}
       aria-labelledby="confirm-title"
-      className="m-auto w-[min(92vw,440px)] elevated rounded-2xl border border-line bg-surface p-0 text-ink shadow-2xl"
+      className="tf-panel m-auto w-[min(92vw,440px)] p-0 text-ink shadow-[inset_0_0_0_1px_var(--card-ring),0_30px_80px_rgb(0_0_0/0.6)]"
     >
       <div className="p-6">
         <h2 id="confirm-title" className="text-lg font-bold">

@@ -33,7 +33,8 @@ export default function AddToCalendar({ eventId, event, size = "sm", variant = "
     };
   }, [open]);
 
-  const item = "flex w-full items-start gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-ink hover:bg-raised";
+  const item =
+    "flex w-full items-start gap-2.5 rounded-[10px] px-3 py-2.5 text-left text-sm font-medium text-ink transition-colors hover:bg-ink/[0.05] [&>svg]:text-accent-text";
 
   return (
     <div ref={ref} className="relative">
@@ -41,7 +42,7 @@ export default function AddToCalendar({ eventId, event, size = "sm", variant = "
         <CalendarPlus size={16} aria-hidden /> {c.add}
       </Button>
       {open && (
-        <div role="menu" aria-label={c.menuLabel} className="absolute right-0 z-30 mt-2 w-64 rounded-xl border border-line bg-surface p-1.5 text-left shadow-2xl">
+        <div role="menu" aria-label={c.menuLabel} className="absolute right-0 z-30 mt-2 w-64 rounded-2xl bg-surface p-2 text-left shadow-[inset_0_0_0_1px_var(--line),0_24px_60px_rgb(0_0_0/0.6)]">
           <a role="menuitem" href={calendarFileUrl(eventId)} className={item} onClick={() => setOpen(false)}>
             <Download size={16} className="mt-0.5 shrink-0" aria-hidden />
             <span>

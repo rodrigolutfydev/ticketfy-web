@@ -68,7 +68,7 @@ export default function EventOrders({ eventId }: { eventId: string }) {
       )}
 
       {data && data.content.length > 0 && (
-        <div className={`elevated overflow-x-auto rounded-2xl border border-line bg-surface transition-opacity ${isFetching ? "opacity-70" : ""}`}>
+        <div className={`tf-panel overflow-x-auto transition-opacity ${isFetching ?"opacity-70" : ""}`}>
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs text-muted">

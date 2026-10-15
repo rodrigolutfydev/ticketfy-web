@@ -81,7 +81,7 @@ export default function TransferTicketDialog({ ticket, onClose, onTransferred }:
       onClose={onClose}
       onClick={(e) => e.target === ref.current && !mutation.isPending && ref.current?.close()}
       aria-labelledby="transfer-title"
-      className="m-auto w-[min(92vw,460px)] elevated rounded-2xl border border-line bg-surface p-0 text-ink shadow-2xl"
+      className="tf-panel m-auto w-[min(92vw,460px)] p-0 text-ink shadow-[inset_0_0_0_1px_var(--card-ring),0_30px_80px_rgb(0_0_0/0.6)]"
     >
       <form onSubmit={submit} className="space-y-4 p-6">
         <div>
@@ -104,7 +104,7 @@ export default function TransferTicketDialog({ ticket, onClose, onTransferred }:
         <Field label={x.password} error={errors.password ?? undefined}>
           <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" maxLength={100} required />
         </Field>
-        <label className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-ink">
+        <label className="flex items-start gap-3 rounded-xl border border-accent-line bg-accent-soft p-3 text-sm text-ink">
           <input
             type="checkbox"
             className="mt-0.5 h-4 w-4 shrink-0 accent-current"

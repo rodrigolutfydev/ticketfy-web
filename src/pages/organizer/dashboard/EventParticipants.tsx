@@ -11,15 +11,16 @@ import { saveBlob } from "../../../utils/download";
 import { formatShortDate } from "../../../utils/format";
 import { maskedCode } from "../../../utils/participants";
 import { useI18n } from "../../../i18n/LocaleContext";
+import { STATUS_TONES } from "../../../components/StatusBadge";
 
 const STATUSES: TicketStatus[] = ["VALID", "USED", "CANCELLED"];
 const PAGE_SIZE = 20;
 const SEARCH_DELAY_MS = 300;
 
 const STATUS_STYLES: Record<TicketStatus, string> = {
-  VALID: "bg-success/12 text-success",
-  USED: "bg-accent/12 text-accent-text",
-  CANCELLED: "bg-raised text-muted",
+  VALID: STATUS_TONES.success,
+  USED: STATUS_TONES.accent,
+  CANCELLED: STATUS_TONES.muted,
 };
 
 export default function EventParticipants({ eventId }: { eventId: string }) {
@@ -117,7 +118,7 @@ export default function EventParticipants({ eventId }: { eventId: string }) {
       )}
 
       {data && data.content.length > 0 && (
-        <div className={`elevated overflow-x-auto rounded-2xl border border-line bg-surface transition-opacity ${isFetching ? "opacity-70" : ""}`}>
+        <div className={`tf-panel overflow-x-auto transition-opacity ${isFetching ?"opacity-70" : ""}`}>
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs text-muted">
@@ -141,7 +142,7 @@ export default function EventParticipants({ eventId }: { eventId: string }) {
                   </td>
                   <td className="px-3 py-3.5 text-muted">{participant.ticketTypeName}</td>
                   <td className="px-3 py-3.5">
-                    <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${STATUS_STYLES[participant.status]}`}>
+                    <span className={`tf-status ${STATUS_STYLES[participant.status]}`}>
                       {t.labels.ticketStatus[participant.status]}
                     </span>
                   </td>

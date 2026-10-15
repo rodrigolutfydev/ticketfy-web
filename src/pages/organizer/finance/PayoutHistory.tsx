@@ -24,7 +24,7 @@ export default function PayoutHistory() {
 
   return (
     <section className="mt-10">
-      <h2 className="mb-4 text-xl font-semibold tracking-tight text-ink">{h.title}</h2>
+      <h2 className="mb-4 text-xl font-bold tracking-[-0.035em] text-ink">{h.title}</h2>
       {isLoading && <Skeleton className="h-32 rounded-2xl" />}
       {error && <ErrorMessage message={errorMessage(error) ?? ""} />}
       {data &&
@@ -32,7 +32,7 @@ export default function PayoutHistory() {
           <Empty icon={<ArrowDownToLine size={22} />} title={h.emptyTitle} hint={h.emptyHint} />
         ) : (
           <>
-            <ul className="elevated overflow-hidden rounded-2xl border border-line bg-surface">
+            <ul className="tf-panel overflow-hidden">
               {data.content.map((payout) => (
                 <PayoutRow key={payout.id} payout={payout} />
               ))}
@@ -75,10 +75,7 @@ function PayoutRow({ payout }: { payout: Payout }) {
           {payout.failureReason && <p className="text-xs text-danger">{h.failure(payout.failureReason)}</p>}
           {payout.rejectionReason && <p className="text-xs text-danger">{h.rejected(payout.rejectionReason)}</p>}
         </div>
-        <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${style}`}>
-          <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
-          {label}
-        </span>
+        <span className={`tf-status shrink-0 ${style}`}>{label}</span>
         {CANCELLABLE_STATUSES.includes(payout.status) && (
           <ConfirmButton
             variant="secondary"

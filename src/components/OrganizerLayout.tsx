@@ -14,8 +14,10 @@ export default function OrganizerLayout() {
   // mas não em "Criar evento" (/organizer/events/new), que tem item próprio.
   const inEvent = pathname.startsWith("/organizer/events/") && pathname !== "/organizer/events/new";
   const item = ({ isActive }: { isActive: boolean }) =>
-    `flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
-      isActive ? "bg-accent/12 text-accent-text" : "text-muted hover:bg-raised hover:text-ink"
+    `flex shrink-0 items-center gap-3 rounded-xl px-3 py-[11px] text-[0.9375rem] transition-colors ${
+      isActive
+        ? "bg-accent/[0.16] font-semibold text-ink shadow-[inset_0_0_0_1px_var(--accent-line)] [&>svg]:text-accent-text"
+        : "font-medium text-muted hover:bg-ink/[0.05] hover:text-ink"
     }`;
 
   const links = [
@@ -29,10 +31,10 @@ export default function OrganizerLayout() {
   return (
     <RequireOrganizer>
       {/* minmax(0,1fr): impede que o menu rolável do celular alargue a coluna e a página inteira. */}
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="min-w-0">
-          <p className="eyebrow mb-3 hidden px-3 md:block">{l.eyebrow}</p>
-          <nav aria-label={l.nav} className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 md:flex-col md:overflow-visible">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[250px_minmax(0,1fr)] lg:gap-8">
+        <aside className="tf-panel min-w-0 p-2 lg:sticky lg:top-24 lg:p-3.5">
+          <p className="hidden px-3 pb-1.5 pt-2.5 text-[11px] font-bold uppercase tracking-[0.16em] text-muted lg:block">{l.eyebrow}</p>
+          <nav aria-label={l.nav} className="flex gap-1 overflow-x-auto [scrollbar-width:none] lg:flex-col lg:overflow-visible">
             {links.map((link) => (
               <NavLink
                 key={link.to}

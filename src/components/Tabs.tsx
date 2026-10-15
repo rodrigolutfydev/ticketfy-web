@@ -45,7 +45,11 @@ export function Tabs<K extends string>({ items, value, onChange, label, idPrefix
   }
 
   return (
-    <div role="tablist" aria-label={label} className="-mx-1 mb-6 flex gap-1 overflow-x-auto border-b border-line px-1">
+    <div
+      role="tablist"
+      aria-label={label}
+      className="mb-7 flex w-fit max-w-full gap-1 overflow-x-auto rounded-full bg-ink/[0.04] p-[5px] shadow-[inset_0_0_0_1px_var(--card-ring)] [scrollbar-width:none]"
+    >
       {items.map((item, index) => {
         const selected = item.key === value;
         return (
@@ -62,15 +66,17 @@ export function Tabs<K extends string>({ items, value, onChange, label, idPrefix
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(item.key)}
             onKeyDown={(e) => handleKeyDown(e, index)}
-            className={`relative -mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold transition-colors ${
-              selected ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-[18px] py-[9px] text-[0.9375rem] transition-colors ${
+              selected
+                ? "bg-accent/[0.18] font-semibold text-ink shadow-[inset_0_0_0_1px_var(--accent-line)]"
+                : "font-medium text-muted hover:bg-ink/[0.06] hover:text-ink"
             }`}
           >
             {item.icon}
             {item.label}
             {item.count !== undefined && (
               <span
-                className={`rounded-full px-2 py-0.5 text-xs ${selected ? "bg-accent/15 text-accent-text" : "bg-raised text-muted"}`}
+                className={`tabular rounded-full px-2 py-0.5 text-xs font-semibold ${selected ? "bg-accent text-accent-ink" : "bg-ink/[0.08] text-muted"}`}
               >
                 {item.count}
               </span>

@@ -36,7 +36,7 @@ export default function ReasonDialog({ open, title, description, confirmLabel, l
       onClose={onClose}
       onClick={(e) => e.target === ref.current && !loading && onClose()}
       aria-labelledby="reason-title"
-      className="m-auto w-[min(92vw,480px)] elevated rounded-2xl border border-line bg-surface p-0 text-ink shadow-2xl"
+      className="tf-panel m-auto w-[min(92vw,480px)] p-0 text-ink shadow-[inset_0_0_0_1px_var(--card-ring),0_30px_80px_rgb(0_0_0/0.6)]"
     >
       <form onSubmit={submit} className="space-y-4 p-6">
         <div>

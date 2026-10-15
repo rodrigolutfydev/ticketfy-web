@@ -94,9 +94,6 @@ export const base = {
     done: " (concluída)",
   },
   authShell: {
-    eyebrow: "SEU PRÓXIMO MOMENTO",
-    headlineTop: "Começa",
-    headlineBottom: "por aqui.",
     backHome: "Voltar para o início",
   },
   password: {
@@ -171,15 +168,6 @@ export const base = {
   cover: {
     photoAlt: (name: string) => `Foto do evento ${name}`,
     generatedAlt: (name: string) => `Capa do evento ${name}`,
-  },
-  carousel: {
-    label: "Eventos em destaque",
-    roleDescription: "carrossel",
-    choose: "Escolher destaque",
-    slide: (index: number, total: number, name: string) => `Destaque ${index} de ${total}: ${name}`,
-    open: (name: string) => `${name}: ver evento e ingressos`,
-    pause: "Pausar passagem automática",
-    play: "Continuar passagem automática",
   },
   storefront: {
     featuredHeading: "Eventos em destaque",
@@ -382,5 +370,70 @@ export const base = {
     perks: ["Crie eventos com foto, local e horário", "Cadastre lotes com preço e quantidade", "Valide ingressos na entrada"],
     noApproval: "Qualquer conta pode virar organizadora, sem aprovação.",
     submit: "Tornar-me organizador",
+  },
+  look: {
+    home: {
+      title: "Seu ingresso pro show da vida.",
+      subtitle: "Encontre eventos perto de você, compre em poucos minutos e entre com o QR Code direto do celular.",
+      seeEvents: "Ver eventos",
+      sellTickets: "Quero vender ingressos",
+      trust: ["Ingresso reservado enquanto você paga", "QR Code direto no celular", "Transfira para um amigo"],
+      ticketTop: "ENTRADA",
+      ticketAria: (name: string) => `${name}: ver ingressos`,
+      date: "DATA",
+      city: "CIDADE",
+      time: "HORÁRIO",
+      from: "a partir de",
+      tapeBrand: ["INGRESSO NA MÃO", "CABEÇA NO ROLÊ", "ENTRA COM QR CODE", "CHAMA A GALERA", "A NOITE É SUA"],
+      featuredTitle: "Principais eventos",
+      allEyebrow: "Agenda",
+      howEyebrow: "Como funciona",
+      howTitle: "Do clique à pista",
+      features: [
+        { title: "Compra rápida", text: "Escolha o lote, informe a quantidade e finalize em poucos passos." },
+        { title: "Reserva enquanto paga", text: "Seus ingressos ficam guardados enquanto você conclui o pagamento." },
+        { title: "Transfira para um amigo", text: "Não vai mais? Passe o ingresso para outra pessoa pela sua conta." },
+        { title: "Adicione à agenda", text: "Salve o evento no Google Agenda ou no calendário do celular." },
+      ],
+      ctaFeats: ["Lotes e cupons", "Check-in por QR Code", "Saque via Pix"],
+      ctaKicker: "CRIAR CONTA É GRÁTIS",
+      ctaBig: "Seu evento no ar hoje",
+      prevFeatured: "Destaques anteriores",
+      nextFeatured: "Próximos destaques",
+    },
+    card: {
+      soldOut: "Esgotado",
+    },
+    footer: {
+      tagline: "Ingresso na mão, cabeça no rolê. Compra rápida e ingresso direto no celular.",
+      navigate: "Navegue",
+      account: "Conta",
+      help: "Ajuda",
+    },
+    neon: {
+      notFound: "404",
+      error: "Ops!",
+      notFoundTitle: "Essa página saiu mais cedo do show.",
+      notFoundHint: "O link pode estar quebrado ou o conteúdo não existe mais.",
+      errorTitle: "Caiu a energia por aqui.",
+    },
+    auth: {
+      quoteTop: "Ingresso na mão,",
+      quoteAccent: "cabeça no rolê.",
+    },
+    tickets: {
+      brightness: "Aumente o brilho da tela na entrada",
+      holder: "TITULAR",
+      date: "DATA",
+      time: "HORÁRIO",
+    },
+    timer: {
+      left: "Tempo restante da reserva",
+    },
+    expired: {
+      eyebrow: "Reserva expirada",
+      title: "O tempo acabou e os ingressos voltaram para a venda.",
+      text: "A reserva dura alguns minutos para que todo mundo tenha chance de comprar. Nenhum valor foi cobrado. Se ainda houver ingressos, é só escolher de novo.",
+    },
   },
 };

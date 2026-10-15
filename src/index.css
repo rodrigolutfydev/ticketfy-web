@@ -1,25 +1,32 @@
 /*
-  Estilo global do Ticketfy.
+  Estilo global do Ticketfy (visual "pista": fundo quase preto, laranja de
+  pirotecnia, tipografia Unbounded + Inter Tight).
 
   Como funciona o tema:
-  - Cada cor do projeto é uma variável CSS (--canvas, --ink, --accent...).
+  - Cada cor é uma variável CSS (--canvas, --ink, --accent...).
   - O bloco @theme inline ensina o Tailwind a criar classes a partir delas:
     --color-canvas vira bg-canvas, text-canvas, border-canvas e assim por diante.
   - Trocar o tema (claro/escuro) é só trocar o atributo data-theme no <html>.
-    As variáveis mudam de valor e todas as classes acompanham, sem precisar
-    escrever "dark:" em cada componente.
+  - A cor de destaque (--accent) é definida UMA vez, em :root. Os tons de apoio
+    (suave, contorno, brilho, sombra) são derivados dela com color-mix, então
+    trocar a marca é trocar uma linha.
+
+  Fontes: empacotadas pelo @fontsource (arquivos do próprio site), sem Google
+  Fonts, para a Content-Security-Policy continuar com font-src 'self'.
+  Imagens de fundo: arquivos de src/assets, servidos pelo próprio site.
 */
 @import "tailwindcss";
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/inter-tight";
+@import "@fontsource-variable/unbounded";
 
 @theme inline {
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Bricolage Grotesque Variable", "Inter Variable", ui-sans-serif, sans-serif;
+  --font-sans: "Inter Tight Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Unbounded Variable", "Inter Tight Variable", ui-sans-serif, sans-serif;
 
   --color-canvas: var(--canvas); /* fundo da página */
   --color-surface: var(--surface); /* cartões e painéis */
-  --color-raised: var(--raised); /* campos e áreas destacadas dentro de cartões */
+  --color-raised: var(--raised); /* áreas destacadas dentro de cartões */
+  --color-field: var(--field); /* fundo de campos de formulário */
   --color-line: var(--line); /* bordas e divisórias */
   --color-line-strong: var(--line-strong); /* borda de campos e botões: precisa aparecer bem */
   --color-ink: var(--ink); /* texto principal */
@@ -29,65 +36,85 @@
   --color-accent-strong: var(--accent-strong); /* hover do laranja */
   --color-accent-ink: var(--accent-ink); /* texto em cima do laranja */
   --color-accent-text: var(--accent-text); /* laranja usado como cor de texto */
+  --color-accent-soft: var(--accent-soft); /* fundo laranja bem suave */
+  --color-accent-line: var(--accent-line); /* contorno laranja */
+  --color-glow: var(--glow); /* violeta UV: só em brilhos */
+  --color-lime: var(--lime); /* verde-limão: só "últimos ingressos" */
+  --color-paper: var(--paper); /* ingresso de papel e faixa clara */
+  --color-paper-ink: var(--paper-ink);
   --color-success: var(--success);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-info: var(--info);
+
+  --radius-card: 22px;
+  --radius-ticket: 18px;
+  --radius-field: 14px;
+
+  --shadow-glow: 0 12px 40px var(--accent-glow);
+  --shadow-pop: 0 24px 60px rgb(0 0 0 / 0.45);
+
+  --ease-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Cor da marca: a única linha a trocar para testar outro destaque. */
+:root {
+  --accent: #ff5b1f;
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 55%, transparent);
+  --accent-glow: color-mix(in srgb, var(--accent) 35%, transparent);
+  --accent-deep: color-mix(in srgb, var(--accent) 55%, #000);
+  --accent-strong: color-mix(in srgb, var(--accent) 86%, #fff);
+  --accent-ink: #0b0a0c;
+  --glow: #7b2cff;
+  --lime: #d7ff3a;
+  --paper: #f4f1f6;
+  --paper-ink: #020203;
 }
 
 /*
-  Tema escuro: é o padrão, igual ao layout de referência.
-  Contraste: cada "camada" (fundo -> cartão -> campo) é um degrau mais clara,
-  e as bordas são visíveis o bastante para separar as caixas sem sombra.
-  Texto secundário (--muted) passa de 7:1 sobre o cartão.
+  Tema escuro (padrão): preto de palco, cartões um degrau acima.
+  Contraste: --muted sobre --surface passa de 9:1 e --subtle de 6:1.
 */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  --canvas: #0e1116;
-  --surface: #161b22;
-  --raised: #1f2630;
-  --line: #2a323d;
-  --line-strong: #3a4452;
-  --ink: #f2f4f7;
-  --muted: #9aa4b2;
-  --subtle: #7d8796;
-  --accent: #ff5a4e;
-  --accent-strong: #ff7167;
-  --accent-ink: #1f0604;
-  --accent-text: #ff6f64;
-  --success: #2fbf71;
-  --danger: #ff6b70;
-  --warning: #f5a524;
-  --info: #7cb3ff;
-  --elevation: 0 1px 0 rgb(255 255 255 / 0.03) inset;
-  --elevation-drop: drop-shadow(0 0 0 transparent);
+  --canvas: #020203;
+  --surface: #0b0a0d;
+  --raised: #141217;
+  --field: #0e0d11;
+  --line: #2a2730;
+  --line-strong: #45404c;
+  --ink: #f4f1f6;
+  --muted: #bdb8c3;
+  --subtle: #9c97a3;
+  --accent-text: var(--accent);
+  --success: #3ddc97;
+  --danger: #ff5a5f;
+  --warning: #ffb547;
+  --info: #5aa9ff;
+  --card-ring: rgb(255 255 255 / 0.06);
 }
 
-/*
-  Tema claro do Figma: fundo cinza-claro, cartões brancos. O coral de texto
-  é mais escuro para ficar legível no branco.
-*/
+/* Tema claro: mesmo laranja, com o texto laranja mais escuro para ler no branco. */
 [data-theme="light"] {
   color-scheme: light;
-  --canvas: #f3f4f6;
+  --canvas: #f4f2f6;
   --surface: #ffffff;
-  --raised: #e8ebef;
-  --line: #d5dae0;
-  --line-strong: #aeb6c3;
-  --ink: #12161c;
-  --muted: #5d6775;
-  --subtle: #6b7482;
-  --accent: #ff5a4e;
-  --accent-strong: #f0453a;
-  --accent-ink: #1f0604;
-  --accent-text: #c4281d;
+  --raised: #eeebf2;
+  --field: #ffffff;
+  --line: #dcd8e2;
+  --line-strong: #aea8b8;
+  --ink: #121014;
+  --muted: #55505d;
+  --subtle: #69636f;
+  --accent-text: color-mix(in srgb, var(--accent) 62%, #000);
   --success: #12754a;
   --danger: #c81e1e;
   --warning: #8f4a00;
   --info: #1d4ed8;
-  --elevation: 0 1px 2px rgb(16 24 40 / 0.06), 0 2px 8px -2px rgb(16 24 40 / 0.08);
-  --elevation-drop: drop-shadow(0 1px 1px rgb(16 24 40 / 0.1)) drop-shadow(0 6px 12px rgb(16 24 40 / 0.07));
+  --card-ring: rgb(18 16 20 / 0.08);
 }
 
 @layer base {
@@ -99,28 +126,28 @@
   body {
     font-family: var(--font-sans);
     background: var(--canvas);
-    font-feature-settings: "cv11", "ss01";
+    line-height: 1.5;
   }
-  /* Títulos na fonte de destaque do Figma. */
+  /* Títulos na fonte de destaque, com o espaçamento apertado do layout. */
   h1,
   h2,
   h3,
   .font-display {
     font-family: var(--font-display);
-    font-optical-sizing: auto;
+    letter-spacing: -0.035em;
   }
   /* Preços, contadores e métricas com algarismos de mesma largura. */
   .tabular {
     font-variant-numeric: tabular-nums;
   }
   ::selection {
-    background: color-mix(in oklab, var(--accent) 35%, transparent);
+    background: color-mix(in srgb, var(--accent) 35%, transparent);
   }
   /* Foco visível só para teclado (o mouse não ganha contorno ao clicar). */
   :focus-visible {
     outline: 2px solid var(--accent);
-    outline-offset: 2px;
-    border-radius: 6px;
+    outline-offset: 3px;
+    border-radius: 8px;
   }
   /* Quem pediu menos movimento no sistema operacional não vê animações. */
   @media (prefers-reduced-motion: reduce) {
@@ -128,6 +155,7 @@
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
@@ -136,104 +164,764 @@
 
 @layer components {
   /*
-    Largura do conteúdo. Cresce em telas grandes (monitores de 1440px ou
-    mais) para não sobrar uma faixa vazia enorme dos lados.
+    Largura do conteúdo: até 1440px de layout, com respiro lateral que
+    cresce com a tela (16px no celular).
   */
   .page-container {
     width: 100%;
-    max-width: 80rem;
+    max-width: 90rem;
     margin-inline: auto;
-    padding-inline: 1rem;
-  }
-  @media (min-width: 640px) {
-    .page-container {
-      padding-inline: 1.5rem;
-    }
-  }
-  @media (min-width: 1536px) {
-    .page-container {
-      max-width: 92rem;
-      padding-inline: 2rem;
-    }
+    padding-inline: clamp(1rem, 5vw, 5rem);
   }
 
-  /* Elevação de cartões: sombra no tema claro, quase nada no escuro. */
-  .elevated {
-    box-shadow: var(--elevation);
-  }
-  /*
-    Para cartões recortados (formato de ingresso): box-shadow seria cortada
-    pela máscara, então a sombra vai como filtro no elemento de fora, e
-    acompanha o contorno do recorte.
-  */
-  .elevated-drop {
-    filter: var(--elevation-drop);
-  }
-
-  /*
-    Recorte de ingresso: dois semicírculos "mordendo" as laterais do cartão,
-    como o picote de um ingresso de papel. É feito com máscara, então o
-    fundo de trás aparece de verdade pelo recorte, em qualquer tema.
-    Use em um elemento com a variável --notch-y (altura do picote).
-  */
-  .ticket-notch {
-    --notch-r: 11px;
-    mask:
-      radial-gradient(circle var(--notch-r) at 0 var(--notch-y, 50%), transparent 98%, #000) left / 51% 100% no-repeat,
-      radial-gradient(circle var(--notch-r) at 100% var(--notch-y, 50%), transparent 98%, #000) right / 51% 100% no-repeat;
-  }
-  /* Linha tracejada do picote, entre os dois recortes. */
-  .ticket-perforation {
-    border-top: 2px dashed var(--line);
-  }
-  /* Brilho laranja do topo da página inicial. */
-  .hero-glow {
-    background: radial-gradient(50% 60% at 50% 0%, color-mix(in oklab, var(--accent) 9%, transparent), transparent 70%);
-  }
-  /* Rótulo curto em coral acima de títulos, como no Figma. */
+  /* Rótulo curto em laranja acima de títulos. */
   .eyebrow {
-    font-size: 0.6875rem;
-    font-weight: 700;
+    font-size: 0.8125rem;
+    font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--accent-text);
   }
-  /* Traço vertical coral ao lado do título de cada seção. */
-  .section-rule {
-    display: inline-block;
-    width: 4px;
-    height: 1.4em;
-    border-radius: 2px;
+
+  /* Painel padrão: cartão escuro com fio claro por dentro. */
+  .tf-panel {
+    position: relative;
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: inset 0 0 0 1px var(--card-ring);
+  }
+  .tf-panel-hl {
+    box-shadow: inset 0 0 0 1px var(--accent-line);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), var(--surface) 60%);
+  }
+
+  /* ------------------------------------------------------------------
+     Botões: sobem com mola, afundam ao clicar e um brilho atravessa
+     no hover. Só animam transform, filtro e sombra.
+     ------------------------------------------------------------------ */
+  .tf-btn {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      transform 0.45s var(--ease-spring),
+      box-shadow 0.35s var(--ease-snap),
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease,
+      filter 0.3s ease;
+  }
+  .tf-btn > svg {
+    transition: transform 0.45s var(--ease-spring);
+  }
+  .tf-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.32) 48%, rgb(255 255 255 / 0.08) 56%, transparent 66%);
+    transform: translateX(-120%);
+  }
+  @media (hover: hover) {
+    .tf-btn:not(:disabled):hover {
+      transform: translateY(-2px);
+    }
+    .tf-btn:not(:disabled):hover::after {
+      transform: translateX(120%);
+      transition: transform 0.75s var(--ease-snap);
+    }
+    .tf-btn:not(:disabled):hover > svg:last-child {
+      transform: translateX(3px);
+    }
+    .tf-btn-primary:not(:disabled):hover {
+      filter: brightness(1.06);
+      box-shadow: 0 4px 0 var(--accent-deep), 0 14px 30px var(--accent-glow);
+    }
+  }
+  .tf-btn:not(:disabled):active {
+    transform: translateY(1px) scale(0.97);
+    transition-duration: 0.12s;
+  }
+  .tf-btn-primary {
+    box-shadow: 0 0 0 var(--accent-deep), 0 10px 30px -8px var(--accent-glow);
+  }
+
+  /* Botão grande da home: pílula com a bolinha escura da seta. */
+  .tf-btn-hero {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 999px;
+    padding: 6px 6px 6px 26px;
+    font-weight: 600;
     background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .tf-btn-hero .tf-dot {
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    background: var(--paper-ink);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    transition: transform 0.5s var(--ease-spring);
+  }
+  @media (hover: hover) {
+    .tf-btn-hero:hover .tf-dot {
+      transform: rotate(45deg) scale(1.08);
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     Recortes de ingresso de verdade (máscara): furos à esquerda e à
+     direita na altura --cut-y. O fundo de trás aparece pelo furo, em
+     qualquer tema.
+     ------------------------------------------------------------------ */
+  .tf-cut-y {
+    --r: 14px;
+    mask:
+      radial-gradient(circle var(--r) at 0 var(--cut-y, 50%), #0000 calc(var(--r) - 1px), #000 var(--r)) left / 51% 100% no-repeat,
+      radial-gradient(circle var(--r) at 100% var(--cut-y, 50%), #0000 calc(var(--r) - 1px), #000 var(--r)) right / 51% 100% no-repeat;
+  }
+  /* Furos em cima e embaixo na posição --cut-x (ingresso deitado). */
+  .tf-cut-x {
+    --r: 14px;
+    mask:
+      radial-gradient(circle var(--r) at var(--cut-x, 70%) 0, #0000 calc(var(--r) - 1px), #000 var(--r)) top / 100% 51% no-repeat,
+      radial-gradient(circle var(--r) at var(--cut-x, 70%) 100%, #0000 calc(var(--r) - 1px), #000 var(--r)) bottom / 100% 51% no-repeat;
+  }
+
+  /* ------------------------------------------------------------------
+     Card de evento em formato de ingresso fino.
+     .tf-tk        o card (link)
+     .tf-tk-shape  forma recortada: foto em cima, picote, canhoto embaixo
+     ------------------------------------------------------------------ */
+  .tf-tk {
+    --photo-h: 170px;
+    --perf: var(--line);
+    position: relative;
+    display: grid;
+    isolation: isolate;
+    border-radius: var(--radius-ticket);
+    transition: translate 0.45s var(--ease-snap);
+  }
+  .tf-tk::before {
+    content: "";
+    position: absolute;
+    inset: 18px 14px -2px;
+    z-index: -1;
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgb(0 0 0 / 0.4), 0 10px 60px var(--accent-glow);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+  .tf-tk-shape {
+    --cut-y: var(--photo-h);
+    --r: 13px;
+    position: relative;
+    display: grid;
+    grid-template-rows: var(--photo-h) 1fr;
+    border-radius: var(--radius-ticket);
+    background: var(--surface);
+    box-shadow: inset 0 0 0 1px var(--card-ring);
+    transition: box-shadow 0.4s ease;
+  }
+  /* Reflexo que atravessa no hover. */
+  .tf-tk-shape::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 0.16) 50%, transparent 62%);
+    transform: translateX(-110%);
+  }
+  /* Picote: traços que "andam" no hover. */
+  .tf-tk-shape::after {
+    content: "";
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    top: calc(var(--cut-y) - 1px);
+    height: 2px;
+    pointer-events: none;
+    background: linear-gradient(90deg, var(--perf) 55%, transparent 0) 0 0 / 10px 2px repeat-x;
+  }
+  .tf-tk-photo {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-ticket) var(--radius-ticket) 0 0;
+    background: var(--raised);
+  }
+  .tf-tk-photo > :first-child {
+    transition: transform 0.9s var(--ease-snap);
+  }
+  .tf-tk-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgb(2 2 3 / 0.3), transparent 45%, rgb(2 2 3 / 0.3));
+  }
+  .tf-tk-date {
+    flex-shrink: 0;
+    align-self: flex-start;
+    width: 52px;
+    padding: 7px 0 8px;
+    border-radius: 12px;
+    background: var(--accent-soft);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    transition: background-color 0.4s ease;
+  }
+  @keyframes tf-perf-march {
+    to {
+      background-position: 10px 0;
+    }
+  }
+  @media (hover: hover) {
+    .tf-tk:hover {
+      --perf: var(--accent-line);
+      translate: 0 -6px;
+    }
+    .tf-tk:hover::before {
+      opacity: 1;
+    }
+    .tf-tk:hover .tf-tk-shape {
+      box-shadow: inset 0 0 0 1px var(--accent-line);
+    }
+    .tf-tk:hover .tf-tk-shape::before {
+      transform: translateX(110%);
+      transition: transform 1s var(--ease-snap);
+    }
+    .tf-tk:hover .tf-tk-shape::after {
+      animation: tf-perf-march 0.7s linear infinite;
+    }
+    .tf-tk:hover .tf-tk-photo > :first-child {
+      transform: scale(1.07);
+    }
+    .tf-tk:hover .tf-tk-date {
+      background: color-mix(in srgb, var(--accent) 26%, transparent);
+    }
+  }
+  .tf-tk:focus-visible {
+    --perf: var(--accent-line);
+  }
+  .tf-tk.is-sold .tf-tk-photo > :first-child {
+    filter: grayscale(1) brightness(0.55);
+  }
+
+  /* ------------------------------------------------------------------
+     Ingresso "de papel" deitado (Meus ingressos): dados à esquerda e o
+     canhoto com o QR à direita; os furos ficam no picote vertical. No
+     celular o canhoto desce e os furos vão para as laterais.
+     ------------------------------------------------------------------ */
+  .tf-pticket {
+    --stub: 15rem;
+    --cut-x: calc(100% - var(--stub));
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--stub);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: inset 0 0 0 1px var(--card-ring);
+  }
+  .tf-pticket::after {
+    content: "";
+    position: absolute;
+    top: 22px;
+    bottom: 22px;
+    left: var(--cut-x);
+    border-left: 2px dashed var(--line);
+  }
+  @media (max-width: 640px) {
+    .tf-pticket {
+      --stub: 0px;
+      --cut-y: calc(100% - 15.5rem);
+      grid-template-columns: 1fr;
+      mask:
+        radial-gradient(circle 14px at 0 var(--cut-y), #0000 13px, #000 14px) left / 51% 100% no-repeat,
+        radial-gradient(circle 14px at 100% var(--cut-y), #0000 13px, #000 14px) right / 51% 100% no-repeat;
+    }
+    .tf-pticket::after {
+      left: 22px;
+      right: 22px;
+      top: var(--cut-y);
+      bottom: auto;
+      border-left: 0;
+      border-top: 2px dashed var(--line);
+    }
+  }
+
+  /* Resumo do pedido em formato de ingresso (checkout e pagamento). */
+  .tf-order-ticket {
+    position: relative;
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: inset 0 0 0 1px var(--accent-line);
+  }
+
+  /* ------------------------------------------------------------------
+     Ingresso grande do topo da home. O reflexo holográfico e a faixa de
+     luz ficam parados para quem pediu menos movimento.
+     ------------------------------------------------------------------ */
+  .tf-paper {
+    --cut-y: calc(100% - 86px);
+    --r: 15px;
+    position: relative;
+    display: block;
+    width: 100%;
+    border: 2px solid transparent;
+    border-radius: 22px;
+    color: var(--ink);
+    background: linear-gradient(170deg, color-mix(in srgb, var(--accent) 16%, var(--surface)) 0%, var(--surface) 55%, var(--canvas) 100%) padding-box;
+    box-shadow: inset 0 0 0 1.5px var(--accent-line), inset 0 1px 0 rgb(255 255 255 / 0.08);
+    backface-visibility: hidden;
+  }
+  .tf-paper::after {
+    content: "";
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    bottom: 83px;
+    border-top: 2px dashed var(--accent-line);
+  }
+  .tf-paper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.22) 49%, rgb(255 200 150 / 0.12) 53%, transparent 62%);
+    background-size: 300% 100%;
+    background-repeat: no-repeat;
+    background-position: 130% 0;
+    animation: tf-shine 5.5s ease-in-out infinite;
+  }
+  .tf-holo {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.22;
+    background: linear-gradient(115deg, transparent 25%, color-mix(in srgb, var(--accent) 55%, transparent) 40%, rgb(255 190 90 / 0.5) 50%, color-mix(in srgb, var(--glow) 45%, transparent) 60%, transparent 75%);
+    background-size: 260% 260%;
+    background-position: var(--holo-x, 30%) var(--holo-y, 20%);
+  }
+  .tf-pulse {
+    animation: tf-pulse 1.8s ease-in-out infinite;
+    text-shadow: 0 0 10px var(--accent);
+  }
+  @keyframes tf-shine {
+    0%,
+    55% {
+      background-position: 130% 0;
+    }
+    85%,
+    100% {
+      background-position: -30% 0;
+    }
+  }
+  @keyframes tf-pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tf-paper::before,
+    .tf-pulse {
+      animation: none;
+    }
+  }
+
+  /* Topo da home: foto do palco em laranja, escurecida para o texto ler bem. */
+  .tf-hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background: var(--canvas) url("./assets/stage-orange.jpg") center 30% / cover no-repeat;
+  }
+  .tf-hero-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgb(2 2 3 / 0.95) 0%, rgb(2 2 3 / 0.74) 40%, rgb(2 2 3 / 0.28) 78%, rgb(2 2 3 / 0.42) 100%);
+  }
+  .tf-hero-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(48% 50% at 78% 35%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%),
+      linear-gradient(180deg, transparent 45%, rgb(2 2 3 / 0.9) 82%, var(--canvas) 100%);
+  }
+  [data-theme="light"] .tf-hero-bg::after {
+    background:
+      radial-gradient(48% 50% at 78% 35%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%),
+      linear-gradient(180deg, transparent 55%, var(--canvas) 100%);
+  }
+
+  /* Brilho laranja e violeta no topo das telas internas. */
+  .tf-topglow {
+    background:
+      radial-gradient(45% 60% at 82% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+      radial-gradient(35% 50% at 10% 0%, color-mix(in srgb, var(--glow) 12%, transparent), transparent 70%);
+  }
+
+  /* ------------------------------------------------------------------
+     Fitas cruzadas: duas faixas inclinadas que deslizam com a rolagem
+     (--shift vem do hook useScrollShift).
+     ------------------------------------------------------------------ */
+  .tf-tapes {
+    --shift: 0px;
+    position: relative;
+    height: 260px;
+    overflow: hidden;
+  }
+  .tf-tape {
+    position: absolute;
+    left: -60%;
+    width: 220%;
+    top: 50%;
+    height: 62px;
+    margin-top: -31px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    white-space: nowrap;
+    will-change: transform;
+  }
+  .tf-tape::before {
+    content: "";
+    position: absolute;
+    inset: 6px 0;
+    border-block: 1.5px dashed currentColor;
+    opacity: 0.28;
+    pointer-events: none;
+  }
+  .tf-tape-paper {
+    background: var(--paper);
+    color: var(--paper-ink);
+    transform: translateX(calc(var(--shift) * -1)) rotate(4deg);
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.16em;
+    box-shadow: 0 16px 40px rgb(0 0 0 / 0.5);
+  }
+  .tf-tape-brand {
+    background: var(--accent);
+    color: var(--accent-ink);
+    transform: translateX(var(--shift)) rotate(-4deg);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 22px;
+    box-shadow: 0 20px 60px var(--accent-glow);
+  }
+  @media (max-width: 600px) {
+    .tf-tapes {
+      height: 190px;
+    }
+    .tf-tape {
+      height: 46px;
+      margin-top: -23px;
+      gap: 18px;
+    }
+    .tf-tape-paper {
+      transform: translateX(calc(var(--shift) * -1)) rotate(9deg);
+      font-size: 12px;
+    }
+    .tf-tape-brand {
+      transform: translateX(var(--shift)) rotate(-9deg);
+      font-size: 16px;
+    }
+  }
+
+  /* CTA de organizadores: ingresso grande com picote vertical e furos reais. */
+  .tf-cta {
+    --stub: 320px;
+    --rr: 18px;
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr var(--stub);
+    border-radius: 28px;
+    overflow: hidden;
+    isolation: isolate;
+    background:
+      radial-gradient(70% 120% at 0% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 60%),
+      radial-gradient(60% 90% at 100% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 65%),
+      var(--surface);
+    box-shadow: inset 0 0 0 1px var(--accent-line);
+    mask:
+      radial-gradient(circle var(--rr) at calc(100% - var(--stub)) 0, #0000 calc(var(--rr) - 1px), #000 var(--rr)) top / 100% 51% no-repeat,
+      radial-gradient(circle var(--rr) at calc(100% - var(--stub)) 100%, #0000 calc(var(--rr) - 1px), #000 var(--rr)) bottom / 100% 51% no-repeat;
+  }
+  .tf-cta::before {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    top: 30px;
+    bottom: 30px;
+    right: var(--stub);
+    border-left: 2px dashed var(--accent-line);
+  }
+  .tf-cta-main {
+    position: relative;
+    isolation: isolate;
+  }
+  .tf-cta-main::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: url("./assets/stage-orange.jpg") 70% 55% / cover no-repeat;
+    mask-image: linear-gradient(90deg, transparent 25%, rgb(0 0 0 / 0.55) 70%, #000 100%);
+    opacity: 0.4;
+  }
+  .tf-cta-stub {
+    background: linear-gradient(165deg, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 55%);
+  }
+  @media (max-width: 960px) {
+    .tf-cta {
+      --stub-h: 190px;
+      --cut-y: calc(100% - var(--stub-h));
+      grid-template-columns: 1fr;
+      mask:
+        radial-gradient(circle var(--rr) at 0 var(--cut-y), #0000 calc(var(--rr) - 1px), #000 var(--rr)) left / 51% 100% no-repeat,
+        radial-gradient(circle var(--rr) at 100% var(--cut-y), #0000 calc(var(--rr) - 1px), #000 var(--rr)) right / 51% 100% no-repeat;
+    }
+    .tf-cta::before {
+      top: auto;
+      bottom: var(--stub-h);
+      left: 30px;
+      right: 30px;
+      border-left: 0;
+      border-top: 2px dashed var(--accent-line);
+    }
+    .tf-cta-main::before {
+      mask-image: linear-gradient(180deg, transparent 10%, #000 100%);
+    }
+    .tf-cta-stub {
+      min-height: var(--stub-h);
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     Placa neon (404, erro, servidor iniciando).
+     ------------------------------------------------------------------ */
+  .tf-neon-wrap {
+    position: relative;
+    isolation: isolate;
+    border-radius: 32px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: #f4f1f6;
+  }
+  .tf-neon-wrap::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background: #020203 url("./assets/neon-sign-orange.jpg") center / cover;
+    filter: brightness(0.45);
+  }
+  .tf-neon-wrap::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(60% 70% at 50% 50%, rgb(2 2 3 / 0.35), rgb(2 2 3 / 0.9));
+  }
+  .tf-neon {
+    font-family: var(--font-display);
+    font-weight: 800;
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    color: #ffe2cf;
+    text-shadow:
+      0 0 6px #fff,
+      0 0 18px var(--accent),
+      0 0 42px var(--accent),
+      0 0 90px color-mix(in srgb, var(--accent) 70%, transparent);
+    animation: tf-flicker 6s linear infinite;
+  }
+  @keyframes tf-flicker {
+    0%,
+    19%,
+    21%,
+    62%,
+    64%,
+    100% {
+      opacity: 1;
+    }
+    20%,
+    63% {
+      opacity: 0.55;
+    }
+  }
+
+  /* Arte das telas de entrada (login e cadastro). */
+  .tf-auth-art {
+    position: relative;
+    isolation: isolate;
+    border-radius: 32px;
+    overflow: hidden;
+    color: #f4f1f6;
+    box-shadow: inset 0 0 0 1px var(--accent-line);
+  }
+  .tf-auth-art::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background: #020203 url("./assets/stage-orange.jpg") center / cover;
+  }
+  .tf-auth-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(60% 60% at 50% 45%, transparent, rgb(2 2 3 / 0.75)),
+      linear-gradient(180deg, rgb(2 2 3 / 0.2), rgb(2 2 3 / 0.75));
+  }
+
+  /* Selos de status: pílula com bolinha da cor do status. */
+  .tf-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tf-status::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .tf-status-blink::before {
+    animation: tf-blink 1.4s ease-in-out infinite;
+  }
+  @keyframes tf-blink {
+    50% {
+      opacity: 0.25;
+    }
+  }
+
+  /* Tabelas: cabeçalho em versalete, linhas finas, sem efeitos. */
+  .tf-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+  .tf-table th {
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 14px 18px;
+    background: color-mix(in srgb, var(--ink) 2.5%, transparent);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .tf-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+    vertical-align: middle;
+  }
+  .tf-table tr:last-child td {
+    border-bottom: 0;
+  }
+  .tf-table tbody tr:hover {
+    background: color-mix(in srgb, var(--ink) 2.5%, transparent);
+  }
+
+  /* Leitor de QR da portaria: moldura com cantos e linha de "laser". */
+  .tf-scanner-frame {
+    position: absolute;
+    inset: 18%;
+    border-radius: 18px;
+    border: 3px solid var(--accent);
+    mask:
+      linear-gradient(#000 0 0) top left / 28% 28% no-repeat,
+      linear-gradient(#000 0 0) top right / 28% 28% no-repeat,
+      linear-gradient(#000 0 0) bottom left / 28% 28% no-repeat,
+      linear-gradient(#000 0 0) bottom right / 28% 28% no-repeat;
+    pointer-events: none;
+  }
+  .tf-laser {
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 16px 4px var(--accent-glow);
+    animation: tf-scan 2.2s ease-in-out infinite alternate;
+    pointer-events: none;
+  }
+  @keyframes tf-scan {
+    from {
+      top: 22%;
+    }
+    to {
+      top: 78%;
+    }
+  }
+
+  /* Bloco "carregando" com brilho que passa. */
+  .tf-shimmer {
+    background: linear-gradient(100deg, var(--raised) 30%, color-mix(in srgb, var(--ink) 9%, var(--raised)) 50%, var(--raised) 70%);
+    background-size: 300% 100%;
+    animation: tf-shimmer 1.4s linear infinite;
+  }
+  @keyframes tf-shimmer {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: 0 0;
+    }
   }
 }
 
-/* Troca de slide do destaque (resposta a clique ou à passagem automática). */
-@keyframes fade-in {
+/* Entrada de diálogos (resposta a uma ação do usuário). */
+@keyframes tf-pop {
   from {
     opacity: 0;
-  }
-}
-.animate-fade-in {
-  animation: fade-in 280ms ease-out;
-}
-
-/* Entrada do diálogo de confirmação (resposta a uma ação do usuário). */
-@keyframes dialog-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
+    transform: translateY(14px) scale(0.96);
   }
 }
 dialog[open] {
-  animation: dialog-in 160ms ease-out;
+  animation: tf-pop 0.4s var(--ease-spring) both;
 }
 dialog::backdrop {
-  background: rgb(0 0 0 / 0.6);
-  backdrop-filter: blur(2px);
+  background: rgb(2 2 3 / 0.72);
+  backdrop-filter: blur(6px);
 }
 
-/* Barra de progresso da foto atual na vitrine (dura o mesmo que a foto). */
+/* Barra de progresso do slide atual (dura o mesmo que o slide). */
 @keyframes progress {
   from {
     width: 0;
@@ -246,14 +934,24 @@ dialog::backdrop {
   animation: progress 3000ms linear forwards;
 }
 
-/* Ingresso subindo da fenda na confirmação da compra (resposta ao pagamento). */
-@keyframes ticket-out {
+/* Selo de sucesso que "salta" ao confirmar a compra. */
+@keyframes tf-badge-pop {
   from {
-    translate: -50% 40px;
-    rotate: 0deg;
+    transform: scale(0.4);
     opacity: 0;
   }
 }
-.animate-ticket-out {
-  animation: ticket-out 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+.animate-badge-pop {
+  animation: tf-badge-pop 0.7s var(--ease-spring) both;
+}
+
+/* Entrada dos cards ao aparecerem na tela (hook useReveal). */
+.tf-reveal {
+  transition:
+    opacity 0.7s ease var(--reveal-delay, 0ms),
+    transform 0.8s var(--ease-snap) var(--reveal-delay, 0ms);
+}
+.tf-reveal[data-revealed="false"] {
+  opacity: 0;
+  transform: translateY(28px) scale(0.98);
 }

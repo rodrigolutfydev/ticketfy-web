@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, TicketPercent, Timer, X } from "lucide-react";
+import { ArrowRight, TicketPercent, X } from "lucide-react";
 import { errorMessage } from "../api/client";
 import { createOrder, getEvent, listTicketTypes, previewCoupon } from "../api/endpoints";
 import type { CouponPreview } from "../api/types";
@@ -108,42 +108,39 @@ export default function CheckoutPage() {
   const orderError = mutation.error && !isCouponError(mutation.error) ? errorMessage(mutation.error) : null;
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1fr_360px] lg:gap-12">
+    <div className="mx-auto grid max-w-[1180px] items-start gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-8">
       <div>
         <BackLink to={`/events/${eventId}`}>{t.checkout.backToEvent}</BackLink>
-        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-ink">{t.checkout.title}</h1>
-        <p className="mt-2 text-muted">{t.checkout.subtitle}</p>
+        <h1 className="mt-6 text-[clamp(1.875rem,3.4vw,2.75rem)] font-extrabold leading-[1.05] tracking-[-0.045em] text-ink">{t.checkout.title}</h1>
+        <p className="mt-2.5 text-[1.0625rem] text-muted">{t.checkout.subtitle}</p>
 
-        <p className="mt-6 flex items-start gap-2.5 rounded-xl border border-warning/35 bg-warning/10 px-4 py-3 text-sm text-warning">
-          <Timer size={18} className="mt-px shrink-0" aria-hidden />
-          {t.checkout.holdNotice}
-        </p>
+        <div className="mt-6">
+          <Alert type="warning">{t.checkout.holdNotice}</Alert>
+        </div>
 
-        <ul className="mt-5 space-y-3">
+        <ul className="mt-5 flex flex-col gap-3">
           {lines.map((line) => (
-            <li key={line.ticketTypeId} className="relative rounded-2xl border border-line bg-surface p-5">
-              <span className="absolute -left-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-line bg-canvas" aria-hidden />
-              <span className="absolute -right-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-line bg-canvas" aria-hidden />
+            <li key={line.ticketTypeId} className="tf-panel tf-cut-y px-6 py-5 [--cut-y:50%] [--r:12px]">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="eyebrow">{t.checkout.ticket}</p>
-                  <p className="mt-2 text-xl font-semibold text-ink">
+                  <p className="mt-2 font-display text-xl font-bold tracking-[-0.03em] text-ink">
                     {line.quantity > 1 && <span className="tabular">{line.quantity}× </span>}
                     {line.type?.name ?? t.checkout.unavailableLot}
                   </p>
                   <p className="mt-1 text-sm text-muted">{event.name}</p>
                 </div>
-                <p className="tabular text-lg font-bold text-accent-text">{line.type ? formatPrice(line.type.price * line.quantity, locale) : t.common.notAvailable}</p>
+                <p className="tabular font-display text-lg font-extrabold tracking-[-0.03em] text-ink">{line.type ? formatPrice(line.type.price * line.quantity, locale) : t.common.notAvailable}</p>
               </div>
             </li>
           ))}
         </ul>
-        <Link to={`/events/${eventId}`} className="mt-4 inline-block text-sm font-semibold text-muted hover:text-ink">
+        <Link to={`/events/${eventId}`} className="mt-4 inline-block text-sm font-semibold text-accent-text hover:underline">
           {t.checkout.changeSelection}
         </Link>
       </div>
 
-      <div className="space-y-4 lg:pt-12">
+      <div className="flex flex-col gap-4 lg:sticky lg:top-24">
         <CheckoutSummary
           event={event}
           total={total}
@@ -155,7 +152,7 @@ export default function CheckoutPage() {
             subtotal: l.type ? l.type.price * l.quantity : null,
           }))}
         />
-        <div className="rounded-2xl border border-line bg-surface p-5">
+        <div className="tf-panel p-5">
           {applied ? (
             <div className="flex items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-sm text-ink">
@@ -193,7 +190,7 @@ export default function CheckoutPage() {
         </div>
         {unavailable && <Alert>{t.checkout.unavailable}</Alert>}
         {orderError && <Alert>{orderError}</Alert>}
-        <Button size="lg" className="w-full" disabled={unavailable || preview.isPending} loading={mutation.isPending} onClick={() => mutation.mutate()}>
+        <Button size="lg" className="w-full justify-between" disabled={unavailable || preview.isPending} loading={mutation.isPending} onClick={() => mutation.mutate()}>
           {total === 0 ? t.checkout.confirmFree : t.checkout.reserve} <ArrowRight size={17} aria-hidden />
         </Button>
       </div>

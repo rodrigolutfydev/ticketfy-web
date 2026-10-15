@@ -57,7 +57,7 @@ export default function OrganizerEventManagePage() {
             <div className="min-w-0">
               <p className="tabular text-[11px] font-bold tracking-wide text-accent-text">{eventStamp(event.startsAt, locale)}</p>
               <div className="mt-1 flex min-w-0 items-center gap-3">
-                <h1 className="truncate text-3xl font-semibold tracking-tight text-ink">{event.name}</h1>
+                <h1 className="truncate text-3xl font-bold tracking-[-0.035em] text-ink">{event.name}</h1>
                 {event.cancelledAt && (
                   <span className="shrink-0 rounded-full border border-danger/30 bg-danger/12 px-2.5 py-1 text-xs font-semibold text-danger">{m.cancelled}</span>
                 )}
@@ -174,7 +174,7 @@ function TicketTypesTab({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-6">
-      <section className="elevated overflow-hidden rounded-2xl border border-line bg-surface">
+      <section className="tf-panel overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
           <h2 className="text-lg font-semibold text-ink">{l.title}</h2>
           <Button size="sm" variant={creating ? "ghost" : "primary"} onClick={() => setCreating((c) => !c)}>
@@ -358,7 +358,7 @@ function CancelEventSection({ event }: { event: EventDetails }) {
 
   if (event.cancelledAt) {
     return (
-      <div className="rounded-2xl border border-line p-6">
+      <div className="rounded-[18px] border border-line p-6">
         <h2 className="text-lg font-extrabold text-ink">{s.cancelledTitle}</h2>
         <p className="mt-1 text-sm text-muted">{s.cancelledAt(formatShortDate(event.cancelledAt, locale))}</p>
         {event.cancellationReason && <p className="mt-2 text-sm text-ink">{s.reason(event.cancellationReason)}</p>}
