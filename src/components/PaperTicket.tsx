@@ -36,7 +36,7 @@ export default function PaperTicket({ event }: { event: EventSummary }) {
             <span className="text-accent-text">{h.ticketTop}</span>
             <span className="tf-pulse text-accent-text">●</span>
           </div>
-          <div className="mx-3.5 h-[200px] overflow-hidden rounded-xl shadow-[0_0_0_1px_rgb(255_255_255/0.06),0_14px_30px_rgb(0_0_0/0.45)] sm:h-[228px] short-lg:h-[130px]">
+          <div className="mx-3.5 h-[200px] overflow-hidden rounded-xl shadow-[0_0_0_1px_rgb(255_255_255/0.06),0_14px_30px_rgb(0_0_0/0.45)] sm:h-[228px]">
             <EventCover name={event.name} startsAt={event.startsAt} imageUrl={event.imageUrl} large />
           </div>
           <div className="flex flex-col gap-3 px-[18px] pb-5 pt-4">

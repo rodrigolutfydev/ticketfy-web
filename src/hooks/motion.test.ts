@@ -7,6 +7,7 @@ import {
   searchStages,
   closedForRetraction,
   searchRetraction,
+  ticketLeftReach,
   barRiseRepel,
   motionEnabled,
   scrollProgress,
@@ -105,15 +106,19 @@ describe("busca do topo se recolhe quando o ingresso desce", () => {
     const afterContact = step(768);
     expect(Math.abs(beforeContact - afterContact)).toBeLessThan(0.002);
   });
+
+  it("margem do ingresso inclinado: maior com o balanço da tela larga", () => {
+    expect(ticketLeftReach(520, 1440)).toBeGreaterThan(ticketLeftReach(520, 390));
+    expect(ticketLeftReach(520, 1440)).toBe(58);
+  });
 });
 
 describe("etapas da busca", () => {
-  it("a Cidade sai primeiro e o resto depois, sem pausa entre elas", () => {
+  it("primeiro sai a Cidade; na metade fica só nome + Buscar; depois some", () => {
     expect(searchStages(0)).toEqual({ a: 0, b: 0 });
-    expect(searchStages(0.3).b).toBe(0);
-    const middle = searchStages(0.5);
-    expect(middle.a).toBeGreaterThan(0.8);
-    expect(middle.b).toBeGreaterThan(0);
+    expect(searchStages(0.25).b).toBe(0);
+    expect(searchStages(0.5)).toEqual({ a: 1, b: 0 });
+    expect(searchStages(0.75).a).toBe(1);
     expect(searchStages(1)).toEqual({ a: 1, b: 1 });
   });
 

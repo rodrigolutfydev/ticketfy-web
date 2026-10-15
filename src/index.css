@@ -28,13 +28,19 @@
 */
 @custom-variant hover (&:where(:root[data-hover] *):hover);
 
-/*
-  short-lg: tela larga e baixa (notebook 1280×720, 1366×768, 1440×900,
-  1536×864...).
-  O palco da home fica mais compacto nela para a busca caber inteira na
-  primeira tela, sem rolar.
-*/
-@custom-variant short-lg (@media (min-width: 64rem) and (max-height: 900px));
+/* Variáveis do efeito da busca registradas como número (para calc e, na
+   busca de "Todos os eventos", para a transição). Valores iniciais: busca do
+   topo aberta (--repel 0) e busca da seção aberta (--scroll 1). */
+@property --repel {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --scroll {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
 
 @theme inline {
   --font-sans: "Inter Tight Variable", ui-sans-serif, system-ui, sans-serif;
@@ -718,25 +724,34 @@
   }
 
   /* Busca do topo: o ingresso, ao descer, a empurra para fora, em duas
-     etapas que se encadeiam (searchStages em hooks/motion.ts):
-       --a  a Cidade se recolhe da direita para a esquerda e o Buscar desliza
-            para junto do nome;
-       --b  o resto se recolhe da direita para a esquerda e some.
-     O JS (useHeroDrop no topo, useSearchReveal em "Todos os eventos", que
-     faz o caminho inverso) escreve --a/--b já suavizados com inércia.
-     --city-w/--city-h (useSearchBarMetrics) dizem o tamanho da parte Cidade:
-     largura lado a lado, altura empilhada (celular).
-     Sem JS ou com menos movimento, --a/--b não existem e a busca fica aberta;
-     com foco de teclado também abre inteira (nunca um campo invisível). */
+     etapas a partir de --closed (0 a 1), com a mesma conta de searchStages
+     (hooks/motion.ts):
+       --a (0 a 0,5)  a Cidade se recolhe da direita para a esquerda e o
+                      Buscar desliza para junto do nome;
+       --b (0,5 a 1)  o resto se recolhe da direita para a esquerda e some.
+     Cada etapa acelera e desacelera (smoothstep): o movimento é suave e as
+     duas aparecem separadas. No topo, --closed vem de --repel (useHeroDrop,
+     já suavizado com a inércia do ingresso) e a busca reabre se a página
+     subir. A mesma busca reaparece em "Todos os eventos" (.tf-search-reveal)
+     fazendo o caminho inverso conforme entra na tela (--scroll, do
+     useScrollShift, suavizado pela transição). --city-w/--city-h
+     (useSearchBarMetrics) dizem o tamanho da parte Cidade: largura lado a
+     lado, altura empilhada (celular). Sem JS ou com menos movimento, as duas
+     ficam abertas e paradas. */
   .tf-hero-search,
   .tf-search-reveal {
-    --cut-y: calc(100% - 86px - var(--a, 0) * var(--city-h, 0px));
+    --closed: 0;
+    --a-t: clamp(0, var(--closed) * 2, 1);
+    --b-t: clamp(0, var(--closed) * 2 - 1, 1);
+    --a: calc(var(--a-t) * var(--a-t) * (3 - 2 * var(--a-t)));
+    --b: calc(var(--b-t) * var(--b-t) * (3 - 2 * var(--b-t)));
+    --cut-y: calc(100% - 86px - var(--a) * var(--city-h, 0px));
     clip-path: inset(
-      -4px calc(var(--a, 0) * var(--city-w, 0px) + var(--b, 0) * (100% - var(--city-w, 0px) + 4px) - 4px) calc(var(--a, 0) * var(--city-h, 0px) - 4px) -4px
+      -4px calc(var(--a) * var(--city-w, 0px) + var(--b) * (100% - var(--city-w, 0px) + 4px) - 4px) calc(var(--a) * var(--city-h, 0px) - 4px) -4px
       round 20px
     );
-    transform: translate3d(calc(var(--b, 0) * -28px), 0, 0);
-    opacity: calc(1 - var(--b, 0) * 0.35);
+    transform: translate3d(calc(var(--b) * -28px), 0, 0);
+    opacity: calc(1 - var(--b) * 0.35);
   }
   @media (min-width: 48rem) {
     .tf-hero-search,
@@ -745,19 +760,31 @@
     }
   }
   .tf-hero-search {
+    --closed: var(--repel);
     z-index: 1;
   }
+  .tf-search-reveal {
+    --closed: calc(1 - clamp(0, var(--scroll) * 2.4, 1));
+    transition: --scroll 0.5s var(--ease-snap);
+  }
   .tf-search-city {
-    clip-path: inset(0 calc(var(--a, 0) * 100%) 0 0);
-    opacity: calc(1 - var(--a, 0));
+    clip-path: inset(0 calc(var(--a) * 100%) 0 0);
+    opacity: calc(1 - var(--a));
   }
   .tf-search-go {
-    transform: translate3d(calc(var(--a, 0) * var(--city-w, 0px) * -1), calc(var(--a, 0) * var(--city-h, 0px) * -1), 0);
+    transform: translate3d(calc(var(--a) * var(--city-w, 0px) * -1), calc(var(--a) * var(--city-h, 0px) * -1), 0);
   }
-  .tf-hero-search:focus-within,
-  .tf-search-reveal:focus-within {
-    --a: 0 !important;
-    --b: 0 !important;
+  /* Com foco, a de "Todos os eventos" abre inteira. A do topo só com foco de
+     teclado (data-kbd-focus, do useHeroDrop): aí abre e fica na frente do
+     ingresso, para o campo focado nunca ficar escondido. Com foco de clique
+     ela segue o ingresso (senão ele passaria por cima) e perde o foco se
+     sumir. */
+  .tf-search-reveal:focus-within,
+  .tf-hero-search[data-kbd-focus] {
+    --closed: 0;
+  }
+  .tf-hero-search[data-kbd-focus] {
+    z-index: 3;
   }
 
   /* Topo da home: foto do palco em laranja, escurecida para o texto ler bem. */
