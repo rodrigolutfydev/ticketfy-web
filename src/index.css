@@ -418,6 +418,146 @@
   .tf-tk.is-sold .tf-tk-photo > :first-child {
     filter: grayscale(1) brightness(0.55);
   }
+  .tf-tk-glare {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    border-radius: inherit;
+    opacity: 0;
+    mix-blend-mode: screen;
+    background: radial-gradient(circle at var(--holo-x, 50%) var(--holo-y, 30%), rgb(255 255 255 / 0.28), color-mix(in srgb, var(--accent) 18%, transparent) 30%, transparent 60%);
+    transition: opacity 0.35s ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tf-tk:hover {
+      translate: none;
+    }
+    .tf-tk:hover .tf-tk-shape::before {
+      transform: translateX(-110%);
+    }
+    .tf-tk:hover .tf-tk-photo > :first-child {
+      transform: none;
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     Carrossel "Próximos eventos" (UpcomingRail). O JS anda a trilha por
+     transform e interpola escala/opacidade pela distância até o centro.
+     --hl = quanto o card do meio cresce; --near = opacidade dos vizinhos;
+     --far = opacidade das pontas.
+     ------------------------------------------------------------------ */
+  .tf-agenda::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 120px;
+    z-index: -1;
+    width: min(1100px, 100%);
+    height: 620px;
+    transform: translateX(-50%);
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--glow) 22%, transparent), var(--accent-soft) 45%, transparent);
+    pointer-events: none;
+  }
+  .tf-rail {
+    --card-w: 260px;
+    --rail-gap: 52px;
+    --hl: 0.2;
+    --near: 1;
+    --far: 0.38;
+    position: relative;
+    overflow: hidden;
+    padding: 64px calc(50% - var(--card-w) / 2) 72px;
+  }
+  .tf-rail.is-looping {
+    touch-action: pan-y;
+    cursor: grab;
+    user-select: none;
+  }
+  .tf-rail.is-dragging {
+    cursor: grabbing;
+  }
+  .tf-rail.is-dragging a {
+    pointer-events: none;
+  }
+  .tf-rail:focus-visible {
+    outline-offset: -4px;
+  }
+  .tf-rail-track {
+    display: flex;
+    align-items: center;
+    gap: var(--rail-gap);
+    width: max-content;
+    will-change: transform;
+  }
+  .tf-rail-card {
+    display: grid;
+    flex: 0 0 var(--card-w);
+    will-change: transform, opacity;
+  }
+  .tf-rail-card.is-center {
+    z-index: 2;
+  }
+  .tf-rail-card.is-center .tf-tk {
+    --perf: var(--accent-line);
+  }
+  .tf-rail-card.is-center .tf-tk::before {
+    opacity: 1;
+  }
+  .tf-rail-card.is-center .tf-tk-shape {
+    box-shadow: inset 0 0 0 1.5px var(--accent-line);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, var(--surface)) 0%, var(--surface) 70%);
+  }
+  .tf-rail-tilt {
+    position: relative;
+    will-change: transform;
+  }
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .tf-rail-tilt:hover .tf-tk-glare {
+      opacity: 1;
+    }
+  }
+  @media (min-width: 601px) {
+    .tf-rail {
+      --rail-max: calc(var(--card-w) * 4 + var(--rail-gap) * 4 + 70px);
+      max-width: var(--rail-max);
+      margin-inline: auto;
+      padding-inline: min(calc(50% - var(--card-w) / 2), calc((var(--rail-max) - var(--card-w)) / 2));
+    }
+    .tf-rail.is-looping {
+      mask-image: linear-gradient(90deg, transparent 0, #000 170px, #000 calc(100% - 170px), transparent 100%);
+    }
+  }
+  @media (max-width: 600px) {
+    .tf-rail {
+      --card-w: 250px;
+      --rail-gap: 28px;
+      --hl: 0.1;
+      padding-block: 40px 52px;
+    }
+  }
+  .tf-rail-dot {
+    position: relative;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--line);
+    transition:
+      width 0.25s ease,
+      background-color 0.25s ease;
+  }
+  .tf-rail-dot::after {
+    content: "";
+    position: absolute;
+    inset: -10px -4px;
+  }
+  .tf-rail-dot:hover {
+    background: var(--muted);
+  }
+  .tf-rail-dot[aria-current="true"] {
+    width: 28px;
+    background: var(--accent);
+  }
 
   /* ------------------------------------------------------------------
      Ingresso "de papel" deitado (Meus ingressos): dados à esquerda e o

@@ -49,12 +49,14 @@ export function EventTicketCard({
   locale,
   categoryText,
   cover,
+  tabIndex,
 }: {
   event: EventSummary;
   labels: EventCardLabels;
   locale: Locale;
   categoryText?: string;
   cover: ReactNode;
+  tabIndex?: number;
 }) {
   const { day, month, weekday } = dateParts(event.startsAt, locale);
   const price = priceLine(event, labels, locale);
@@ -64,8 +66,10 @@ export function EventTicketCard({
       to={`/events/${event.id}`}
       className={`tf-tk group h-full ${event.soldOut ? "is-sold" : ""}`}
       aria-label={`${event.name}, ${formatDate(event.startsAt, locale)}`}
+      tabIndex={tabIndex}
     >
       <div className="tf-tk-shape tf-cut-y h-full">
+        <span className="tf-tk-glare" aria-hidden />
         <div className="tf-tk-photo">{cover}</div>
         <div className="flex flex-1 flex-col gap-4 px-[18px] pb-[18px] pt-5">
           <div className="flex gap-3">
@@ -132,7 +136,7 @@ export function EventTicketCard({
   );
 }
 
-export default function EventCard({ event }: { event: EventSummary }) {
+export default function EventCard({ event, tabIndex }: { event: EventSummary; tabIndex?: number }) {
   const { t, locale } = useI18n();
   const labels: EventCardLabels = {
     featured: t.eventCard.featured,
@@ -149,6 +153,7 @@ export default function EventCard({ event }: { event: EventSummary }) {
       locale={locale}
       categoryText={event.category ? categoryLabel(event.category, locale) : undefined}
       cover={<EventCover name={event.name} startsAt={event.startsAt} imageUrl={event.imageUrl} />}
+      tabIndex={tabIndex}
     />
   );
 }

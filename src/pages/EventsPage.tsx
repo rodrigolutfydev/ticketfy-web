@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, ArrowUpRight, CalendarPlus, CalendarSearch, Check, MapPin, QrCode, Repeat, Search, Timer, X, Zap } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CalendarPlus, CalendarSearch, Check, MapPin, QrCode, Repeat, Search, Timer, X, Zap } from "lucide-react";
 import { listEventCategories, listEvents } from "../api/endpoints";
 import type { EventCategory, EventCategoryCount, EventSummary } from "../api/types";
 import { CATEGORY_LABELS, EVENT_CATEGORIES, categoryLabel, parseCategoryParam } from "../i18n/categories";
@@ -20,11 +20,13 @@ import { useMe } from "../auth/useMe";
 import EventCard, { EventCardSkeleton } from "../components/EventCard";
 import PaperTicket from "../components/PaperTicket";
 import CrossedTapes from "../components/CrossedTapes";
+import UpcomingRail from "../components/UpcomingRail";
 import Pagination from "../components/Pagination";
 import { Empty, ErrorMessage } from "../components/StateMessage";
 import { Button, ButtonLink } from "../components/ui";
 import { isPast } from "../utils/format";
 import { safeImageUrl } from "../utils/security";
+import { upcomingForRail } from "../utils/rail";
 import { useReveal } from "../hooks/motion";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -83,7 +85,7 @@ export default function EventsPage() {
     queryKey: ["events", { featured: true, soldOut: false }],
     queryFn: () => listEvents({ featured: true, soldOut: false, size: 8 }),
   });
-  // Lista geral sem filtros: reserva para o palco quando não há destaques.
+  // Lista geral sem filtros: alimenta o carrossel "Próximos eventos" e o palco quando não há destaques.
   // A chave é a mesma da página inicial sem busca, então vem do cache.
   const spotlightQuery = useQuery({
     queryKey: ["events", { q: "", city: "", page: 0, soldOut: false }],
@@ -93,6 +95,7 @@ export default function EventsPage() {
   const byDate = (list: EventSummary[]) => list.filter((e) => !isPast(e.startsAt)).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const featured = byDate((featuredQuery.data?.content ?? []).filter((e) => e.featured));
   const upcoming = byDate(spotlightQuery.data?.content ?? []);
+  const railEvents = upcomingForRail(spotlightQuery.data?.content ?? []);
   // O ingresso do palco: o primeiro destaque com foto; senão qualquer destaque; senão o próximo evento.
   const pool = featured.length > 0 ? featured : upcoming;
   const heroEvent = pool.find((e) => safeImageUrl(e.imageUrl)) ?? pool[0] ?? null;
@@ -114,13 +117,13 @@ export default function EventsPage() {
 
       <CrossedTapes paper={tapePaper} brand={t.look.home.tapeBrand} />
 
-      {!filtering && featured.length > 0 && <FeaturedRail events={featured} />}
+      {!filtering && railEvents.length > 0 && <UpcomingRail events={railEvents} eyebrow={t.look.home.upcomingEyebrow} title={t.look.home.upcomingTitle} />}
 
       <section id="eventos" className="page-container scroll-mt-28 pt-16 sm:pt-20" aria-labelledby="eventos-titulo">
         <SectionHeading
           id="eventos-titulo"
           eyebrow={t.look.home.allEyebrow}
-          title={filtering ? t.storefront.searchResults : t.storefront.upcoming}
+          title={filtering ? t.storefront.searchResults : t.look.home.allTitle}
           subtitle={
             data && events.length > 0
               ? (filtering ? t.storefront.found : t.storefront.onSale)(data.page.totalElements)
@@ -355,54 +358,6 @@ function Hero({ heroEvent, qInput, cityInput, setQInput, setCityInput, onSubmit 
             </Button>
           </div>
         </form>
-      </div>
-    </section>
-  );
-}
-
-// Destaques escolhidos pelo admin: trilho que rola de lado (com setas no computador).
-function FeaturedRail({ events }: { events: EventSummary[] }) {
-  const { t } = useI18n();
-  const rail = useRef<HTMLDivElement>(null);
-  const scrollBy = (direction: 1 | -1) => {
-    const element = rail.current;
-    if (!element) return;
-    element.scrollBy({ left: direction * Math.max(280, element.clientWidth * 0.8), behavior: "smooth" });
-  };
-  const arrow =
-    "flex h-12 w-12 items-center justify-center rounded-full text-ink shadow-[inset_0_0_0_1px_var(--line)] transition-[transform,background-color,box-shadow] hover:scale-105 hover:bg-accent-soft hover:shadow-[inset_0_0_0_1px_var(--accent)] active:scale-95";
-  return (
-    <section className="relative pt-12 sm:pt-16" aria-labelledby="destaques-titulo">
-      {/* Brilho violeta e laranja atrás dos cards. */}
-      <div
-        className="pointer-events-none absolute left-1/2 top-24 -z-10 h-[620px] w-[min(1100px,100%)] -translate-x-1/2 bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--glow)_22%,transparent),var(--accent-soft)_45%,transparent)]"
-        aria-hidden
-      />
-      <div className="page-container">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <SectionHeading id="destaques-titulo" eyebrow={t.storefront.featuredSection} title={t.look.home.featuredTitle} />
-          {events.length > 4 && (
-            <div className="mb-8 hidden gap-2.5 sm:flex">
-              <button type="button" className={arrow} onClick={() => scrollBy(-1)} aria-label={t.look.home.prevFeatured} aria-controls="destaques-trilho">
-                <ArrowLeft size={16} aria-hidden />
-              </button>
-              <button type="button" className={arrow} onClick={() => scrollBy(1)} aria-label={t.look.home.nextFeatured} aria-controls="destaques-trilho">
-                <ArrowRight size={16} aria-hidden />
-              </button>
-            </div>
-          )}
-        </div>
-        <div
-          ref={rail}
-          id="destaques-trilho"
-          className="-mx-4 flex snap-x snap-mandatory gap-[22px] overflow-x-auto scroll-smooth px-4 pb-8 pt-2 [scrollbar-width:none] sm:-mx-6 sm:px-6"
-        >
-          {events.map((event) => (
-            <div key={event.id} className="grid w-[260px] shrink-0 snap-start sm:w-[280px]">
-              <EventCard event={event} />
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );
