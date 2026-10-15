@@ -3,7 +3,10 @@ import {
   floatOffset,
   heroDropFrame,
   heroDropTravel,
-  heroRepel,
+  heroSearchClosed,
+  searchStages,
+  closedForRetraction,
+  searchRetraction,
   barRiseRepel,
   motionEnabled,
   scrollProgress,
@@ -68,31 +71,58 @@ describe("hover do CSS segue o ponteiro de verdade", () => {
 });
 
 describe("busca do topo se recolhe quando o ingresso desce", () => {
-  // Busca de 100px de altura entre 1000 e 1100; o que importa é a base do ingresso.
-  const bar = [1000, 1100] as const;
+  // Ingresso parado com a base em 670; busca começando em 772 (contato em 764).
+  const rest = 670;
+  const barTop = 772;
 
-  it("aberta enquanto o ingresso está longe", () => {
-    expect(heroRepel(800, ...bar)).toBe(0);
+  it("aberta com o ingresso parado", () => {
+    expect(heroSearchClosed(670, rest, barTop, 0.45)).toBe(0);
   });
 
-  it("começa a recolher antes de encostar", () => {
-    const value = heroRepel(950, ...bar);
-    expect(value).toBeGreaterThan(0);
-    expect(value).toBeLessThan(1);
+  it("ao encostar já recolheu o mínimo pedido", () => {
+    expect(heroSearchClosed(764, rest, barTop, 0.45)).toBeGreaterThanOrEqual(0.45);
   });
 
-  it("ainda saindo logo depois de a base passar dela (saída suave)", () => {
-    const value = heroRepel(1100, ...bar);
-    expect(value).toBeGreaterThan(0.3);
-    expect(value).toBeLessThan(1);
+  it("some de vez 520px depois de encostar", () => {
+    expect(heroSearchClosed(764 + 520, rest, barTop, 0.45)).toBe(1);
   });
 
-  it("some de vez quando a base do ingresso passa 240px dela", () => {
-    expect(heroRepel(1340, ...bar)).toBe(1);
+  it("sempre crescente e sem saltos nem paradas no caminho", () => {
+    let previous = 0;
+    let maxStep = 0;
+    for (let bottom = 671; bottom <= 1284; bottom++) {
+      const value = heroSearchClosed(bottom, rest, barTop, 0.45);
+      expect(value).toBeGreaterThanOrEqual(previous);
+      maxStep = Math.max(maxStep, value - previous);
+      previous = value;
+    }
+    expect(maxStep).toBeLessThan(0.02);
   });
 
-  it("continua recolhida depois que o ingresso passou", () => {
-    expect(heroRepel(1700, ...bar)).toBe(1);
+  it("sem freada no contato: a velocidade quase não muda de um lado para o outro", () => {
+    const step = (bottom: number) => heroSearchClosed(bottom + 1, rest, barTop, 0.45) - heroSearchClosed(bottom, rest, barTop, 0.45);
+    const beforeContact = step(760);
+    const afterContact = step(768);
+    expect(Math.abs(beforeContact - afterContact)).toBeLessThan(0.002);
+  });
+});
+
+describe("etapas da busca", () => {
+  it("a Cidade sai primeiro e o resto depois, sem pausa entre elas", () => {
+    expect(searchStages(0)).toEqual({ a: 0, b: 0 });
+    expect(searchStages(0.3).b).toBe(0);
+    const middle = searchStages(0.5);
+    expect(middle.a).toBeGreaterThan(0.8);
+    expect(middle.b).toBeGreaterThan(0);
+    expect(searchStages(1)).toEqual({ a: 1, b: 1 });
+  });
+
+  it("acha o menor recolhimento que abre o espaço pedido", () => {
+    const closed = closedForRetraction(420, 1300, 480);
+    expect(searchRetraction(closed, 1300, 480)).toBeGreaterThanOrEqual(420);
+    expect(searchRetraction(closed - 0.01, 1300, 480)).toBeLessThan(420);
+    expect(closedForRetraction(0, 1300, 480)).toBe(0);
+    expect(closedForRetraction(5000, 1300, 480)).toBe(1);
   });
 });
 

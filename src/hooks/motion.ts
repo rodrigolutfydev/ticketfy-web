@@ -261,15 +261,35 @@ export function heroDropFrame(drop: number, layout: HeroDropLayout, viewportWidt
   };
 }
 
-// Quanto a busca do topo já se recolheu (0 a 1) com o ingresso descendo
-// sobre ela: começa `lead` px antes de a base do ingresso encostar e chega a
-// 1 (sumiu) quando a base passa `tail` px da busca. A faixa longa deixa a
-// saída suave e dá espaço para as duas etapas (ver .tf-hero-search no CSS).
-// Depois fica recolhida; só reabre se a página subir de novo.
-export function heroRepel(ticketBottom: number, barTop: number, barBottom: number, lead = 60, tail = 240) {
-  const span = barBottom - barTop + lead + tail;
-  if (span <= 0) return 0;
-  return Math.round(smoothstep(clamp((ticketBottom + lead - barTop) / span, 0, 1)) * 1000) / 1000;
+const round3 = (n: number) => Math.round(n * 1000) / 1000;
+
+// Recolhimento da busca do topo (0 a 1) numa curva só, do ingresso parado
+// (`restBottom`, a base dele sem rolar) até `tail` px depois de encostar.
+// Ao encostar (`barTop` - 8), a busca já tem de ter recolhido pelo menos
+// `minAtContact` (o bastante para ficar à esquerda dele). A curva é uma spline
+// de Hermite que passa por esse ponto com a mesma velocidade dos dois lados
+// (média harmônica das inclinações, que garante que ela só cresce): começa
+// parada, nunca freia de repente no contato e termina parada.
+export function heroSearchClosed(ticketBottom: number, restBottom: number, barTop: number, minAtContact: number, tail = 520) {
+  const contact = barTop - 8;
+  const start = Math.min(restBottom, contact - 1);
+  const end = contact + tail;
+  const u = clamp((ticketBottom - start) / (end - start), 0, 1);
+  const uc = (contact - start) / (end - start);
+  const plain = smoothstep(uc);
+  const cv = Math.min(0.98, Math.max(minAtContact, plain));
+  const before = cv / uc;
+  const after = (1 - cv) / (1 - uc);
+  const slope = cv === plain ? 6 * uc * (1 - uc) : (2 * before * after) / (before + after);
+  let value: number;
+  if (u <= uc) {
+    const t = u / uc;
+    value = (-2 * t ** 3 + 3 * t ** 2) * cv + (t ** 3 - t ** 2) * uc * slope;
+  } else {
+    const t = (u - uc) / (1 - uc);
+    value = (2 * t ** 3 - 3 * t ** 2 + 1) * cv + (t ** 3 - 2 * t ** 2 + t) * (1 - uc) * slope + (-2 * t ** 3 + 3 * t ** 2);
+  }
+  return round3(clamp(value, 0, 1));
 }
 
 // No celular a busca fica atrás do ingresso enquanto ele desce e só aparece
@@ -283,6 +303,57 @@ export function barRiseRepel(barTop: number, barHeight: number, ticketTop: numbe
   return Math.round(smoothstep(clamp((startTop - barTop) / (startTop - endTop), 0, 1)) * 1000) / 1000;
 }
 
+// Etapas do recolhimento da busca a partir de um valor contínuo (0 a 1):
+// `a` recolhe a Cidade (o Buscar desliza para junto do nome), `b` recolhe o
+// resto. As faixas se sobrepõem (a: 0–0,6; b: 0,4–1) e cada uma acelera e
+// desacelera suave: o movimento nunca para entre uma etapa e outra.
+export function searchStages(closed: number) {
+  return {
+    a: round3(smoothstep(clamp(closed / 0.6, 0, 1))),
+    b: round3(smoothstep(clamp((closed - 0.4) / 0.6, 0, 1))),
+  };
+}
+
+// Quantos px a busca já recolheu (a partir da direita) para um valor de closed.
+export function searchRetraction(closed: number, barWidth: number, cityWidth: number) {
+  const { a, b } = searchStages(closed);
+  return a * cityWidth + b * (barWidth - cityWidth);
+}
+
+// Menor closed que recolhe pelo menos `need` px. O recolhimento só cresce com
+// closed, então uma busca binária basta.
+export function closedForRetraction(need: number, barWidth: number, cityWidth: number) {
+  if (need <= 0) return 0;
+  if (need >= barWidth) return 1;
+  let low = 0;
+  let high = 1;
+  for (let i = 0; i < 18; i++) {
+    const mid = (low + high) / 2;
+    if (searchRetraction(mid, barWidth, cityWidth) >= need) high = mid;
+    else low = mid;
+  }
+  return high;
+}
+
+// Escreve as etapas na busca (o CSS lê --a e --b).
+function writeSearchStages(element: HTMLElement, closed: number) {
+  const { a, b } = searchStages(closed);
+  element.style.setProperty("--a", String(a));
+  element.style.setProperty("--b", String(b));
+}
+
+// Folga entre a borda direita da busca e o ingresso.
+const CLEARANCE = 32;
+
+// Quanto o ingresso pode avançar para a esquerda além da caixa dele parado:
+// inclinação fixa de 4° mais o balanço máximo da descida (ver heroDropFrame) e
+// a flutuação. É uma margem fixa de propósito: medir a posição de cada quadro
+// faria a busca tremer junto com a flutuação.
+export function ticketLeftReach(height: number, viewportWidth: number) {
+  const swayMax = viewportWidth < 600 ? 1.5 : viewportWidth < 960 ? 3.5 : 7;
+  return Math.round((height / 2) * Math.sin(((4 + swayMax) * Math.PI) / 180) + 8);
+}
+
 // Folga do corte na fenda: o ingresso vai inclinado e flutuando, então as
 // pontas descem um pouco além da conta feita com ele reto.
 const CUT_SLACK = 28;
@@ -290,9 +361,12 @@ const CUT_SLACK = 28;
 // Liga o percurso: o elemento desce com a rolagem até o elemento `slot` (as
 // fitas). Escreve --drop, --sway, --tks e --tko e corta a parte que já entrou
 // na fenda (clip-path). Suavizado com inércia, igual em 60 ou 120 Hz.
-// Se `repelSelector` existir (a busca), ela ganha --repel (0 a 1) para se
-// recolher conforme o ingresso desce sobre ela (heroRepel) ou, no celular,
-// conforme sobe na tela depois de sair de trás dele (barRiseRepel).
+// Se `repelSelector` existir (a busca), ela se recolhe em duas etapas (--a e
+// --b, ver searchStages) conforme o ingresso desce sobre ela (heroSearchClosed), mas
+// nunca deixa o ingresso passar por cima: recolhe pelo menos o necessário
+// para ficar à esquerda dele. No celular, onde ela fica atrás do ingresso,
+// recolhe conforme sobe na tela depois de sair de trás dele (barRiseRepel).
+// Tudo sai de `current`, que já anda com inércia: sem transição no CSS.
 export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSelector?: string): RefObject<T | null> {
   const ref = useRef<T>(null);
   const enabled = motionEnabled(useMotionPreference());
@@ -303,7 +377,8 @@ export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSe
     const bar = repelSelector ? document.querySelector<HTMLElement>(repelSelector) : null;
     if (!element || !slotElement || !enabled) return;
     let layout: HeroDropLayout = { center: 0, height: 0, slot: 0 };
-    let barBox = { top: 0, bottom: 0 };
+    let barBox = { top: 0, bottom: 0, right: 0, width: 0 };
+    let ticketLeft = 0;
     // Campos empilhados (celular): mesma quebra do md: do Tailwind na busca.
     const stackedQuery = window.matchMedia("(max-width: 47.99rem)");
     let current = 0;
@@ -328,7 +403,8 @@ export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSe
       };
       if (bar) {
         const barRect = restingRect(bar);
-        barBox = { top: barRect.top + window.scrollY, bottom: barRect.bottom + window.scrollY };
+        barBox = { top: barRect.top + window.scrollY, bottom: barRect.bottom + window.scrollY, right: barRect.right, width: barRect.width };
+        ticketLeft = rect.left - ticketLeftReach(rect.height, window.innerWidth);
       }
     };
     const target = () => clamp(window.scrollY * 0.9, 0, heroDropTravel(layout));
@@ -344,10 +420,18 @@ export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSe
       element.style.visibility = f.opacity <= 0.001 ? "hidden" : "";
       if (bar) {
         const ticketTop = layout.center + f.drop - layout.height / 2;
-        const repel = stackedQuery.matches
-          ? barRiseRepel(barBox.top - window.scrollY, barBox.bottom - barBox.top, ticketTop - window.scrollY)
-          : heroRepel(ticketTop + layout.height, barBox.top, barBox.bottom);
-        bar.style.setProperty("--repel", repel.toFixed(3));
+        const ticketBottom = ticketTop + layout.height;
+        let closed: number;
+        if (stackedQuery.matches) {
+          closed = barRiseRepel(barBox.top - window.scrollY, barBox.bottom - barBox.top, ticketTop - window.scrollY);
+        } else {
+          // Ao encostar, a borda direita já tem de estar à esquerda do ingresso.
+          const cityWidth = parseFloat(bar.style.getPropertyValue("--city-w")) || 0;
+          const need = barBox.right - (ticketLeft - CLEARANCE);
+          const minAtContact = closedForRetraction(need, barBox.width, cityWidth);
+          closed = heroSearchClosed(ticketBottom, layout.center + layout.height / 2, barBox.top, minAtContact);
+        }
+        writeSearchStages(bar, closed);
       }
     };
     const tick = (now: number) => {
@@ -388,9 +472,62 @@ export function useHeroDrop<T extends HTMLElement>(slotSelector: string, repelSe
       for (const name of ["--drop", "--sway", "--tks", "--tko"]) element.style.removeProperty(name);
       element.style.clipPath = "";
       element.style.visibility = "";
-      bar?.style.removeProperty("--repel");
+      bar?.style.removeProperty("--a");
+      bar?.style.removeProperty("--b");
     };
   }, [enabled, slotSelector, repelSelector]);
+
+  return ref;
+}
+
+// Busca de "Todos os eventos": abre da esquerda para a direita (o caminho
+// inverso do recolhimento do topo) conforme entra na tela, com a mesma inércia
+// do ingresso, para não engasgar com a roda do mouse.
+export function useSearchReveal<T extends HTMLElement>(): RefObject<T | null> {
+  const ref = useRef<T>(null);
+  const enabled = motionEnabled(useMotionPreference());
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || !enabled) return;
+    let current = 0;
+    let frame = 0;
+    let last = 0;
+    // Fechada com o topo na borda de baixo da tela; aberta perto da metade.
+    const target = () => {
+      const rect = element.getBoundingClientRect();
+      return 1 - clamp(scrollProgress(rect.top, rect.height, window.innerHeight) * 2.4, 0, 1);
+    };
+    const tick = (now: number) => {
+      frame = 0;
+      const dt = Math.min(64, now - (last || now));
+      last = now;
+      const goal = target();
+      current += (goal - current) * (1 - Math.pow(1 - 0.14, dt / 16.67));
+      if (Math.abs(goal - current) < 0.001) {
+        current = goal;
+        last = 0;
+        writeSearchStages(element, current);
+        return;
+      }
+      writeSearchStages(element, current);
+      frame = requestAnimationFrame(tick);
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(tick);
+    };
+    current = target();
+    writeSearchStages(element, current);
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      element.style.removeProperty("--a");
+      element.style.removeProperty("--b");
+    };
+  }, [enabled]);
 
   return ref;
 }

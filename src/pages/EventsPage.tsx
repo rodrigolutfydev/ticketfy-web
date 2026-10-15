@@ -27,7 +27,7 @@ import { Button, ButtonLink } from "../components/ui";
 import { isPast } from "../utils/format";
 import { safeImageUrl } from "../utils/security";
 import { upcomingForRail } from "../utils/rail";
-import { useReveal, useScrollShift } from "../hooks/motion";
+import { useReveal, useSearchReveal } from "../hooks/motion";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 export default function EventsPage() {
@@ -289,9 +289,9 @@ function Hero({ heroEvent, qInput, cityInput, setQInput, setCityInput, onSubmit 
     <section data-theme="dark" className="relative isolate -mt-[76px] overflow-x-clip bg-canvas pt-[76px] text-ink" aria-labelledby="home-titulo">
       <div className="tf-hero-bg" aria-hidden />
       <div className="page-container">
-        <div className="flex flex-col items-stretch gap-12 pt-6 lg:flex-row lg:items-center lg:justify-between lg:pt-12">
-          <div className="flex max-w-[720px] flex-col gap-7">
-            <h1 id="home-titulo" className="text-[clamp(2.625rem,6.4vw,5.75rem)] font-extrabold leading-none tracking-[-0.05em] text-ink">
+        <div className="flex flex-col items-stretch gap-12 pt-6 lg:flex-row lg:items-center lg:justify-between lg:pt-12 short-lg:pt-4">
+          <div className="flex max-w-[720px] flex-col gap-7 short-lg:gap-5">
+            <h1 id="home-titulo" className="text-[clamp(2.625rem,6.4vw,5.75rem)] font-extrabold leading-none tracking-[-0.05em] text-ink short-lg:text-[min(6.4vw,9vh,4.5rem)]">
               {h.title}
             </h1>
             <p className="max-w-[560px] text-[clamp(1.0625rem,1.5vw,1.3125rem)] leading-relaxed text-ink/85">{h.subtitle}</p>
@@ -324,10 +324,15 @@ function Hero({ heroEvent, qInput, cityInput, setQInput, setCityInput, onSubmit 
           {heroEvent && <PaperTicket event={heroEvent} />}
         </div>
 
-        {/* Recolhe da direita para a esquerda quando o ingresso desce por cima dela. */}
+        {/* Recolhe da direita para a esquerda quando o ingresso desce por cima dela.
+            No desktop fica bem abaixo do ingresso (lg:mt-48): o espaço deixa a
+            primeira etapa do recolhimento mais lenta. Em tela larga e baixa
+            (short-lg) o espaço é o maior que ainda deixa a busca inteira na
+            primeira tela: altura da tela menos o palco compacto (499px), a
+            busca (94px) e 16px de respiro, entre 96px e 192px. */}
         <SearchBar
           variant="hero"
-          className="mb-16 mt-20 md:mt-24"
+          className="mb-16 mt-20 md:mt-24 lg:mt-48 short-lg:mt-[clamp(6rem,calc(100svh_-_610px),12rem)]"
           qInput={qInput}
           cityInput={cityInput}
           setQInput={setQInput}
@@ -352,16 +357,16 @@ interface SearchBarProps {
 // Busca em forma de ingresso: recortes nas laterais e o botão no "canhoto".
 // Aparece duas vezes, com os mesmos campos:
 // - "hero" (no palco): o ingresso do topo, ao descer, a empurra para fora; ela
-//   se recolhe da direita para a esquerda (--repel, escrito pelo useHeroDrop
-//   do PaperTicket) e reabre ao subir a página;
+//   se recolhe da direita para a esquerda (useHeroDrop do PaperTicket) e
+//   reabre ao subir a página;
 // - "section" (em Todos os eventos): abre da esquerda para a direita conforme
-//   entra na tela (--scroll, do useScrollShift).
+//   entra na tela (useSearchReveal).
 // O recolhimento tem duas etapas: primeiro sai a Cidade (o Buscar desliza
 // para junto do nome), depois sai o resto. Com foco de teclado, qualquer uma
 // das duas abre inteira.
 function SearchBar({ variant, className = "", qInput, cityInput, setQInput, setCityInput, onSubmit }: SearchBarProps) {
   const { t } = useI18n();
-  const revealRef = useScrollShift<HTMLFormElement>(0);
+  const revealRef = useSearchReveal<HTMLFormElement>();
   const { formRef, nameRef, goRef } = useSearchBarMetrics();
   const hero = variant === "hero";
   return (
