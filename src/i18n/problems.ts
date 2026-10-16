@@ -100,6 +100,10 @@ const PT_BR: Catalog = {
     "sales-closed": "As vendas deste evento foram encerradas.",
     "invalid-password": "Senha incorreta.",
     "too-many-password-attempts": ({ retryAfter }) => `Muitas tentativas com a senha. Tente de novo em ${minutes(retryAfter)} min.`,
+    "password-reset-token-invalid": "Este link de recuperação não é válido. Ele pode estar incompleto ou ter sido trocado por um pedido mais novo.",
+    "password-reset-token-expired": "Este link de recuperação expirou. Os links valem 30 minutos.",
+    "password-reset-token-used": "Este link de recuperação já foi usado.",
+    "too-many-password-reset-attempts": ({ retryAfter }) => `Muitos pedidos de recuperação de senha. Tente de novo em ${minutes(retryAfter)} min.`,
     "payout-account-not-found": "Você ainda não cadastrou os dados de recebimento.",
     "payout-account-required": "Cadastre os dados de recebimento antes de pedir um saque.",
     "payout-account-cooldown": ({ properties }, locale) => {
@@ -362,6 +366,10 @@ const EN: Catalog = {
     "sales-closed": "Ticket sales for this event have ended.",
     "invalid-password": "Incorrect password.",
     "too-many-password-attempts": ({ retryAfter }) => `Too many password attempts. Try again in ${minutes(retryAfter)} min.`,
+    "password-reset-token-invalid": "This recovery link isn't valid. It may be incomplete or replaced by a newer request.",
+    "password-reset-token-expired": "This recovery link has expired. Links are valid for 30 minutes.",
+    "password-reset-token-used": "This recovery link has already been used.",
+    "too-many-password-reset-attempts": ({ retryAfter }) => `Too many password recovery requests. Try again in ${minutes(retryAfter)} min.`,
     "payout-account-not-found": "You haven't added your payout details yet.",
     "payout-account-required": "Add your payout details before requesting a withdrawal.",
     "payout-account-cooldown": ({ properties }, locale) => {

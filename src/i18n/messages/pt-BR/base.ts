@@ -1,5 +1,8 @@
 const tickets = (n: number) => `${n} ${n === 1 ? "ingresso" : "ingressos"}`;
 
+// Tempo de espera: "45 s" ou, a partir de 1 minuto, "14 min 05 s".
+const duration = (n: number) => (n < 60 ? `${n} s` : `${Math.floor(n / 60)} min ${String(n % 60).padStart(2, "0")} s`);
+
 export const base = {
   common: {
     loading: "Carregando...",
@@ -11,8 +14,8 @@ export const base = {
     total: "Total",
     free: "Gratuito",
     notAvailable: "—",
-    seconds: (n: number) => `${n} s`,
-    wait: (seconds: number) => `Aguarde ${seconds} s`,
+    seconds: duration,
+    wait: (seconds: number) => `Aguarde ${duration(seconds)}`,
     relativeDay: (days: number) => {
       if (days < 0) return "já aconteceu";
       if (days === 0) return "hoje";
@@ -160,6 +163,8 @@ export const base = {
     submit: "Entrar",
     noAccount: "Ainda não tem conta?",
     createAccount: "Criar conta",
+    forgot: "Esqueci minha senha",
+    passwordReset: "Senha alterada. Entre com a nova senha.",
   },
   register: {
     pageTitle: "Criar conta",
@@ -174,6 +179,40 @@ export const base = {
     submit: "Criar conta",
     haveAccount: "Já tem conta?",
     signIn: "Entrar",
+  },
+  forgotPassword: {
+    pageTitle: "Recuperar senha",
+    eyebrow: "Recuperar acesso",
+    title: "Esqueceu a senha?",
+    subtitle: "Informe o e-mail da conta e enviamos um link para criar uma nova senha.",
+    email: "E-mail",
+    submit: "Enviar link",
+    sent: "Se existir uma conta com esse e-mail, enviamos um link para criar uma nova senha. Ele vale 30 minutos. Confira também o spam.",
+    googleHint: "Criou a conta com o Google? O mesmo link serve para definir uma senha.",
+    otherEmail: "Usar outro e-mail",
+    backToLogin: "Voltar para o login",
+    lockedBefore: "Muitos pedidos de recuperação. Tente de novo em",
+    remembered: "Lembrou a senha?",
+    signIn: "Entrar",
+  },
+  resetPassword: {
+    pageTitle: "Nova senha",
+    eyebrow: "Recuperar acesso",
+    title: "Crie uma nova senha",
+    subtitle: "Ao salvar, todas as sessões da conta são encerradas e você entra de novo com a nova senha.",
+    next: "Nova senha",
+    confirm: "Confirmar nova senha",
+    weak: "Escolha uma senha mais forte. Veja as dicas abaixo do campo.",
+    submit: "Salvar nova senha",
+    lockedBefore: "Muitas tentativas. Tente de novo em",
+    linkTitle: { invalid: "Link inválido", expired: "Link expirado", used: "Link já usado" },
+    linkText: {
+      invalid: "Este link de recuperação não é válido. Ele pode estar incompleto ou ter sido trocado por um pedido mais novo.",
+      expired: "Este link de recuperação expirou. Os links valem 30 minutos depois do pedido.",
+      used: "Este link de recuperação já foi usado. Cada link troca a senha uma vez só.",
+    },
+    requestNew: "Pedir um novo link",
+    backToLogin: "Voltar para o login",
   },
   errorBoundary: {
     title: "Algo deu errado nesta tela",
@@ -410,6 +449,10 @@ export const base = {
       setText: "Sua conta foi criada pelo Google e ainda não tem senha. Com uma senha, você também entra com e-mail e confirma ações como exportar dados, transferir ingressos e pedir saques.",
       setSuccess: "Senha definida. Agora você também pode entrar com e-mail e senha.",
       setSubmit: "Definir senha",
+      or: "ou",
+      emailLink: "Receber um link por e-mail para definir a senha",
+      emailLinkSent: (email: string) => `Enviamos um link para ${email}. Ele vale 30 minutos. Confira também o spam.`,
+      emailLinkLockedBefore: "Muitos pedidos de link. Tente de novo em",
     },
     googleLinked: "Ligada ao Google",
     googleLabel: "Login com Google",

@@ -8,6 +8,7 @@ import { useI18n } from "../i18n/LocaleContext";
 import AuthShell from "../components/AuthShell";
 import { showFlash } from "../components/FlashNotice";
 import GoogleSignIn from "../components/GoogleSignIn";
+import PasswordStrengthMeter from "../components/PasswordStrengthMeter";
 import { Alert, Button, Field, Form, Input, PasswordInput } from "../components/ui";
 import { passwordStrength, safeRedirectPath } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -87,7 +88,7 @@ export default function RegisterPage() {
             <PasswordInput ref={confirmRef} required maxLength={72} autoComplete="new-password" value={form.confirm} onChange={set("confirm")} />
           </Field>
         </div>
-        {form.password ? <StrengthMeter {...strength} /> : <p className="-mt-2 text-[0.8125rem] text-muted">{t.password.lengthHint}</p>}
+        {form.password ? <PasswordStrengthMeter {...strength} /> : <p className="-mt-2 text-[0.8125rem] text-muted">{t.password.lengthHint}</p>}
         {localError && <Alert>{localError}</Alert>}
         {!localError && mutation.error && hasUnmappedError(mutation.error, REGISTER_FIELDS) && <Alert>{errorMessage(mutation.error)}</Alert>}
         <Button type="submit" className="w-full" loading={mutation.isPending}>
@@ -106,24 +107,5 @@ export default function RegisterPage() {
         </p>
       </Form>
     </AuthShell>
-  );
-}
-
-// Barra de força da senha: 4 segmentos que acendem conforme a pontuação.
-function StrengthMeter({ score, tips }: ReturnType<typeof passwordStrength>) {
-  const { t } = useI18n();
-  const color = score <= 1 ? "bg-danger" : score === 2 ? "bg-warning" : "bg-success";
-  return (
-    <div className="-mt-2" aria-live="polite">
-      <div className="flex gap-1.5" aria-hidden>
-        {[1, 2, 3, 4].map((step) => (
-          <span key={step} className={`h-1.5 flex-1 rounded-full ${score >= step ? color : "bg-raised"}`} />
-        ))}
-      </div>
-      <p className="mt-1.5 text-xs text-muted">
-        {t.password.strength}: <span className="font-semibold text-ink">{t.password.levels[score]}</span>
-        {tips.length > 0 && ` · ${tips.map((tip) => t.password.tips[tip]).join(" ")}`}
-      </p>
-    </div>
   );
 }

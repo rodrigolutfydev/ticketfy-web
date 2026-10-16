@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { NavLink, Outlet } from "react-router";
 import { ClipboardCheck, ScrollText, UserCog } from "lucide-react";
 import RequireAdmin from "../auth/RequireAdmin";
 import { useI18n } from "../i18n/LocaleContext";
+import PageLoading from "./PageLoading";
 
 export default function AdminLayout() {
   const { t } = useI18n();
@@ -34,7 +36,9 @@ export default function AdminLayout() {
           </nav>
         </aside>
         <section className="min-w-0">
-          <Outlet />
+          <Suspense fallback={<PageLoading variant="section" />}>
+            <Outlet />
+          </Suspense>
         </section>
       </div>
     </RequireAdmin>

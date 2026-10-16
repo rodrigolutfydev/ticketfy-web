@@ -22,6 +22,7 @@ import { salesPanel } from "../utils/sales";
 import { categoryLabel } from "../i18n/categories";
 import { isValidId, mapsUrl, safeImageUrl } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { preloadCheckout } from "./lazyPages";
 import NotFoundPage from "./NotFoundPage";
 
 const TABS = ["sobre", "local", "informacoes"] as const;
@@ -37,6 +38,8 @@ export default function EventDetailPage() {
   const eventQuery = useQuery({ queryKey: ["event", id], queryFn: () => getEvent(id), enabled: validId });
   const ticketTypesQuery = useQuery({ queryKey: ["ticket-types", id], queryFn: () => listTicketTypes(id), enabled: validId });
   usePageTitle(eventQuery.data?.name);
+  // Quem está na página do evento costuma ir para o checkout: baixa a tela antes.
+  useEffect(preloadCheckout, []);
   const [photoOpen, setPhotoOpen] = useState(false);
 
   if (!validId) return <NotFoundPage />;

@@ -24,6 +24,8 @@ const AUTH_ROUTES: Record<string, string> = {
   "/auth/refresh": "POST",
   "/auth/logout": "POST",
   "/auth/logout-all": "POST",
+  "/auth/password-reset/request": "POST",
+  "/auth/password-reset/confirm": "POST",
   "/users/me/password": "PATCH",
   "/users/me/deletion": "POST",
 };
@@ -33,6 +35,8 @@ const SESSION_ROUTES: Record<string, string> = {
   "/auth/google": "POST",
   "/auth/refresh": "POST",
   "/auth/logout": "POST",
+  "/auth/password-reset/request": "POST",
+  "/auth/password-reset/confirm": "POST",
   "/users/me": "GET",
 };
 

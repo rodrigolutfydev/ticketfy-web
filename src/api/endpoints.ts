@@ -26,6 +26,11 @@ export const logoutAll = () => authApi.post<void>("/auth/logout-all", undefined,
 // Sem currentPassword: define a primeira senha de uma conta criada pelo Google.
 export const changePassword = (data: { currentPassword?: string; newPassword: string }) =>
   authApi.patch<TokenResponse>("/users/me/password", data, { authenticated: true });
+// Sempre 202, exista a conta ou não: a tela mostra a mesma mensagem nos dois casos.
+export const requestPasswordReset = (email: string) => authApi.post<void>("/auth/password-reset/request", { email });
+// 204 sem sessão nova: a API encerra todas as sessões da conta e a pessoa entra de novo.
+export const confirmPasswordReset = (token: string, newPassword: string) =>
+  authApi.post<void>("/auth/password-reset/confirm", { token, newPassword });
 export const becomeOrganizer = () => api.post<void>("/users/me/organizer");
 export const getMe = () => api.get<UserProfile>("/users/me");
 // "" remove a foto; uma URL https troca.

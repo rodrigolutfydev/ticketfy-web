@@ -92,7 +92,7 @@ Tudo que começa com `VITE_` fica visível para qualquer visitante do site publi
 
 ## Servidor acordando e erros de tela
 
-- **API no Render free:** a API hiberna depois de um tempo sem uso e pode levar até um minuto para responder. Ao abrir o site com sessão salva, o front chama `GET /actuator/health` direto na API e espera a resposta antes do primeiro `/auth/refresh`. As chamadas de sessão (`/auth/login`, `/auth/refresh`, `/auth/logout` e `GET /users/me`) esperam até 60 s; as demais, 15 s. Se alguma chamada passar de 5 s, aparece o aviso "O servidor está iniciando, isso pode levar até um minuto", que some quando a resposta chega. O refresh nunca é repetido automaticamente.
+- **API no Render free:** a API hiberna depois de um tempo sem uso e pode levar até um minuto para responder. Ao abrir o site com sessão salva, o front chama `GET /actuator/health` direto na API e espera a resposta antes do primeiro `/auth/refresh`. As chamadas de sessão (`/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/password-reset/*` e `GET /users/me`) esperam até 60 s; as demais, 15 s. Se alguma chamada passar de 5 s, aparece o aviso "O servidor está iniciando, isso pode levar até um minuto", que some quando a resposta chega. O refresh nunca é repetido automaticamente.
 - **Error Boundary:** um erro ao desenhar uma tela mostra uma tela de recuperação ("Tentar de novo" e "Voltar para o início") sem derrubar o cabeçalho; outro Error Boundary na raiz cobre erros do próprio layout. Detalhes técnicos do erro nunca aparecem para o usuário. Se faltar um arquivo JS depois de um deploy, a página recarrega sozinha uma única vez (marca `ticketfy.chunkReload` no `sessionStorage`).
 
 ## Telas e rotas da API
@@ -110,6 +110,7 @@ Tudo que começa com `VITE_` fica visível para qualquer visitante do site publi
 | Detalhe do pedido | `/orders/:id` | `GET /orders/{id}`, `DELETE /orders/{id}`, `POST /orders/{id}/refund` |
 | Meus ingressos | `/tickets` | `GET /tickets/me` |
 | Entrar / Criar conta | `/login`, `/register` | `POST /api/auth/login` (pela Function), `POST /users` |
+| Recuperar senha | `/forgot-password`, `/reset-password` | `POST /api/auth/password-reset/request` e `/confirm` (pela Function) |
 | Minha conta | `/account` | `GET /users/me`, `POST /users/me/organizer` |
 | Painel do organizador | `/organizer` | `GET /events/mine` |
 | Meus eventos | `/organizer/events` | `GET /events/mine` |
@@ -117,7 +118,7 @@ Tudo que começa com `VITE_` fica visível para qualquer visitante do site publi
 | Gerenciar evento (abas Visão geral, Lotes, Configurações) | `/organizer/events/:id` | `GET /events/{id}/ticket-types`, `POST /events/{id}/ticket-types`, `DELETE /events/{id}` |
 | Check-in | `/organizer/check-in` | `POST /tickets/{code}/check-in` |
 
-Rotas de sessão (`/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/logout-all`, troca de senha e exclusão de conta) passam pela Function da Cloudflare em `/api/...`, que guarda o refresh token num cookie `HttpOnly`. As demais vão direto à API com o access token, que fica só na memória.
+Rotas de sessão (`/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/logout-all`, recuperação de senha, troca de senha e exclusão de conta) passam pela Function da Cloudflare em `/api/...`, que guarda o refresh token num cookie `HttpOnly`. As demais vão direto à API com o access token, que fica só na memória.
 
 ## Privacidade (LGPD)
 

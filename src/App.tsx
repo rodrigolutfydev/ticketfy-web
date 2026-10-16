@@ -1,38 +1,23 @@
 // Mapa de telas: cada <Route> liga um endereço a um componente.
 // Rotas aninhadas herdam a moldura do pai (Layout, OrganizerLayout).
+// Só a home, a página do evento, entrar e criar conta vão no pacote inicial;
+// o resto vem sob demanda (pages/lazyPages.ts), com o Suspense do Layout.
 
 import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import RequireAuth from "./auth/RequireAuth";
 import Layout from "./components/Layout";
-import OrganizerLayout from "./components/OrganizerLayout";
-import AccountDeletedPage from "./pages/AccountDeletedPage";
-import AccountPage from "./pages/AccountPage";
-import CheckoutPage from "./pages/CheckoutPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import EventsPage from "./pages/EventsPage";
-import GoogleCallbackPage from "./pages/GoogleCallbackPage";
-import HelpPage from "./pages/HelpPage";
-import HowItWorksPage from "./pages/HowItWorksPage";
-import LegalPage from "./pages/LegalPage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
-import OrderConfirmationPage from "./pages/OrderConfirmationPage";
-import OrderDetailPage from "./pages/OrderDetailPage";
-import OrdersPage from "./pages/OrdersPage";
-import PaymentPage from "./pages/PaymentPage";
 import RegisterPage from "./pages/RegisterPage";
-import TicketsPage from "./pages/TicketsPage";
-import CheckInPage from "./pages/organizer/CheckInPage";
-import OrganizerDashboardPage from "./pages/organizer/OrganizerDashboardPage";
-import OrganizerEventFormPage from "./pages/organizer/OrganizerEventFormPage";
-import OrganizerEventManagePage from "./pages/organizer/OrganizerEventManagePage";
-import OrganizerEventsPage from "./pages/organizer/OrganizerEventsPage";
-import OrganizerFinancePage from "./pages/organizer/OrganizerFinancePage";
-import AdminLayout from "./components/AdminLayout";
-import AdminAuditPage from "./pages/admin/AdminAuditPage";
-import AdminPayoutsPage from "./pages/admin/AdminPayoutsPage";
-import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import {
+  AccountDeletedPage, AccountPage, AdminAuditPage, AdminLayout, AdminPayoutsPage, AdminUsersPage, CheckInPage, CheckoutPage,
+  ForgotPasswordPage, GoogleCallbackPage, HelpPage, HowItWorksPage, LegalPage, OrderConfirmationPage, OrderDetailPage,
+  OrdersPage, OrganizerDashboardPage, OrganizerEventFormPage, OrganizerEventManagePage, OrganizerEventsPage, OrganizerFinancePage,
+  OrganizerLayout, PaymentPage, ResetPasswordPage, TicketsPage,
+} from "./pages/lazyPages";
 
 // Envolve a tela na guarda de login.
 const privateRoute = (element: ReactNode) => <RequireAuth>{element}</RequireAuth>;
@@ -51,6 +36,8 @@ export default function App() {
         <Route path="account-deleted" element={<AccountDeletedPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
+        <Route path="forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="auth/google/callback" element={<GoogleCallbackPage />} />
 
         {/* Compra */}

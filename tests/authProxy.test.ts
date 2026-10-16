@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { proxyAuth } from "../functions/_lib/authProxy";
+import { readFileSync } from "node:fs";
+import { AUTH_PROXY_ROUTES, proxyAuth } from "../functions/_lib/authProxy";
 
 const SITE = "https://ticketfy.pages.dev";
 const env = { API_ORIGIN: "https://api.example.com", PROXY_SHARED_SECRET: "s3cret" };
@@ -115,5 +116,39 @@ describe("proxy de autenticação", () => {
     const response = await proxyAuth({ request: request("/api/auth/logout"), env });
     expect(response.status).toBe(502);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("repassa a recuperação de senha em POST, com Origin, X-Ticketfy-Auth e Retry-After", async () => {
+    const fetchMock = upstream(new Response(null, { status: 429, headers: { "Retry-After": "600" } }));
+
+    const response = await proxyAuth({ request: request("/api/auth/password-reset/request", { body: '{"email":"a@b.c"}' }), env });
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("600");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.example.com/auth/password-reset/request");
+    const sent = init?.headers as Headers;
+    expect(sent.get("Origin")).toBe(SITE);
+    expect(sent.get("X-Ticketfy-Auth")).toBe("1");
+
+    upstream(new Response(null, { status: 204 }));
+    expect((await proxyAuth({ request: request("/api/auth/password-reset/confirm", { body: "{}" }), env })).status).toBe(204);
+    expect((await proxyAuth({ request: request("/api/auth/password-reset/confirm", { method: "PATCH", body: "{}" }), env })).status).toBe(405);
+    expect((await proxyAuth({ request: request("/api/auth/password-reset/other", { body: "{}" }), env })).status).toBe(404);
+  });
+
+  it("todas as rotas do proxy estão no _routes.json da Cloudflare e no proxy do npm run dev", () => {
+    const routes = JSON.parse(readFileSync(new URL("../public/_routes.json", import.meta.url), "utf8")) as { include: string[] };
+    const covered = (path: string) =>
+      routes.include.some((pattern) => (pattern.endsWith("/*") ? path.startsWith(pattern.slice(0, -1)) : path === pattern));
+    const viteConfig = readFileSync(new URL("../vite.config.ts", import.meta.url), "utf8");
+    const devProxy = /proxy: \{ "([^"]+)"/.exec(viteConfig)?.[1].replace(/\\\\/g, "\\");
+    expect(devProxy).toBeTruthy();
+    for (const [path, method] of Object.entries(AUTH_PROXY_ROUTES)) {
+      expect(covered(path), path).toBe(true);
+      expect(new RegExp(devProxy!).test(path), path).toBe(true);
+      expect(viteConfig, path).toContain(`"${path}": "${method}"`);
+    }
+    expect(AUTH_PROXY_ROUTES["/api/auth/password-reset/request"]).toBe("POST");
+    expect(AUTH_PROXY_ROUTES["/api/auth/password-reset/confirm"]).toBe("POST");
   });
 });

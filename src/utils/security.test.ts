@@ -52,8 +52,8 @@ describe("safeRedirectPath", () => {
     expect(new URL(result, "https://ticketfy.test").origin).toBe("https://ticketfy.test");
   });
 
-  it("não volta para login nem cadastro, mesmo disfarçados", () => {
-    for (const value of ["/login", "/login?next=/tickets", "/register", "/register#form", "/./login", "/tickets/../login", "/%2E/register"]) {
+  it("não volta para login, cadastro nem recuperação de senha, mesmo disfarçados", () => {
+    for (const value of ["/login", "/login?next=/tickets", "/register", "/register#form", "/./login", "/tickets/../login", "/%2E/register", "/forgot-password", "/reset-password?token=abc"]) {
       expect(safeRedirectPath(value)).toBe("/");
     }
   });

@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiError, errorMessage, fieldError, hasUnmappedError } from "../api/client";
-import { changePassword, deleteAccount, exportMyData, logoutAll, updateAvatar } from "../api/endpoints";
+import { changePassword, deleteAccount, exportMyData, logoutAll, requestPasswordReset, updateAvatar } from "../api/endpoints";
 import { saveBlob } from "../utils/download";
 import type { UserProfile } from "../api/types";
 import Avatar from "../components/Avatar";
@@ -20,7 +20,9 @@ import { formatTime } from "../utils/format";
 import { deletionProof, hasNoPassword, needsPasswordSetup, passwordChangeBody, sameEmail } from "../utils/account";
 import { GoogleLogo } from "../components/GoogleSignIn";
 import PasswordRequiredNotice from "../components/PasswordRequiredNotice";
+import { useLockCountdown } from "../hooks/useLockCountdown";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { resetRetryAfter } from "../utils/passwordReset";
 import { useI18n } from "../i18n/LocaleContext";
 import { LOCALES } from "../i18n/locale";
 
@@ -385,18 +387,44 @@ export function PasswordCard() {
           {locked ? t.common.wait(lockSeconds) : setting ? p.setSubmit : p.submit}
         </Button>
       </Form>
+      {setting && me?.email && <PasswordEmailLink email={me.email} />}
     </Card>
   );
 }
 
-function useLockCountdown() {
-  const [seconds, setSeconds] = useState(0);
-  useEffect(() => {
-    if (seconds <= 0) return;
-    const timer = setTimeout(() => setSeconds((current) => current - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [seconds]);
-  return [seconds, setSeconds] as const;
+// Conta sem senha: em vez de digitar a senha aqui, pede o link de recuperação,
+// que nessa conta serve para definir a primeira senha.
+function PasswordEmailLink({ email }: { email: string }) {
+  const { t } = useI18n();
+  const p = t.account.passwordCard;
+  const [lockSeconds, setLockSeconds] = useLockCountdown();
+  const mutation = useMutation({
+    mutationFn: () => requestPasswordReset(email),
+    onError: (error) => setLockSeconds(resetRetryAfter(error)),
+  });
+  const locked = lockSeconds > 0;
+  const failed = mutation.error && resetRetryAfter(mutation.error) === 0;
+
+  return (
+    <div className="mt-6 space-y-4">
+      <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-subtle">
+        <span className="h-px flex-1 bg-line" aria-hidden />
+        {p.or}
+        <span className="h-px flex-1 bg-line" aria-hidden />
+      </div>
+      {mutation.isSuccess && <Alert type="success">{p.emailLinkSent(email)}</Alert>}
+      {failed && <Alert>{errorMessage(mutation.error)}</Alert>}
+      {locked && (
+        <Alert type="warning">
+          {p.emailLinkLockedBefore} <span className="tabular font-bold">{t.common.seconds(lockSeconds)}</span>.
+        </Alert>
+      )}
+      <Button variant="secondary" className="w-full sm:w-auto" loading={mutation.isPending} disabled={locked} onClick={() => mutation.mutate()}>
+        <Mail size={16} className="shrink-0" aria-hidden />
+        <span className="whitespace-normal text-center leading-tight">{locked ? t.common.wait(lockSeconds) : p.emailLink}</span>
+      </Button>
+    </div>
+  );
 }
 
 function PrivacyTab() {

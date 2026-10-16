@@ -1,7 +1,7 @@
 // Moldura de todas as telas: cabeçalho, conteúdo (<Outlet/>) e rodapé.
 // <Outlet/> é o "buraco" onde o React Router coloca a tela da rota atual.
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, matchPath, useLocation, useNavigate } from "react-router";
 import { ArrowLeft, CircleQuestionMark, LogOut, Menu, Moon, ReceiptText, Sun, Ticket, UserRound, X } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
@@ -13,9 +13,12 @@ import CheckoutSteps from "./CheckoutSteps";
 import ErrorBoundary from "./ErrorBoundary";
 import FlashNotice from "./FlashNotice";
 import LanguageSwitcher from "./LanguageSwitcher";
+import PageLoading from "./PageLoading";
 import Logo, { Wordmark } from "./Logo";
 import { ButtonLink } from "./ui";
 import { PRIVACY_CONTACT_EMAIL, privacyContactHref } from "../utils/contact";
+
+const AUTH_PAGES = new Set(["/login", "/register", "/forgot-password", "/reset-password"]);
 
 export default function Layout() {
   const { isAuthenticated, isChecking, signOut } = useAuth();
@@ -25,11 +28,15 @@ export default function Layout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const checkoutStep = getCheckoutStep(location.pathname);
-  const isAuthPage = location.pathname === "/login" || location.pathname === "/register" || location.pathname.startsWith("/auth/");
+  const isAuthPage = AUTH_PAGES.has(location.pathname) || location.pathname.startsWith("/auth/");
   const isHome = location.pathname === "/";
+  // Suspense dentro do ErrorBoundary: se o arquivo da tela não carregar
+  // (deploy novo apagou o antigo), o erro cai no ErrorBoundary, que recarrega.
   const page = (
     <ErrorBoundary scope="page" resetKey={location.pathname}>
-      <Outlet />
+      <Suspense fallback={<PageLoading variant={isAuthPage ? "auth" : "page"} />}>
+        <Outlet />
+      </Suspense>
     </ErrorBoundary>
   );
 

@@ -1,6 +1,7 @@
 import type { base as reference } from "../pt-BR/base";
 
 const tickets = (n: number) => `${n} ${n === 1 ? "ticket" : "tickets"}`;
+const duration = (n: number) => (n < 60 ? `${n} s` : `${Math.floor(n / 60)} min ${String(n % 60).padStart(2, "0")} s`);
 
 export const base: typeof reference = {
   common: {
@@ -13,8 +14,8 @@ export const base: typeof reference = {
     total: "Total",
     free: "Free",
     notAvailable: "—",
-    seconds: (n: number) => `${n} s`,
-    wait: (seconds: number) => `Wait ${seconds} s`,
+    seconds: duration,
+    wait: (seconds: number) => `Wait ${duration(seconds)}`,
     relativeDay: (days: number) => {
       if (days < 0) return "already happened";
       if (days === 0) return "today";
@@ -162,6 +163,8 @@ export const base: typeof reference = {
     submit: "Sign in",
     noAccount: "Don't have an account yet?",
     createAccount: "Create account",
+    forgot: "Forgot my password",
+    passwordReset: "Password changed. Sign in with your new password.",
   },
   register: {
     pageTitle: "Create account",
@@ -176,6 +179,40 @@ export const base: typeof reference = {
     submit: "Create account",
     haveAccount: "Already have an account?",
     signIn: "Sign in",
+  },
+  forgotPassword: {
+    pageTitle: "Recover password",
+    eyebrow: "Recover access",
+    title: "Forgot your password?",
+    subtitle: "Enter your account email and we'll send you a link to create a new password.",
+    email: "Email",
+    submit: "Send link",
+    sent: "If an account exists for that email, we've sent a link to create a new password. It's valid for 30 minutes. Check your spam folder too.",
+    googleHint: "Created your account with Google? The same link lets you set a password.",
+    otherEmail: "Use another email",
+    backToLogin: "Back to sign in",
+    lockedBefore: "Too many recovery requests. Try again in",
+    remembered: "Remembered it?",
+    signIn: "Sign in",
+  },
+  resetPassword: {
+    pageTitle: "New password",
+    eyebrow: "Recover access",
+    title: "Create a new password",
+    subtitle: "When you save, all sessions on your account end and you sign in again with the new password.",
+    next: "New password",
+    confirm: "Confirm new password",
+    weak: "Choose a stronger password. See the tips below the field.",
+    submit: "Save new password",
+    lockedBefore: "Too many attempts. Try again in",
+    linkTitle: { invalid: "Invalid link", expired: "Link expired", used: "Link already used" },
+    linkText: {
+      invalid: "This recovery link isn't valid. It may be incomplete or replaced by a newer request.",
+      expired: "This recovery link has expired. Links are valid for 30 minutes after the request.",
+      used: "This recovery link has already been used. Each link changes the password only once.",
+    },
+    requestNew: "Request a new link",
+    backToLogin: "Back to sign in",
   },
   errorBoundary: {
     title: "Something went wrong on this screen",
@@ -412,6 +449,10 @@ export const base: typeof reference = {
       setText: "Your account was created with Google and doesn't have a password yet. With a password, you can also sign in with your email and confirm actions like exporting data, transferring tickets and requesting withdrawals.",
       setSuccess: "Password set. You can now also sign in with your email and password.",
       setSubmit: "Set password",
+      or: "or",
+      emailLink: "Get an email link to set the password",
+      emailLinkSent: (email: string) => `We sent a link to ${email}. It's valid for 30 minutes. Check your spam folder too.`,
+      emailLinkLockedBefore: "Too many link requests. Try again in",
     },
     googleLinked: "Linked to Google",
     googleLabel: "Google sign-in",

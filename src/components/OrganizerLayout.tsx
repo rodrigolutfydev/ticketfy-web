@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { CalendarDays, CalendarPlus, LayoutDashboard, ScanLine, Wallet } from "lucide-react";
 import RequireOrganizer from "../auth/RequireOrganizer";
 import { useMe } from "../auth/useMe";
 import { useI18n } from "../i18n/LocaleContext";
+import PageLoading from "./PageLoading";
 
 // Moldura da área do organizador: menu lateral (vira uma grade de botões no celular) + conteúdo.
 export default function OrganizerLayout() {
@@ -49,7 +51,9 @@ export default function OrganizerLayout() {
           </nav>
         </aside>
         <section className="min-w-0">
-          <Outlet />
+          <Suspense fallback={<PageLoading variant="section" />}>
+            <Outlet />
+          </Suspense>
         </section>
       </div>
     </RequireOrganizer>

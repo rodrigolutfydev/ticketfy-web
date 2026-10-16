@@ -49,11 +49,18 @@ describe.each(["pt-BR", "en"] as const)("account without a password (%s)", (loca
     expect(html).not.toContain('autocomplete="current-password"');
   });
 
+  it("also offers an email link to set the password", () => {
+    const html = render(PasswordCard, profile(), locale);
+    expect(html).toContain(t.account.passwordCard.emailLink);
+    expect(html).toContain(t.account.passwordCard.or);
+  });
+
   it("asks for the current password when the account has one", () => {
     const html = render(PasswordCard, profile({ hasPassword: true, googleLinked: false }), locale);
     expect(html).toContain(t.account.passwordCard.title);
     expect(html).toContain(t.account.passwordCard.current);
     expect(html).not.toContain(t.account.passwordCard.setTitle);
+    expect(html).not.toContain(t.account.passwordCard.emailLink);
   });
 
   it("confirms the deletion with the account email instead of the password", () => {

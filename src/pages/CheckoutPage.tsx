@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, TicketPercent, X } from "lucide-react";
@@ -16,6 +16,7 @@ import { newIdempotencyKey } from "../utils/idempotency";
 import { isValidId } from "../utils/security";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n/LocaleContext";
+import { preloadPayment } from "./lazyPages";
 
 // Revisão do pedido antes de reservar. Rota privada: sem login, vai para
 // o login e volta para cá com a mesma seleção (ela está na URL).
@@ -26,6 +27,8 @@ import { useI18n } from "../i18n/LocaleContext";
 export default function CheckoutPage() {
   const { t, locale } = useI18n();
   usePageTitle(t.checkout.pageTitle);
+  // O próximo passo é o pagamento: baixa a tela enquanto a pessoa revisa o pedido.
+  useEffect(preloadPayment, []);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

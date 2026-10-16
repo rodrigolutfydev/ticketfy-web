@@ -18,7 +18,7 @@ export default function LoginPage() {
   const { signIn, isAuthenticated, lastSignOutReason } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as { from?: unknown; registered?: boolean } | null;
+  const state = location.state as { from?: unknown; registered?: boolean; passwordReset?: boolean } | null;
   // Para onde voltar depois de entrar. safeRedirectPath garante que é uma
   // página do próprio site (nada de redirecionar para um domínio externo).
   const from = safeRedirectPath(state?.from);
@@ -91,9 +91,10 @@ export default function LoginPage() {
         </span>
       }
     >
-      {(state?.registered || (signOutMessage && !mutation.error)) && (
+      {(state?.registered || state?.passwordReset || (signOutMessage && !mutation.error)) && (
         <div className="mb-6 space-y-4">
           {state?.registered && <Alert type="success">{t.login.registered}</Alert>}
+          {state?.passwordReset && <Alert type="success">{t.login.passwordReset}</Alert>}
           {signOutMessage && !mutation.error && <Alert type="info">{signOutMessage}</Alert>}
         </div>
       )}
@@ -105,6 +106,15 @@ export default function LoginPage() {
         <Field label={t.login.password}>
           <PasswordInput required maxLength={72} autoComplete="current-password" placeholder={t.login.passwordPlaceholder} value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
+        <div className="-mt-1.5 flex justify-end">
+          <Link
+            to="/forgot-password"
+            state={{ email: email.trim(), from }}
+            className="rounded-md text-[0.8125rem] font-medium text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
+          >
+            {t.login.forgot}
+          </Link>
+        </div>
         {errorText && !locked && <Alert>{errorText}</Alert>}
         {locked && (
           <Alert type="warning">

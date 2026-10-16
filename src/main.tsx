@@ -6,6 +6,8 @@
 //   AuthProvider        -> sessão (usa o QueryClient para limpar o cache)
 //   ThemeProvider       -> tema claro/escuro
 //   BrowserRouter       -> navegação entre telas sem recarregar a página
+//                          (sem transição: ao abrir uma tela sob demanda, o
+//                          carregamento aparece em vez de a tela antiga ficar parada)
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -44,7 +46,7 @@ createRoot(document.getElementById("root")!).render(
         <AuthProvider>
           <LocaleProvider>
             <ThemeProvider>
-              <BrowserRouter>
+              <BrowserRouter useTransitions={false}>
                 <App />
               </BrowserRouter>
               <ServerWakeNotice />

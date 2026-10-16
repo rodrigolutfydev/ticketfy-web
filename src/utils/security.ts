@@ -52,7 +52,8 @@ export function safeRedirectPath(value: unknown, fallback = "/"): string {
   return value;
 }
 
-const isAuthPath = (path: string) => path.startsWith("/login") || path.startsWith("/register") || path.startsWith("/auth/");
+const AUTH_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/auth/"];
+const isAuthPath = (path: string) => AUTH_PATHS.some((prefix) => path.startsWith(prefix));
 
 // ---------------------------------------------------------------------------
 // Imagens de evento

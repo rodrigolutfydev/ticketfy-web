@@ -65,6 +65,8 @@ const DEV_AUTH_ROUTES: Record<string, string> = {
   "/api/auth/refresh": "POST",
   "/api/auth/logout": "POST",
   "/api/auth/logout-all": "POST",
+  "/api/auth/password-reset/request": "POST",
+  "/api/auth/password-reset/confirm": "POST",
   "/api/users/me/password": "PATCH",
   "/api/users/me/deletion": "POST",
 };
