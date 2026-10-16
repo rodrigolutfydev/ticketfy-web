@@ -2,19 +2,19 @@ import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { AuthProvider } from "../auth/AuthContext";
 import { LocaleProvider } from "../i18n/LocaleContext";
 import { setLocale, type Locale } from "../i18n/locale";
 import { MESSAGES } from "../i18n/messages";
-import { PASSWORD_RESET_DONE } from "../utils/passwordReset";
+import { PASSWORD_RESET_DONE, forgetResetToken } from "../utils/passwordReset";
 import ForgotPasswordPage, { ForgotPasswordSent } from "./ForgotPasswordPage";
 import LoginPage from "./LoginPage";
 import ResetPasswordPage, { ResetLinkProblemView } from "./ResetPasswordPage";
 
 const TOKEN = "Vx3kR9mQ2pL7wN4tY8bC1dF6gH0jK5sA3eZ_-uI2oP0";
 
-function render(element: ReturnType<typeof createElement>, locale: Locale = "pt-BR", entry: { pathname: string; state?: unknown } = { pathname: "/" }) {
+function render(element: ReturnType<typeof createElement>, locale: Locale = "pt-BR", entry: { pathname: string; search?: string; state?: unknown } = { pathname: "/" }) {
   setLocale(locale);
   const html = renderToStaticMarkup(
     createElement(
@@ -29,11 +29,13 @@ function render(element: ReturnType<typeof createElement>, locale: Locale = "pt-
 const page = (component: ComponentType) => createElement(component);
 
 function resetPageAt(search: string, locale: Locale = "pt-BR") {
-  vi.stubGlobal("window", { location: { pathname: "/reset-password", search, hash: "" }, history: { state: null, replaceState: vi.fn() } });
-  return render(page(ResetPasswordPage), locale, { pathname: "/reset-password" });
+  return render(page(ResetPasswordPage), locale, { pathname: "/reset-password", search });
 }
 
-afterEach(() => setLocale("pt-BR"));
+afterEach(() => {
+  setLocale("pt-BR");
+  forgetResetToken();
+});
 
 describe.each(["pt-BR", "en"] as const)("recuperação de senha (%s)", (locale) => {
   const t = MESSAGES[locale];
@@ -73,6 +75,15 @@ describe.each(["pt-BR", "en"] as const)("recuperação de senha (%s)", (locale) 
       expect(html).toContain(t.resetPassword.linkTitle.invalid);
       expect(html).toContain(t.resetPassword.requestNew);
     }
+  });
+
+  it("o token sobrevive a uma nova montagem da tela depois de sair da URL", () => {
+    expect(resetPageAt(`?token=${TOKEN}`, locale)).toContain(t.resetPassword.title);
+    // Segunda montagem (Suspense, ErrorBoundary, troca de rota): a URL já não tem o token.
+    const html = resetPageAt("", locale);
+    expect(html).toContain(t.resetPassword.title);
+    expect(html).not.toContain(t.resetPassword.linkTitle.invalid);
+    expect(html.match(/type="password"/g)).toHaveLength(2);
   });
 
   it("com token, pede a nova senha e a confirmação como no cadastro", () => {

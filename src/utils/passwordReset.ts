@@ -8,17 +8,6 @@ export type ResetLinkProblem = "invalid" | "expired" | "used";
 // tela se o tamanho mudar; o que não tem cara de token nem vai para a API.
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{16,512}$/;
 
-interface UrlParts {
-  pathname: string;
-  search: string;
-  hash: string;
-}
-
-interface HistoryLike {
-  readonly state: unknown;
-  replaceState(data: unknown, unused: string, url?: string | null): void;
-}
-
 // Lê o token de /reset-password?token=... O que não tem cara de token vale
 // como link inválido, sem chamar a API.
 export function readResetToken(search: string): string | null {
@@ -26,15 +15,32 @@ export function readResetToken(search: string): string | null {
   return TOKEN_PATTERN.test(token) ? token : null;
 }
 
-// Tira o token da barra de endereço, para ele não ficar no histórico, em
-// favoritos nem em capturas de tela. O estado do history é mantido para o
-// roteador não perder a posição, e os outros parâmetros continuam.
-export function removeResetToken(location: UrlParts, history: HistoryLike) {
-  const params = new URLSearchParams(location.search);
-  if (!params.has("token")) return;
+// O token sai da URL logo na primeira montagem da tela. Se a tela montar de
+// novo (Suspense, ErrorBoundary, StrictMode, troca de rota), ela o encontra
+// aqui, na memória do módulo, e não em storage: some ao fechar ou recarregar a aba.
+let rememberedToken: string | null = null;
+
+// Um token na URL sempre vence o guardado (link novo, ou malformado, que vira
+// link inválido). Sem token na URL, vale o que a tela já tinha lido.
+export function takeResetToken(search: string): string | null {
+  if (new URLSearchParams(search).has("token")) rememberedToken = readResetToken(search);
+  return rememberedToken;
+}
+
+// Depois da troca, ou quando a API diz que o link não serve mais.
+export function forgetResetToken() {
+  rememberedToken = null;
+}
+
+// Query sem o token, para a tela trocar a URL pelo próprio roteador (replace),
+// sem o token no histórico, em favoritos ou em capturas de tela. Os outros
+// parâmetros continuam. null quando não há token a tirar.
+export function searchWithoutResetToken(search: string): string | null {
+  const params = new URLSearchParams(search);
+  if (!params.has("token")) return null;
   params.delete("token");
   const query = params.toString();
-  history.replaceState(history.state, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
+  return query ? `?${query}` : "";
 }
 
 // Erros que tornam o link inútil: a tela troca o formulário pelo pedido de um link novo.

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { errorMessage, fieldError, hasUnmappedError } from "../api/client";
 import { confirmPasswordReset } from "../api/endpoints";
@@ -10,7 +10,9 @@ import { Alert, Button, ButtonLink, Field, Form, PasswordInput } from "../compon
 import { useLockCountdown } from "../hooks/useLockCountdown";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n/LocaleContext";
-import { PASSWORD_RESET_DONE, readResetToken, removeResetToken, resetLinkProblem, resetRetryAfter, type ResetLinkProblem } from "../utils/passwordReset";
+import {
+  PASSWORD_RESET_DONE, forgetResetToken, resetLinkProblem, resetRetryAfter, searchWithoutResetToken, takeResetToken, type ResetLinkProblem,
+} from "../utils/passwordReset";
 import { passwordStrength } from "../utils/security";
 
 export default function ResetPasswordPage() {
@@ -18,10 +20,17 @@ export default function ResetPasswordPage() {
   const r = t.resetPassword;
   usePageTitle(r.pageTitle);
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, signOut } = useAuth();
-  // O token fica só na memória da tela: some da URL antes da primeira pintura.
-  const [token] = useState(() => readResetToken(window.location.search));
-  useLayoutEffect(() => removeResetToken(window.location, window.history), []);
+  // O token fica só em memória (veja takeResetToken) e some da URL antes da
+  // primeira pintura. A troca da URL passa pelo roteador, que assim continua
+  // sabendo onde está; o estado da entrada do histórico é mantido.
+  const [token] = useState(() => takeResetToken(location.search));
+  useLayoutEffect(() => {
+    const search = searchWithoutResetToken(location.search);
+    if (search === null) return;
+    navigate({ pathname: location.pathname, search, hash: location.hash }, { replace: true, state: location.state });
+  }, [location, navigate]);
 
   const [form, setForm] = useState({ next: "", confirm: "" });
   const [localError, setLocalError] = useState<string | null>(null);
@@ -33,11 +42,15 @@ export default function ResetPasswordPage() {
   const mutation = useMutation({
     mutationFn: (value: string) => confirmPasswordReset(value, form.next),
     onSuccess: () => {
+      forgetResetToken();
       setForm({ next: "", confirm: "" });
       if (isAuthenticated) signOut();
       navigate("/login", { replace: true, state: PASSWORD_RESET_DONE });
     },
-    onError: (error) => setLockSeconds(resetRetryAfter(error)),
+    onError: (error) => {
+      if (resetLinkProblem(error)) forgetResetToken();
+      setLockSeconds(resetRetryAfter(error));
+    },
   });
 
   const problem = token ? resetLinkProblem(mutation.error) : "invalid";

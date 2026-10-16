@@ -3,7 +3,9 @@ import { clearSession, errorMessage, fieldError, setSession } from "../api/clien
 import { confirmPasswordReset, requestPasswordReset } from "../api/endpoints";
 import { setLocale } from "../i18n/locale";
 import { MESSAGES } from "../i18n/messages";
-import { readResetToken, removeResetToken, resetLinkProblem, resetRetryAfter } from "./passwordReset";
+import {
+  forgetResetToken, readResetToken, resetLinkProblem, resetRetryAfter, searchWithoutResetToken, takeResetToken,
+} from "./passwordReset";
 
 const TOKEN = "Vx3kR9mQ2pL7wN4tY8bC1dF6gH0jK5sA3eZ_-uI2oP0";
 
@@ -30,6 +32,7 @@ async function failure(promise: Promise<unknown>) {
 
 afterEach(() => {
   clearSession();
+  forgetResetToken();
   setLocale("pt-BR");
 });
 
@@ -42,21 +45,36 @@ describe("token do link de recuperação", () => {
     expect(readResetToken("?token=abc%20def%3Cscript%3Exxxxxxxxxxxx")).toBeNull();
   });
 
-  it("tira o token da barra de endereço com replaceState, mantendo o estado do roteador", () => {
-    const history = { state: { idx: 3, key: "k" }, replaceState: vi.fn() };
-    removeResetToken({ pathname: "/reset-password", search: `?token=${TOKEN}`, hash: "" }, history);
-    expect(history.replaceState).toHaveBeenCalledTimes(1);
-    expect(history.replaceState).toHaveBeenCalledWith({ idx: 3, key: "k" }, "", "/reset-password");
+  it("aceita o token no formato que a API gera: 32 bytes em base64url, 43 caracteres", () => {
+    const bytes = Uint8Array.from({ length: 32 }, (_, i) => (i * 37 + 251) % 256);
+    const apiToken = Buffer.from(bytes).toString("base64url");
+    expect(apiToken).toHaveLength(43);
+    expect(readResetToken(`?token=${apiToken}`)).toBe(apiToken);
+    expect(readResetToken("?token=" + "-_".repeat(21) + "A")).toBe("-_".repeat(21) + "A");
   });
 
-  it("mantém os outros parâmetros e o fragmento, e não mexe na URL sem token", () => {
-    const history = { state: null, replaceState: vi.fn() };
-    removeResetToken({ pathname: "/reset-password", search: `?lang=en&token=${TOKEN}`, hash: "#x" }, history);
-    expect(history.replaceState).toHaveBeenCalledWith(null, "", "/reset-password?lang=en#x");
+  it("guarda o token em memória para a tela montar de novo depois que ele saiu da URL", () => {
+    expect(takeResetToken(`?token=${TOKEN}`)).toBe(TOKEN);
+    expect(takeResetToken("")).toBe(TOKEN);
+    expect(takeResetToken("?lang=en")).toBe(TOKEN);
 
-    history.replaceState.mockClear();
-    removeResetToken({ pathname: "/reset-password", search: "", hash: "" }, history);
-    expect(history.replaceState).not.toHaveBeenCalled();
+    forgetResetToken();
+    expect(takeResetToken("")).toBeNull();
+  });
+
+  it("um token na URL substitui o guardado, e um malformado vira link inválido", () => {
+    const other = TOKEN.split("").reverse().join("");
+    takeResetToken(`?token=${TOKEN}`);
+    expect(takeResetToken(`?token=${other}`)).toBe(other);
+    expect(takeResetToken("?token=curto")).toBeNull();
+    expect(takeResetToken("")).toBeNull();
+  });
+
+  it("monta a query sem o token para a troca de URL pelo roteador", () => {
+    expect(searchWithoutResetToken(`?token=${TOKEN}`)).toBe("");
+    expect(searchWithoutResetToken(`?lang=en&token=${TOKEN}`)).toBe("?lang=en");
+    expect(searchWithoutResetToken("?lang=en")).toBeNull();
+    expect(searchWithoutResetToken("")).toBeNull();
   });
 });
 
