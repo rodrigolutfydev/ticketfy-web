@@ -35,7 +35,6 @@ import type {
   ParticipantFilters,
   PayoutAccount,
   PayoutAccountInput,
-  PaymentDetails,
   TicketDetails,
   TicketTransferResult,
   TicketTypeDetails,
