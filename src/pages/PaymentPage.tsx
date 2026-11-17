@@ -4,20 +4,17 @@ import {
   useState,
   type ReactNode,
 } from "react";
-
 import {
   Link,
   Navigate,
   useNavigate,
   useParams,
 } from "react-router";
-
 import {
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-
 import {
   Check,
   Clock3,
@@ -28,76 +25,56 @@ import {
   QrCode,
   ShieldCheck,
 } from "lucide-react";
-
 import { errorMessage } from "../api/client";
-
 import {
   cancelOrder,
   getOrder,
   payOrder,
   type PixPaymentResponse,
 } from "../api/endpoints";
-
 import CheckoutSummary from "../components/CheckoutSummary";
 import MobileActionBar from "../components/MobileActionBar";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { ReservationTimer } from "../components/Countdown";
 import { ErrorMessage, Loading } from "../components/StateMessage";
 import { Alert, BackLink, Button } from "../components/ui";
-
 import { formatPrice, shortId } from "../utils/format";
 import { isValidId } from "../utils/security";
 import NotFoundPage from "./NotFoundPage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n/LocaleContext";
-
+import { getPaymentPixCopy } from "../i18n/paymentPixCopy";
 // Converte imagens base64 retornadas pela API.
 // Não carrega imagens de URLs externas.
 function getQrImageSource(value: string): string | null {
   const qr = value.trim();
-
   if (!qr) return null;
-
   if (
     /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(qr)
   ) {
     return qr;
   }
-
   if (/^iVBORw0KGgo[A-Za-z0-9+/=]+$/.test(qr)) {
     return `data:image/png;base64,${qr}`;
   }
-
   if (/^\/9j\/[A-Za-z0-9+/=]+$/.test(qr)) {
     return `data:image/jpeg;base64,${qr}`;
   }
-
   return null;
 }
-
 export default function PaymentPage() {
   const { t, locale } = useI18n();
-
+  const pixText = getPaymentPixCopy(locale);
   usePageTitle(t.payment.pageTitle);
-
   const { id = "" } = useParams();
-
   const validId = isValidId(id);
-
   const navigate = useNavigate();
-
   const queryClient = useQueryClient();
-
   const [confirmCancel, setConfirmCancel] = useState(false);
-
   const [method, setMethod] = useState<"pix" | "card">("pix");
-
   const [pix, setPix] = useState<PixPaymentResponse | null>(null);
-
   const [copied, setCopied] = useState(false);
-
   const [copyError, setCopyError] = useState(false);
-
   const {
     data: order,
     isLoading,
@@ -105,89 +82,66 @@ export default function PaymentPage() {
     refetch,
   } = useQuery({
     queryKey: ["order", id],
-
     queryFn: () => getOrder(id),
-
     enabled: validId,
-
     // Consulta a API Java enquanto aguarda confirmação.
     refetchInterval: pix ? 5000 : false,
-
     refetchIntervalInBackground: false,
   });
-
   const invalidate = useCallback(() => {
     void queryClient.invalidateQueries({
       queryKey: ["order", id],
     });
-
     void queryClient.invalidateQueries({
       queryKey: ["orders"],
     });
-
     void queryClient.invalidateQueries({
       queryKey: ["tickets"],
     });
-
     void queryClient.invalidateQueries({
       queryKey: ["ticket-types"],
     });
   }, [queryClient, id]);
-
   const pay = useMutation({
     mutationFn: () => payOrder(id),
-
     onSuccess: (response) => {
       // Criar cobrança não significa pagamento aprovado.
       setPix(response);
-
       setCopied(false);
       setCopyError(false);
-
       invalidate();
     },
   });
-
   const cancel = useMutation({
     mutationFn: () => cancelOrder(id),
-
     onSuccess: () => {
       invalidate();
-
       navigate(`/orders/${id}`, {
         replace: true,
       });
     },
   });
-
   // O status PAID precisa vir do backend Java.
   useEffect(() => {
     if (order?.status !== "PAID") return;
-
     invalidate();
-
     navigate(`/orders/${id}/confirmation`, {
       replace: true,
     });
   }, [order?.status, id, navigate, invalidate]);
-
   const onExpire = useCallback(() => {
     window.setTimeout(() => {
       void refetch();
     }, 3000);
   }, [refetch]);
-
   async function copyPix() {
     if (!pix?.pixCopyPaste) return;
-
     try {
       await navigator.clipboard.writeText(
         pix.pixCopyPaste,
       );
-
       setCopied(true);
       setCopyError(false);
-
       window.setTimeout(() => {
         setCopied(false);
       }, 2500);
@@ -196,15 +150,12 @@ export default function PaymentPage() {
       setCopyError(true);
     }
   }
-
   if (!validId) {
     return <NotFoundPage />;
   }
-
   if (isLoading) {
     return <Loading />;
   }
-
   if (error) {
     return (
       <ErrorMessage
@@ -212,17 +163,13 @@ export default function PaymentPage() {
       />
     );
   }
-
   if (!order) {
     return <NotFoundPage />;
   }
-
   const o = order;
-
   if (o.status === "PAID") {
     return <Loading />;
   }
-
   if (o.status !== "PENDING") {
     return (
       <Navigate
@@ -231,27 +178,20 @@ export default function PaymentPage() {
       />
     );
   }
-
   const busy = pay.isPending || cancel.isPending;
-
   const pixCreated = pix !== null;
-
   const qrImage = pix
     ? getQrImageSource(pix.pixQrCode ?? "")
     : null;
-
   const hasCopyPaste = Boolean(
     pix?.pixCopyPaste?.trim(),
   );
-
   function generatePix() {
     if (busy || pixCreated || method !== "pix") {
       return;
     }
-
     pay.mutate();
   }
-
   return (
     <div className="grid items-start gap-8 pb-28 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-12 lg:pb-0">
       {/* CONTEÚDO PRINCIPAL */}
@@ -259,17 +199,14 @@ export default function PaymentPage() {
         <BackLink to="/orders">
           {t.payment.myOrders}
         </BackLink>
-
         <h1 className="mt-6 text-[clamp(1.875rem,3.4vw,2.75rem)] font-extrabold leading-[1.05] tracking-[-0.045em] text-ink">
           {pixCreated
-            ? "Pagamento via Pix"
+            ? pixText.title
             : t.payment.title}
         </h1>
-
         <p className="mt-2.5 text-muted">
           {t.payment.order(shortId(o.id))}
         </p>
-
         <div className="mt-6">
           <ReservationTimer
             from={o.createdAt}
@@ -278,7 +215,6 @@ export default function PaymentPage() {
             onExpire={onExpire}
           />
         </div>
-
         {/* MÉTODOS DE PAGAMENTO */}
         {!pixCreated && (
           <div
@@ -290,21 +226,19 @@ export default function PaymentPage() {
               selected={method === "pix"}
               onSelect={() => setMethod("pix")}
               icon={<QrCode size={22} />}
-              title="Pix"
-              hint="Confirmação automática após pagamento"
+              title={pixText.pix}
+              hint={pixText.automatic}
             />
-
             <MethodOption
               selected={method === "card"}
               onSelect={() => setMethod("card")}
               icon={<CreditCard size={22} />}
               title={t.payment.card}
-              hint="Indisponível no momento"
+              hint={pixText.unavailable}
               disabled
             />
           </div>
         )}
-
         {/* INSTRUÇÕES ANTES DE GERAR */}
         {!pixCreated && (
           <div className="tf-panel mt-4 p-6 sm:p-7">
@@ -312,53 +246,43 @@ export default function PaymentPage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-soft text-accent-text">
                 <QrCode size={24} />
               </div>
-
               <div>
                 <h2 className="text-xl font-bold tracking-[-0.03em] text-ink">
-                  Pagamento via Pix
+                  {pixText.title}
                 </h2>
-
                 <p className="mt-1 text-sm text-muted">
-                  Gere o código Pix para concluir sua compra.
+                  {pixText.intro}
                 </p>
               </div>
             </div>
-
             <div className="mt-6 space-y-4">
               <Step
                 number={1}
-                title="Confira seu pedido"
-                description="Verifique os ingressos e o valor total."
+                title={pixText.reviewTitle}
+                description={pixText.reviewDesc}
               />
-
               <Step
                 number={2}
-                title="Gere o código Pix"
-                description="Uma cobrança será vinculada ao seu pedido."
+                title={pixText.generateTitle}
+                description={pixText.generateDesc}
               />
-
               <Step
                 number={3}
-                title="Aguarde a confirmação"
-                description="Os ingressos serão liberados somente após a confirmação do pagamento."
+                title={pixText.waitTitle}
+                description={pixText.waitDesc}
               />
             </div>
-
             <div className="mt-6 flex items-start gap-3 rounded-xl border border-line bg-field p-4">
               <ShieldCheck
                 size={20}
                 className="shrink-0 text-accent-text"
               />
-
               <p className="text-sm leading-relaxed text-muted">
-                Gerar o Pix não confirma o pagamento.
-                A liberação dos ingressos depende da
-                confirmação pelo sistema.
+                {pixText.notice}
               </p>
             </div>
           </div>
         )}
-
         {/* PIX GERADO */}
         {pixCreated && (
           <div className="tf-panel mt-5 p-6 sm:p-8">
@@ -366,26 +290,21 @@ export default function PaymentPage() {
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft text-accent-text">
                 <QrCode size={28} />
               </div>
-
               <h2 className="mt-5 text-2xl font-bold tracking-tight text-ink">
-                Seu Pix está pronto
+                {pixText.ready}
               </h2>
-
               <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
-                Escaneie o QR Code ou utilize o Pix
-                copia e cola para realizar o pagamento.
+                {pixText.scan}
               </p>
-
               <div className="mt-6 text-3xl font-extrabold text-ink">
                 {formatPrice(o.totalAmount, locale)}
               </div>
-
               {/* IMAGEM DO QR CODE */}
               {qrImage ? (
                 <div className="mt-7 rounded-2xl bg-white p-5">
                   <img
                     src={qrImage}
-                    alt="QR Code para pagamento Pix"
+                    alt={pixText.qrAlt}
                     className="h-56 w-56 object-contain sm:h-64 sm:w-64"
                   />
                 </div>
@@ -395,28 +314,24 @@ export default function PaymentPage() {
                     size={48}
                     className="text-accent-text"
                   />
-
                   <p className="mt-3 text-sm text-muted">
                     {hasCopyPaste
-                      ? "Utilize o código Pix copia e cola abaixo."
-                      : "O QR Code não está disponível nesta resposta."}
+                      ? pixText.copyHint
+                      : pixText.qrUnavailable}
                   </p>
                 </div>
               )}
-
               {/* CÓDIGO PIX */}
               {hasCopyPaste && (
                 <div className="mt-6 w-full">
                   <p className="mb-3 text-left text-sm font-semibold text-ink">
-                    Pix copia e cola
+                    {pixText.copyLabel}
                   </p>
-
                   <div className="rounded-xl border border-line bg-field p-4">
                     <p className="break-all text-left font-mono text-xs leading-relaxed text-muted">
                       {pix.pixCopyPaste}
                     </p>
                   </div>
-
                   <Button
                     size="lg"
                     className="mt-3 w-full"
@@ -425,25 +340,22 @@ export default function PaymentPage() {
                     {copied ? (
                       <>
                         <Check size={18} />
-                        Código copiado!
+                        {pixText.copied}
                       </>
                     ) : (
                       <>
                         <Copy size={18} />
-                        Copiar código Pix
+                        {pixText.copyButton}
                       </>
                     )}
                   </Button>
-
                   {copyError && (
                     <p className="mt-2 text-sm text-muted">
-                      Não foi possível copiar automaticamente.
-                      Selecione o código acima para copiá-lo.
+                      {pixText.copyError}
                     </p>
                   )}
                 </div>
               )}
-
               {/* STATUS */}
               <div className="mt-7 w-full rounded-xl border border-line bg-field p-5">
                 <div className="flex items-center justify-center gap-3">
@@ -451,42 +363,36 @@ export default function PaymentPage() {
                     size={20}
                     className="animate-spin text-accent-text"
                   />
-
                   <span
                     className="font-semibold text-ink"
                     role="status"
                   >
-                    Aguardando pagamento
+                    {pixText.awaiting}
                   </span>
                 </div>
-
                 <p className="mt-2 text-sm text-muted">
-                  Estamos verificando o status do seu pedido.
+                  {pixText.checking}
                 </p>
-
                 <p className="mt-1 text-xs text-muted">
-                  A confirmação pode levar alguns instantes.
+                  {pixText.delay}
                 </p>
               </div>
-
               <div className="mt-5 flex items-center gap-2 text-xs text-muted">
                 <Clock3 size={15} />
-                Pedido sujeito ao prazo de reserva.
+                {pixText.reservation}
               </div>
-
               <Button
                 variant="ghost"
                 size="sm"
                 className="mt-4"
                 onClick={() => void refetch()}
               >
-                Verificar pagamento
+                {pixText.checkButton}
               </Button>
             </div>
           </div>
         )}
       </div>
-
       {/* RESUMO */}
       <div className="flex flex-col gap-4 lg:sticky lg:top-24">
         <CheckoutSummary
@@ -507,13 +413,11 @@ export default function PaymentPage() {
             subtotal: item.subtotal,
           }))}
         />
-
         {(pay.error || cancel.error) && (
           <Alert>
             {errorMessage(pay.error ?? cancel.error)}
           </Alert>
         )}
-
         {/* GERAR PIX — DESKTOP */}
         {!pixCreated && (
           <div className="hidden lg:block">
@@ -525,15 +429,13 @@ export default function PaymentPage() {
               onClick={generatePix}
             >
               <Lock size={16} aria-hidden />
-
-              {`Gerar Pix de ${formatPrice(
+              {`${pixText.generateOf} ${formatPrice(
                 o.totalAmount,
                 locale,
               )}`}
             </Button>
           </div>
         )}
-
         {/* PAGAMENTO PENDENTE */}
         {pixCreated && (
           <div className="hidden rounded-xl border border-line bg-field p-4 lg:block">
@@ -542,19 +444,15 @@ export default function PaymentPage() {
                 size={17}
                 className="animate-spin text-accent-text"
               />
-
               <span className="text-sm font-semibold text-ink">
-                Pagamento pendente
+                {pixText.pending}
               </span>
             </div>
-
             <p className="mt-2 text-sm text-muted">
-              Seus ingressos serão disponibilizados
-              após a confirmação do pagamento.
+              {pixText.pendingDesc}
             </p>
           </div>
         )}
-
         <div className="flex items-center justify-between">
           <Link
             to="/orders"
@@ -562,7 +460,6 @@ export default function PaymentPage() {
           >
             {t.payment.payLater}
           </Link>
-
           <Button
             variant="ghost"
             size="sm"
@@ -573,7 +470,6 @@ export default function PaymentPage() {
           </Button>
         </div>
       </div>
-
       {/* AÇÃO MOBILE */}
       {!pixCreated && (
         <MobileActionBar
@@ -592,11 +488,10 @@ export default function PaymentPage() {
             onClick={generatePix}
           >
             <QrCode size={16} aria-hidden />
-            Gerar Pix
+            {pixText.generateButton}
           </Button>
         </MobileActionBar>
       )}
-
       {/* CANCELAMENTO */}
       <ConfirmDialog
         open={confirmCancel}
@@ -612,7 +507,6 @@ export default function PaymentPage() {
     </div>
   );
 }
-
 function Step({
   number,
   title,
@@ -627,12 +521,10 @@ function Step({
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent-text">
         {number}
       </span>
-
       <div>
         <p className="font-semibold text-ink">
           {title}
         </p>
-
         <p className="mt-1 text-sm leading-relaxed text-muted">
           {description}
         </p>
@@ -640,7 +532,6 @@ function Step({
     </div>
   );
 }
-
 function MethodOption({
   selected,
   onSelect,
@@ -680,17 +571,14 @@ function MethodOption({
       >
         {icon}
       </span>
-
       <span className="flex-1">
         <span className="block font-semibold text-ink">
           {title}
         </span>
-
         <span className="block text-sm text-muted">
           {hint}
         </span>
       </span>
-
       <span
         className={`flex h-4 w-4 items-center justify-center rounded-full border-2 ${
           selected
