@@ -44,6 +44,7 @@ import NotFoundPage from "./NotFoundPage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n/LocaleContext";
 import { getPaymentPixCopy } from "../i18n/paymentPixCopy";
+import { QRCodeSVG } from "qrcode.react";
 // Converte imagens base64 retornadas pela API.
 // Não carrega imagens de URLs externas.
 function getQrImageSource(value: string): string | null {
@@ -300,27 +301,36 @@ export default function PaymentPage() {
                 {formatPrice(o.totalAmount, locale)}
               </div>
               {/* IMAGEM DO QR CODE */}
-              {qrImage ? (
-                <div className="mt-7 rounded-2xl bg-white p-5">
-                  <img
-                    src={qrImage}
-                    alt={pixText.qrAlt}
-                    className="h-56 w-56 object-contain sm:h-64 sm:w-64"
-                  />
-                </div>
-              ) : (
-                <div className="mt-7 flex w-full max-w-sm flex-col items-center rounded-2xl border border-line bg-field p-6">
-                  <QrCode
-                    size={48}
-                    className="text-accent-text"
-                  />
-                  <p className="mt-3 text-sm text-muted">
-                    {hasCopyPaste
-                      ? pixText.copyHint
-                      : pixText.qrUnavailable}
-                  </p>
-                </div>
-              )}
+            {qrImage ? (
+  <div className="mt-7 rounded-2xl bg-white p-5">
+    <img
+      src={qrImage}
+      alt={pixText.qrAlt}
+      className="h-56 w-56 object-contain sm:h-64 sm:w-64"
+    />
+  </div>
+) : hasCopyPaste ? (
+  <div className="mt-7 rounded-2xl bg-white p-5 shadow-sm">
+    <QRCodeSVG
+      value={pix!.pixCopyPaste}
+      size={240}
+      level="M"
+      marginSize={2}
+      bgColor="#FFFFFF"
+      fgColor="#000000"
+      title={pixText.qrAlt}
+      className="h-56 w-56 sm:h-64 sm:w-64"
+    />
+  </div>
+) : (
+  <div className="mt-7 flex w-full max-w-sm flex-col items-center rounded-2xl border border-line bg-field p-6">
+    <QrCode size={48} className="text-accent-text" />
+
+    <p className="mt-3 text-sm text-muted">
+      {pixText.qrUnavailable}
+    </p>
+  </div>
+)}
               {/* CÓDIGO PIX */}
               {hasCopyPaste && (
                 <div className="mt-6 w-full">
